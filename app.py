@@ -241,6 +241,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
     outcomes_data = result.outcomes_data
     exposure_data = result.exposure_by_classification
     wallet_classifications = result.wallet_classifications
+    trades = result.trades
 
     # Outcome colors
     outcome_colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd"]
@@ -256,6 +257,32 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
 
     # Highlight color for selected wallet
     highlight_color = "#FFD700"  # Gold
+
+    def build_last_price_series():
+        """Build running last-price series per outcome for overlaying on exposure charts."""
+        series = {}
+        for outcome, data in outcomes_data.items():
+            if not data["timestamps"]:
+                continue
+
+            sorted_indices = sorted(range(len(data["timestamps"])),
+                                    key=lambda i: data["timestamps"][i])
+            timestamps = [data["timestamps"][i] for i in sorted_indices]
+            prices = [data["prices"][i] for i in sorted_indices]
+
+            last_prices = []
+            current_price = None
+            for price in prices:
+                current_price = price
+                last_prices.append(current_price)
+
+            series[outcome] = {
+                "timestamps": timestamps,
+                "last_prices": last_prices
+            }
+        return series
+
+    last_price_series = build_last_price_series()
 
     # Helper function to get display name for wallet
     def get_display_name(wallet: str, wallet_name: str) -> str:
@@ -521,74 +548,180 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
     )
     st.plotly_chart(fig_sizes, key="sizes_chart")
 
-    # Get all outcomes for exposure charts
-    all_outcomes = set()
-    for exp in exposure_data.values():
-        all_outcomes.update(exp.exposure_by_outcome.keys())
-    outcomes_list = sorted(all_outcomes)
+    exposure_tab, wallet_tab = st.tabs(["Cumulative Category Exposure", "Wallet Intelligence"])
 
-    # Chart 3: First outcome exposure
-    if len(outcomes_list) >= 1:
-        outcome1 = outcomes_list[0]
-        fig_exp1 = go.Figure()
+    with exposure_tab:
+        # Get all outcomes for exposure charts
+        all_outcomes = set()
+        for exp in exposure_data.values():
+            all_outcomes.update(exp.exposure_by_outcome.keys())
+        outcomes_list = sorted(all_outcomes)
 
-        for cls, exp in exposure_data.items():
-            if not exp.timestamps:
-                continue
-            color = classification_colors.get(cls, "#999999")
-            exposure_values = exp.exposure_by_outcome.get(outcome1, [])
-            if exposure_values:
+        # Chart 3: First outcome exposure
+        if len(outcomes_list) >= 1:
+            outcome1 = outcomes_list[0]
+            fig_exp1 = make_subplots(specs=[[{"secondary_y": True}]])
+
+            for cls, exp in exposure_data.items():
+                if not exp.timestamps:
+                    continue
+                color = classification_colors.get(cls, "#999999")
+                exposure_values = exp.exposure_by_outcome.get(outcome1, [])
+                if exposure_values:
+                    fig_exp1.add_trace(go.Scatter(
+                        x=exp.timestamps, y=exposure_values,
+                        mode='lines',
+                        line=dict(color=color, width=2, shape='hv'),  # step function: horizontal then vertical
+                        name=cls,
+                        hovertemplate=f"<b>{cls}</b><br>Exposure: %{{y:.2f}}<extra></extra>"
+                    ), secondary_y=False)
+
+            # Add zero line
+            fig_exp1.add_hline(y=0, line_dash="solid", line_color="black", line_width=0.5)
+
+            # Overlay last price on secondary y-axis
+            price_series1 = last_price_series.get(outcome1)
+            if price_series1:
                 fig_exp1.add_trace(go.Scatter(
-                    x=exp.timestamps, y=exposure_values,
+                    x=price_series1["timestamps"],
+                    y=price_series1["last_prices"],
                     mode='lines',
-                    line=dict(color=color, width=2, shape='hv'),  # step function: horizontal then vertical
-                    name=cls,
-                    hovertemplate=f"<b>{cls}</b><br>Exposure: %{{y:.2f}}<extra></extra>"
-                ))
+                    line=dict(color="#2c3e50", width=1.5, dash='dot'),
+                    name=f"{outcome1} Last Price",
+                    hovertemplate=f"<b>{outcome1} Last Price</b><br>Price: %{{y:.3f}}<extra></extra>"
+                ), secondary_y=True)
 
-        # Add zero line
-        fig_exp1.add_hline(y=0, line_dash="solid", line_color="black", line_width=0.5)
+            fig_exp1.update_layout(
+                title=f"Net '{outcome1}' Exposure by Wallet Classification",
+                xaxis_title="Time",
+                height=400,
+                hovermode='x unified'
+            )
+            fig_exp1.update_yaxes(title_text=f"Net {outcome1} Exposure", secondary_y=False)
+            fig_exp1.update_yaxes(title_text=f"{outcome1} Last Price", secondary_y=True, range=[0, 1.05])
+            st.plotly_chart(fig_exp1, key="exp1_chart")
 
-        fig_exp1.update_layout(
-            title=f"Net '{outcome1}' Exposure by Wallet Classification",
-            xaxis_title="Time",
-            yaxis_title=f"Net {outcome1} Exposure",
-            height=400,
-            hovermode='x unified'
-        )
-        st.plotly_chart(fig_exp1, key="exp1_chart")
+        # Chart 4: Second outcome exposure
+        if len(outcomes_list) >= 2:
+            outcome2 = outcomes_list[1]
+            fig_exp2 = make_subplots(specs=[[{"secondary_y": True}]])
 
-    # Chart 4: Second outcome exposure
-    if len(outcomes_list) >= 2:
-        outcome2 = outcomes_list[1]
-        fig_exp2 = go.Figure()
+            for cls, exp in exposure_data.items():
+                if not exp.timestamps:
+                    continue
+                color = classification_colors.get(cls, "#999999")
+                exposure_values = exp.exposure_by_outcome.get(outcome2, [])
+                if exposure_values:
+                    fig_exp2.add_trace(go.Scatter(
+                        x=exp.timestamps, y=exposure_values,
+                        mode='lines',
+                        line=dict(color=color, width=2, shape='hv'),  # step function: horizontal then vertical
+                        name=cls,
+                        hovertemplate=f"<b>{cls}</b><br>Exposure: %{{y:.2f}}<extra></extra>"
+                    ), secondary_y=False)
 
-        for cls, exp in exposure_data.items():
-            if not exp.timestamps:
-                continue
-            color = classification_colors.get(cls, "#999999")
-            exposure_values = exp.exposure_by_outcome.get(outcome2, [])
-            if exposure_values:
+            # Add zero line
+            fig_exp2.add_hline(y=0, line_dash="solid", line_color="black", line_width=0.5)
+
+            # Overlay last price on secondary y-axis
+            price_series2 = last_price_series.get(outcome2)
+            if price_series2:
                 fig_exp2.add_trace(go.Scatter(
-                    x=exp.timestamps, y=exposure_values,
+                    x=price_series2["timestamps"],
+                    y=price_series2["last_prices"],
                     mode='lines',
-                    line=dict(color=color, width=2, shape='hv'),  # step function: horizontal then vertical
-                    name=cls,
-                    hovertemplate=f"<b>{cls}</b><br>Exposure: %{{y:.2f}}<extra></extra>"
-                ))
+                    line=dict(color="#2c3e50", width=1.5, dash='dot'),
+                    name=f"{outcome2} Last Price",
+                    hovertemplate=f"<b>{outcome2} Last Price</b><br>Price: %{{y:.3f}}<extra></extra>"
+                ), secondary_y=True)
 
-        # Add zero line
-        fig_exp2.add_hline(y=0, line_dash="solid", line_color="black", line_width=0.5)
+            fig_exp2.update_layout(
+                title=f"Net '{outcome2}' Exposure by Wallet Classification",
+                xaxis_title="Time",
+                height=400,
+                hovermode='x unified'
+            )
+            fig_exp2.update_yaxes(title_text=f"Net {outcome2} Exposure", secondary_y=False)
+            fig_exp2.update_yaxes(title_text=f"{outcome2} Last Price", secondary_y=True, range=[0, 1.05])
+            st.plotly_chart(fig_exp2, key="exp2_chart")
 
-        fig_exp2.update_layout(
-            title=f"Net '{outcome2}' Exposure by Wallet Classification",
-            xaxis_title="Time",
-            yaxis_title=f"Net {outcome2} Exposure",
-            height=400,
-            hovermode='x unified'
-        )
-        st.plotly_chart(fig_exp2, key="exp2_chart")
+    with wallet_tab:
+        # Table: selected wallet trades with running outcome exposure
+        st.subheader("Selected Wallet Trade Log")
+        if not selected_wallet:
+            st.info("Select a wallet above to view a detailed trade log.")
+        else:
+            wallet_trades = [t for t in trades if t.wallet == selected_wallet]
+            if not wallet_trades:
+                st.info("No trades found for the selected wallet.")
+            else:
+                wallet_trades = sorted(wallet_trades, key=lambda t: t.timestamp)
+                running_totals = {}
+                dollars_bought = {}
+                dollars_sold = {}
+                rows_by_outcome = {}
 
+                for t in wallet_trades:
+                    outcome = t.outcome
+                    running_totals.setdefault(outcome, 0.0)
+                    dollars_bought.setdefault(outcome, 0.0)
+                    dollars_sold.setdefault(outcome, 0.0)
+                    rows_by_outcome.setdefault(outcome, [])
+
+                    delta = t.size if t.side == "BUY" else -t.size
+                    running_totals[outcome] += delta
+                    amount_dollars = t.size * t.price
+                    if t.side == "BUY":
+                        dollars_bought[outcome] += amount_dollars
+                    else:
+                        dollars_sold[outcome] += amount_dollars
+
+                    rows_by_outcome[outcome].append({
+                        "Datetime": t.datetime.strftime("%Y-%m-%d %H:%M:%S"),
+                        "Outcome": outcome,
+                        "Side": t.side,
+                        "Price": t.price,
+                        "Size": t.size,
+                        "Amount (number of shares)": t.size,
+                        "Amount (dollar value)": amount_dollars,
+                        "Cumulative Shares (outcome)": running_totals[outcome]
+                    })
+
+                # Compute P/L by outcome and total
+                pnl_by_outcome = {}
+                total_pnl = 0.0
+                for outcome, shares in running_totals.items():
+                    last_price_info = last_price_series.get(outcome, {})
+                    current_price = last_price_info.get("last_prices", [0])[-1] if last_price_info else 0
+                    current_value = shares * current_price
+                    pnl = current_value + dollars_sold.get(outcome, 0.0) - dollars_bought.get(outcome, 0.0)
+                    pnl_by_outcome[outcome] = {
+                        "current_price": current_price,
+                        "shares": shares,
+                        "current_value": current_value,
+                        "dollars_bought": dollars_bought.get(outcome, 0.0),
+                        "dollars_sold": dollars_sold.get(outcome, 0.0),
+                        "pnl": pnl
+                    }
+                    total_pnl += pnl
+
+                # Wallet intelligence summary
+                wallet_display_name = wallet_trades[0].wallet_name or f"{selected_wallet[:8]}...{selected_wallet[-6:]}"
+                st.markdown(f"**Wallet:** `{selected_wallet}` ({wallet_display_name})  |  "
+                            f"**Classification:** {wallet_classifications.get(selected_wallet, 'Unknown')}  |  "
+                            f"**Total P/L:** {total_pnl:,.2f}")
+                st.caption(f"Trades: {len(wallet_trades)} | First trade: {wallet_trades[0].datetime} | Last trade: {wallet_trades[-1].datetime}")
+
+                for outcome, rows in rows_by_outcome.items():
+                    st.markdown(f"**{outcome} Trades**  — P/L: {pnl_by_outcome[outcome]['pnl']:,.2f} | "
+                                f"Shares: {pnl_by_outcome[outcome]['shares']:,.2f} @ "
+                                f"Price {pnl_by_outcome[outcome]['current_price']:.3f}")
+                    df = pd.DataFrame(rows)
+                    st.dataframe(
+                        df,
+                        width="stretch",
+                        hide_index=True
+                    )
 
 def main():
     """Main Streamlit app entry point."""
