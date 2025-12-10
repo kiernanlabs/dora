@@ -18,9 +18,42 @@ def get_service():
     return PolymarketService()
 
 
+@st.cache_data(show_spinner=False)
+def get_wallet_market_overview(wallet: str):
+    """Cached helper to fetch wallet-level market summaries."""
+    service = get_service()
+    return service.get_wallet_market_summaries(wallet)
+
+
+def format_seconds(seconds: float) -> str:
+    """Human-friendly formatter for average time values."""
+    if seconds is None or seconds <= 0:
+        return "—"
+    total_seconds = int(seconds)
+    minutes, sec = divmod(total_seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours}h {minutes}m"
+    if minutes:
+        return f"{minutes}m {sec}s"
+    return f"{sec}s"
+
+
+def format_currency(value: float, decimals: int = 2) -> str:
+    """Format a currency value with a dollar sign and fixed decimals."""
+    return f"${value:,.{decimals}f}"
+
+
+def format_return(pnl: float, buy: float) -> str:
+    """Return percentage string based on pnl / buy."""
+    if buy <= 0:
+        return "—"
+    return f"{(pnl / buy) * 100:,.2f}%"
+
+
 def render_market_lookup():
     """Render the event/market lookup section."""
-    st.header("1. Find Markets")
+    st.header("📍 Find Markets")
 
     col1, col2 = st.columns([3, 1])
     with col1:
@@ -32,7 +65,7 @@ def render_market_lookup():
     with col2:
         st.write("")  # Spacer
         st.write("")  # Spacer
-        get_markets_btn = st.button("Get Markets", type="primary")
+        get_markets_btn = st.button("🔎 Get Markets", type="primary")
 
     if get_markets_btn and event_slug:
         with st.spinner("Fetching markets..."):
@@ -74,7 +107,7 @@ def render_market_lookup():
 
 def render_market_analysis():
     """Render the market analysis section."""
-    st.header("2. Analyze Market")
+    st.header("📊 Analyze Market")
 
     col1, col2, col3 = st.columns([3, 1, 1])
     with col1:
@@ -94,7 +127,7 @@ def render_market_analysis():
     with col3:
         st.write("")  # Spacer
         st.write("")  # Spacer
-        analyze_btn = st.button("Analyze Market", type="primary")
+        analyze_btn = st.button("📈 Analyze Market", type="primary")
 
     if analyze_btn and market_id:
         with st.spinner("Analyzing trades..."):
@@ -147,7 +180,7 @@ def render_analysis_results(result: AnalysisResult):
             outcome_data.append({
                 "Outcome": outcome,
                 "Trades": stats["trade_count"],
-                "Avg Price": f"${stats['avg_price']:.3f}",
+                "Avg Price": format_currency(stats['avg_price']),
                 "Total Size": f"{stats['total_size']:.2f}"
             })
         st.dataframe(pd.DataFrame(outcome_data), width="stretch", hide_index=True)
@@ -335,7 +368,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                 name=f"{outcome} (BUY)",
                 hovertemplate="<b>%{customdata[2]}</b><br>" +
                               f"<b>{outcome} BUY</b><br>" +
-                              "Price: %{y:.3f}<br>" +
+                              "Price: $%{y:.2f}<br>" +
                               "Size: %{customdata[0]:.2f}<br>" +
                               "Trader: %{customdata[1]}<extra></extra>",
                 customdata=list(zip(buy_sizes, buy_displays, buy_classes))
@@ -353,7 +386,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                 name=f"{outcome} (SELL)",
                 hovertemplate="<b>%{customdata[2]}</b><br>" +
                               f"<b>{outcome} SELL</b><br>" +
-                              "Price: %{y:.3f}<br>" +
+                              "Price: $%{y:.2f}<br>" +
                               "Size: %{customdata[0]:.2f}<br>" +
                               "Trader: %{customdata[1]}<extra></extra>",
                 customdata=list(zip(sell_sizes, sell_displays, sell_classes))
@@ -390,7 +423,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                     hovertemplate="<b>★ SELECTED WALLET</b><br>" +
                                   "<b>%{customdata[2]}</b><br>" +
                                   f"<b>{outcome} BUY</b><br>" +
-                                  "Price: %{y:.3f}<br>" +
+                                  "Price: $%{y:.2f}<br>" +
                                   "Size: %{customdata[0]:.2f}<br>" +
                                   "Trader: %{customdata[1]}<extra></extra>",
                     customdata=list(zip(buy_sizes, buy_displays, buy_classes))
@@ -410,7 +443,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                     hovertemplate="<b>★ SELECTED WALLET</b><br>" +
                                   "<b>%{customdata[2]}</b><br>" +
                                   f"<b>{outcome} SELL</b><br>" +
-                                  "Price: %{y:.3f}<br>" +
+                                  "Price: $%{y:.2f}<br>" +
                                   "Size: %{customdata[0]:.2f}<br>" +
                                   "Trader: %{customdata[1]}<extra></extra>",
                     customdata=list(zip(sell_sizes, sell_displays, sell_classes))
@@ -459,7 +492,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                 hovertemplate="<b>%{customdata[2]}</b><br>" +
                               f"<b>{outcome} BUY</b><br>" +
                               "Size: %{y:.2f}<br>" +
-                              "Price: %{customdata[0]:.3f}<br>" +
+                              "Price: $%{customdata[0]:.2f}<br>" +
                               "Trader: %{customdata[1]}<extra></extra>",
                 customdata=list(zip(buy_prices, buy_displays, buy_classes))
             ))
@@ -477,7 +510,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                 hovertemplate="<b>%{customdata[2]}</b><br>" +
                               f"<b>{outcome} SELL</b><br>" +
                               "Size: %{y:.2f}<br>" +
-                              "Price: %{customdata[0]:.3f}<br>" +
+                              "Price: $%{customdata[0]:.2f}<br>" +
                               "Trader: %{customdata[1]}<extra></extra>",
                 customdata=list(zip(sell_prices, sell_displays, sell_classes))
             ))
@@ -514,7 +547,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                                   "<b>%{customdata[2]}</b><br>" +
                                   f"<b>{outcome} BUY</b><br>" +
                                   "Size: %{y:.2f}<br>" +
-                                  "Price: %{customdata[0]:.3f}<br>" +
+                                  "Price: $%{customdata[0]:.2f}<br>" +
                                   "Trader: %{customdata[1]}<extra></extra>",
                     customdata=list(zip(buy_prices, buy_displays, buy_classes))
                 ))
@@ -534,7 +567,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                                   "<b>%{customdata[2]}</b><br>" +
                                   f"<b>{outcome} SELL</b><br>" +
                                   "Size: %{y:.2f}<br>" +
-                                  "Price: %{customdata[0]:.3f}<br>" +
+                                  "Price: $%{customdata[0]:.2f}<br>" +
                                   "Trader: %{customdata[1]}<extra></extra>",
                     customdata=list(zip(sell_prices, sell_displays, sell_classes))
                 ))
@@ -588,7 +621,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                     mode='lines',
                     line=dict(color="#2c3e50", width=1.5, dash='dot'),
                     name=f"{outcome1} Last Price",
-                    hovertemplate=f"<b>{outcome1} Last Price</b><br>Price: %{{y:.3f}}<extra></extra>"
+                    hovertemplate=f"<b>{outcome1} Last Price</b><br>Price: $%{{y:.2f}}<extra></extra>"
                 ), secondary_y=True)
 
             fig_exp1.update_layout(
@@ -632,7 +665,7 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                     mode='lines',
                     line=dict(color="#2c3e50", width=1.5, dash='dot'),
                     name=f"{outcome2} Last Price",
-                    hovertemplate=f"<b>{outcome2} Last Price</b><br>Price: %{{y:.3f}}<extra></extra>"
+                    hovertemplate=f"<b>{outcome2} Last Price</b><br>Price: $%{{y:.2f}}<extra></extra>"
                 ), secondary_y=True)
 
             fig_exp2.update_layout(
@@ -647,10 +680,32 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
 
     with wallet_tab:
         # Table: selected wallet trades with running outcome exposure
-        st.subheader("Selected Wallet Trade Log")
+        st.subheader("💼 Wallet Intelligence")
         if not selected_wallet:
             st.info("Select a wallet above to view a detailed trade log.")
         else:
+            wallet_overview = get_wallet_market_overview(selected_wallet)
+            profile = wallet_overview.get("profile", {}) if wallet_overview else {}
+
+            summary_container = st.container()
+            with summary_container:
+                cols = st.columns([1, 3, 2])
+                with cols[0]:
+                    if profile.get("profile_image"):
+                        st.image(profile["profile_image"], width=72)
+                with cols[1]:
+                    wallet_label = profile.get("display_name") or f"{selected_wallet[:8]}...{selected_wallet[-6:]}"
+                    # Add clickable link to Polymarket profile
+                    polymarket_profile_url = f"https://polymarket.com/profile/{selected_wallet}"
+                    st.markdown(f"**Wallet:** `{selected_wallet}` [🔗 View on Polymarket]({polymarket_profile_url})")
+                    st.caption(wallet_label)
+                    if profile.get("bio"):
+                        st.caption(profile["bio"])
+                with cols[2]:
+                    st.markdown(f"**Classification:** {wallet_classifications.get(selected_wallet, 'Unknown')}")
+                    st.caption("Recent markets below · Trade log shows current market activity")
+
+            st.subheader("Selected Wallet Trade Log")
             wallet_trades = [t for t in trades if t.wallet == selected_wallet]
             if not wallet_trades:
                 st.info("No trades found for the selected wallet.")
@@ -680,11 +735,11 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                         "Datetime": t.datetime.strftime("%Y-%m-%d %H:%M:%S"),
                         "Outcome": outcome,
                         "Side": t.side,
-                        "Price": t.price,
-                        "Size": t.size,
-                        "Amount (number of shares)": t.size,
-                        "Amount (dollar value)": amount_dollars,
-                        "Cumulative Shares (outcome)": running_totals[outcome]
+                        "Price": format_currency(t.price),
+                        "Size": f"{t.size:.2f}",
+                        "Amount (number of shares)": f"{t.size:.2f}",
+                        "Amount (dollar value)": format_currency(amount_dollars),
+                        "Cumulative Shares (outcome)": f"{running_totals[outcome]:.2f}"
                     })
 
                 # Compute P/L by outcome and total
@@ -707,15 +762,20 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
 
                 # Wallet intelligence summary
                 wallet_display_name = wallet_trades[0].wallet_name or f"{selected_wallet[:8]}...{selected_wallet[-6:]}"
-                st.markdown(f"**Wallet:** `{selected_wallet}` ({wallet_display_name})  |  "
-                            f"**Classification:** {wallet_classifications.get(selected_wallet, 'Unknown')}  |  "
-                            f"**Total P/L:** {total_pnl:,.2f}")
-                st.caption(f"Trades: {len(wallet_trades)} | First trade: {wallet_trades[0].datetime} | Last trade: {wallet_trades[-1].datetime}")
+                metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+                with metrics_col1:
+                    st.metric("Total P/L (current market)", format_currency(total_pnl))
+                with metrics_col2:
+                    st.metric("Trades (current market)", f"{len(wallet_trades)}")
+                with metrics_col3:
+                    first_trade = wallet_trades[0].datetime.strftime("%Y-%m-%d")
+                    last_trade = wallet_trades[-1].datetime.strftime("%Y-%m-%d")
+                    st.metric("Activity window", f"{first_trade} → {last_trade}")
 
                 for outcome, rows in rows_by_outcome.items():
-                    st.markdown(f"**{outcome} Trades**  — P/L: {pnl_by_outcome[outcome]['pnl']:,.2f} | "
+                    st.markdown(f"**{outcome} Trades**  — P/L: {format_currency(pnl_by_outcome[outcome]['pnl'])} | "
                                 f"Shares: {pnl_by_outcome[outcome]['shares']:,.2f} @ "
-                                f"Price {pnl_by_outcome[outcome]['current_price']:.3f}")
+                                f"Price {format_currency(pnl_by_outcome[outcome]['current_price'])}")
                     df = pd.DataFrame(rows)
                     st.dataframe(
                         df,
@@ -723,17 +783,162 @@ def render_interactive_charts(result: AnalysisResult, selected_wallet: str = Non
                         hide_index=True
                     )
 
+            st.markdown("**📈 Recent Markets (last 10)**")
+            markets_list = wallet_overview.get("markets", []) if wallet_overview else []
+            total_pnl_recent = sum(m.pnl for m in markets_list)
+            total_buy_recent = sum(m.total_buy_dollars for m in markets_list)
+            return_recent = format_return(total_pnl_recent, total_buy_recent)
+
+            summary_cols = st.columns(3)
+            summary_cols[0].metric("Total P/L (recent 10)", format_currency(total_pnl_recent))
+            summary_cols[1].metric("Total BUY Volume", format_currency(total_buy_recent))
+            summary_cols[2].metric("Return (P/L ÷ BUY)", return_recent)
+
+            if markets_list:
+                # Table headers
+                header_cols = st.columns([0.6, 2.2, 1.4, 1.3, 1.0, 1.6, 1.2, 1.2, 1.1, 1.0, 1.0])
+                headers = ["Icon", "Market", "Slug", "Event", "Trades", "Outcome Counts", "Avg Size (sh)", "Avg Size ($)", "Avg Time", "P/L", "Return %"]
+                for col, label in zip(header_cols, headers):
+                    col.markdown(f"**{label}**")
+
+                def show_pl_dialog(market, idx):
+                    """Render modal with P/L detail for a market."""
+                    @st.dialog(f"P/L Details — {market.market_title}")
+                    def _dialog():
+                        st.markdown(f"**Total P/L:** {format_currency(market.pnl)}  |  "
+                                    f"**Return:** {format_return(market.pnl, market.total_buy_dollars)}  |  "
+                                    f"**Total BUY:** {format_currency(market.total_buy_dollars)}")
+                        st.caption(f"Market: {market.market_slug} · Event: {market.event_slug}")
+
+                        outcome_rows = []
+                        for d in market.outcome_details:
+                            outcome_rows.append({
+                                "Outcome": d["outcome"],
+                                "Exit Side": d["exit_side"],
+                                "Net Shares": f"{d['net_shares']:.2f}",
+                                "Avg Buy": format_currency(d["avg_buy_price"]),
+                                "Avg Sell": format_currency(d["avg_sell_price"]),
+                                "Exit Price": format_currency(d["exit_price"]),
+                                "P/L": format_currency(d["pnl"])
+                            })
+                        st.markdown("**Outcome-Level P/L**")
+                        st.dataframe(pd.DataFrame(outcome_rows), hide_index=True, width="stretch")
+
+                        trade_rows = []
+                        for t in sorted(market.trade_details, key=lambda r: r["timestamp"]):
+                            trade_rows.append({
+                                "Datetime": t["datetime"].strftime("%Y-%m-%d %H:%M:%S"),
+                                "Outcome": t["outcome"],
+                                "Side": t["side"],
+                                "Size": f"{t['size']:.2f}",
+                                "Entry Price": format_currency(t["price"]),
+                                "Exit Price": format_currency(t["exit_price"]),
+                                "P/L": format_currency(t["pnl"]),
+                                "Return": f"{t['return_pct']:.2f}%"
+                            })
+                        st.markdown("**Trades**")
+                        st.dataframe(pd.DataFrame(trade_rows), hide_index=True, width="stretch")
+                    _dialog()
+
+                for idx, market in enumerate(markets_list):
+                    return_pct = format_return(market.pnl, market.total_buy_dollars)
+                    counts_str = " | ".join(
+                        f"{outcome}: B{counts.get('BUY', 0)}/S{counts.get('SELL', 0)}"
+                        for outcome, counts in market.trade_counts_by_outcome.items()
+                    )
+                    cols = st.columns([0.6, 2.2, 1.4, 1.3, 1.0, 1.6, 1.2, 1.2, 1.1, 1.0, 1.0])
+                    with cols[0]:
+                        if market.icon:
+                            st.image(market.icon, width=32)
+                    # Make market title clickable to Polymarket
+                    market_url = f"https://polymarket.com/event/{market.event_slug}/{market.market_slug}" if market.market_slug and market.event_slug else None
+                    if market_url:
+                        cols[1].markdown(f"**[{market.market_title}]({market_url})**")
+                    else:
+                        cols[1].markdown(f"**{market.market_title}**")
+                    cols[2].caption(market.market_slug)
+                    cols[3].caption(market.event_slug)
+                    cols[4].write(str(market.total_trades))
+                    cols[5].write(counts_str)
+                    cols[6].write(f"{market.avg_trade_size:.2f}")
+                    cols[7].write(format_currency(market.avg_trade_dollars))
+                    cols[8].write(format_seconds(market.avg_time_between_trades_seconds))
+                    if cols[9].button(format_currency(market.pnl), key=f"pl_btn_{idx}"):
+                        show_pl_dialog(market, idx)
+                    cols[10].write(return_pct)
+            else:
+                st.info("No recent cross-market activity found for this wallet.")
+
 def main():
     """Main Streamlit app entry point."""
     st.set_page_config(
         page_title="Polymarket Trade Analyzer",
         page_icon="📊",
-        layout="wide"
+        layout="wide",
+        initial_sidebar_state="collapsed"
     )
+
+    # Custom CSS for sleeker design
+    st.markdown("""
+        <style>
+        /* Modern color scheme and typography */
+        .main .block-container {
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+        }
+        h1 {
+            font-weight: 700;
+            background: linear-gradient(120deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        h2 {
+            color: #1e293b;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 0.5rem;
+            margin-top: 2rem;
+        }
+        h3 {
+            color: #334155;
+            font-weight: 600;
+        }
+        /* Card-like containers */
+        div[data-testid="stDataFrame"] {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+        /* Better metric styling */
+        div[data-testid="stMetric"] {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #3b82f6;
+        }
+        /* Improved button styling */
+        .stButton > button {
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .stButton > button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        /* Info/Warning/Success boxes */
+        div.stAlert {
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     st.title("Polymarket Trade Pattern Analyzer")
     st.markdown(
-        "Analyze trading patterns and wallet behavior in Polymarket prediction markets."
+        "🔍 **Analyze trading patterns and wallet behavior in Polymarket prediction markets**"
     )
 
     # Render sections

@@ -2,3 +2,7 @@ streamlit
 plotly
 pandas
 requests
+python-dateutil
+cryptography
+python-dotenv
+websockets
