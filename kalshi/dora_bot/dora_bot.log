@@ -1,0 +1,658 @@
+2025-12-12 17:54:27,530 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 17:57:12,738 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 17:57:12,784 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 17:57:12,960 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 17:57:12,960 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 17:57:13,318 - __main__ - INFO - Exchange status: True
+2025-12-12 17:57:13,318 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 17:57:13,355 - state_manager - INFO - Loaded 0 positions
+2025-12-12 17:57:13,388 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 17:57:13,590 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 17:57:13,590 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 17:57:13,590 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 17:57:13,591 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 17:57:13,755 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 17:57:13,755 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 17:57:13,755 - __main__ - INFO - State summary: {'num_positions': 0, 'num_open_orders': 0, 'total_exposure': 0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': None}
+2025-12-12 17:57:13,926 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 1.0s...
+2025-12-12 17:57:15,012 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 2.0s...
+2025-12-12 17:57:17,120 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-12 17:57:17,120 - __main__ - CRITICAL - Fatal error: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 304, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 138, in startup
+    balance = self.exchange.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 220, in get_balance
+    return self._retry_request(_fetch)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 62, in _retry_request
+    raise last_error
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 52, in _retry_request
+    return func(*args, **kwargs)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 214, in _fetch
+    response = self.client.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 149, in get_balance
+    return self.get(self.portfolio_url + '/balance')
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 133, in get
+    self.raise_if_bad_response(response)
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 112, in raise_if_bad_response
+    response.raise_for_status()
+  File "/home/joe/dora/.venv/lib/python3.10/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-12 19:59:53,625 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 19:59:53,674 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 19:59:53,877 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 19:59:53,877 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 19:59:54,137 - __main__ - INFO - Exchange status: True
+2025-12-12 19:59:54,138 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 19:59:54,176 - state_manager - INFO - Loaded 0 positions
+2025-12-12 19:59:54,212 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 19:59:54,363 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 19:59:54,363 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 19:59:54,363 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 19:59:54,363 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 19:59:54,511 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 19:59:54,511 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 19:59:54,511 - __main__ - INFO - State summary: {'num_positions': 0, 'num_open_orders': 0, 'total_exposure': 0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': None}
+2025-12-12 19:59:54,663 - __main__ - INFO - Account balance: $49.00, Payout: $0.00, Total: $49.00
+2025-12-12 19:59:54,664 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 19:59:54,664 - __main__ - INFO - Starting main event loop...
+2025-12-12 19:59:54,727 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 19:59:54,890 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:54,890 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:55,338 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:55,339 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:55,853 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:55,853 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:56,362 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:56,362 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:56,937 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:56,937 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:57,385 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:57,385 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,009 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,009 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,374 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,374 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,852 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:58,852 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:59,349 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN yes 10.0@0.13: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 19:59:59,349 - exchange_client - ERROR - Failed to place order KXPRESPERSON-28-JVAN no 10.0@0.81: KalshiHttpClient.post() got an unexpected keyword argument 'json'
+2025-12-12 20:01:48,294 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:01:48,340 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:01:48,537 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:01:48,537 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:01:48,835 - __main__ - INFO - Exchange status: True
+2025-12-12 20:01:48,836 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:01:48,866 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:01:48,901 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:01:49,112 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:01:49,112 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:01:49,112 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:01:49,112 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:01:49,338 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:01:49,338 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:01:49,338 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 0.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': None}
+2025-12-12 20:01:49,606 - __main__ - INFO - Account balance: $49.00, Payout: $0.00, Total: $49.00
+2025-12-12 20:01:49,607 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:01:49,607 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:01:49,655 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:01:50,258 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:50,258 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:50,405 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:50,405 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:50,620 - __main__ - WARNING - Loop took 1013ms (target: 500.0ms)
+2025-12-12 20:01:51,170 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:51,170 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:51,324 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:51,324 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:51,523 - __main__ - WARNING - Loop took 902ms (target: 500.0ms)
+2025-12-12 20:01:51,881 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:51,881 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:52,018 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:52,018 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:52,187 - __main__ - WARNING - Loop took 664ms (target: 500.0ms)
+2025-12-12 20:01:52,534 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:52,534 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:52,684 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:52,684 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:52,850 - __main__ - WARNING - Loop took 662ms (target: 500.0ms)
+2025-12-12 20:01:53,166 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:53,166 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:53,347 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:53,347 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:53,496 - __main__ - WARNING - Loop took 646ms (target: 500.0ms)
+2025-12-12 20:01:53,816 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN yes 10.0@0.13: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:53,816 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:53,997 - exchange_client - ERROR - HTTP error placing order KXPRESPERSON-28-JVAN no 10.0@0.81: 400 Client Error: Bad Request for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders
+2025-12-12 20:01:53,997 - exchange_client - ERROR - API error details: {'code': 'bad_request', 'message': 'bad request', 'details': 'json: cannot unmarshal number 10.0 into Go struct field CreateOrderRequest.count of type int'}
+2025-12-12 20:01:54,038 - __main__ - INFO - Received shutdown signal
+2025-12-12 20:01:54,039 - __main__ - INFO - Shutting down...
+2025-12-12 20:01:54,117 - __main__ - INFO - Shutdown complete
+2025-12-12 20:02:53,923 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:02:53,967 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:02:54,148 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:02:54,148 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:02:54,330 - __main__ - INFO - Exchange status: True
+2025-12-12 20:02:54,331 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:02:54,362 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:02:54,391 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:02:54,630 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:02:54,630 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:02:54,630 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:02:54,630 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:02:54,785 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:02:54,785 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:02:54,785 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 0.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': None}
+2025-12-12 20:02:54,964 - __main__ - INFO - Account balance: $49.00, Payout: $0.00, Total: $49.00
+2025-12-12 20:02:54,964 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:02:54,964 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:02:55,013 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:02:55,441 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN yes 10@0.13 - ID: fce30f6b-f46e-40be-99ff-d63898c0dcd6
+2025-12-12 20:02:55,748 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN no 10@0.81 - ID: d3e035f3-eb38-47ae-99b5-912131e572d7
+2025-12-12 20:02:55,961 - __main__ - WARNING - Loop took 997ms (target: 500.0ms)
+2025-12-12 20:02:56,343 - exchange_client - INFO - Cancelled order: fce30f6b-f46e-40be-99ff-d63898c0dcd6
+2025-12-12 20:02:56,493 - exchange_client - INFO - Cancelled order: d3e035f3-eb38-47ae-99b5-912131e572d7
+2025-12-12 20:02:56,670 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN yes 10@0.38 - ID: c3021fd1-3767-4968-be5d-c25365ddafbf
+2025-12-12 20:02:56,810 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN no 10@0.56 - ID: 12b8e79a-cb77-419c-9c9b-231f451cf6ce
+2025-12-12 20:02:56,981 - state_manager - INFO - Processing 1 fills
+2025-12-12 20:02:57,018 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:02:57,018 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:02:57,018 - __main__ - WARNING - Loop took 1057ms (target: 500.0ms)
+2025-12-12 20:02:57,378 - exchange_client - ERROR - Failed to cancel order c3021fd1-3767-4968-be5d-c25365ddafbf: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/c3021fd1-3767-4968-be5d-c25365ddafbf
+2025-12-12 20:02:57,528 - exchange_client - INFO - Cancelled order: 12b8e79a-cb77-419c-9c9b-231f451cf6ce
+2025-12-12 20:02:57,675 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN yes 10@0.25 - ID: 1fd1b7ea-0017-46f2-a7c3-81f99fb69eb5
+2025-12-12 20:02:57,813 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN no 10@0.69 - ID: 7ba40cd4-6257-4631-9b0d-530fcecf3924
+2025-12-12 20:02:57,971 - state_manager - INFO - Processing 1 fills
+2025-12-12 20:02:58,002 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:02:58,002 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:02:58,002 - __main__ - WARNING - Loop took 984ms (target: 500.0ms)
+2025-12-12 20:02:58,394 - exchange_client - ERROR - Failed to cancel order c3021fd1-3767-4968-be5d-c25365ddafbf: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/c3021fd1-3767-4968-be5d-c25365ddafbf
+2025-12-12 20:02:58,546 - exchange_client - INFO - Cancelled order: 1fd1b7ea-0017-46f2-a7c3-81f99fb69eb5
+2025-12-12 20:02:58,705 - exchange_client - INFO - Cancelled order: 7ba40cd4-6257-4631-9b0d-530fcecf3924
+2025-12-12 20:02:58,853 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN yes 10@0.31 - ID: 62052029-711c-40c2-83c0-7d255d60e3ec
+2025-12-12 20:02:58,993 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN no 10@0.63 - ID: 609f5b48-ea9a-46b6-adac-b210f07f0a51
+2025-12-12 20:02:59,169 - state_manager - INFO - Processing 2 fills
+2025-12-12 20:02:59,201 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:02:59,243 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:02:59,243 - __main__ - INFO - Processed 2 new fills, Daily PnL: $0.00
+2025-12-12 20:02:59,243 - __main__ - WARNING - Loop took 1241ms (target: 500.0ms)
+2025-12-12 20:02:59,634 - exchange_client - ERROR - Failed to cancel order c3021fd1-3767-4968-be5d-c25365ddafbf: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/c3021fd1-3767-4968-be5d-c25365ddafbf
+2025-12-12 20:02:59,803 - exchange_client - ERROR - Failed to cancel order 62052029-711c-40c2-83c0-7d255d60e3ec: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/62052029-711c-40c2-83c0-7d255d60e3ec
+2025-12-12 20:02:59,962 - exchange_client - INFO - Cancelled order: 609f5b48-ea9a-46b6-adac-b210f07f0a51
+2025-12-12 20:03:00,119 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN yes 10@0.27 - ID: d1da870c-62ec-42a6-916c-2a49f5ab0e61
+2025-12-12 20:03:00,304 - exchange_client - INFO - Placed order: KXPRESPERSON-28-JVAN no 10@0.67 - ID: 3d7ab9d7-70be-4131-b4fb-fd35e83d6a52
+2025-12-12 20:03:00,471 - state_manager - INFO - Processing 1 fills
+2025-12-12 20:03:00,507 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:03:00,507 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:03:00,507 - __main__ - WARNING - Loop took 1264ms (target: 500.0ms)
+2025-12-12 20:03:00,877 - exchange_client - ERROR - Failed to cancel order c3021fd1-3767-4968-be5d-c25365ddafbf: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/c3021fd1-3767-4968-be5d-c25365ddafbf
+2025-12-12 20:03:01,052 - exchange_client - ERROR - Failed to cancel order 62052029-711c-40c2-83c0-7d255d60e3ec: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/62052029-711c-40c2-83c0-7d255d60e3ec
+2025-12-12 20:03:01,072 - __main__ - INFO - Received shutdown signal
+2025-12-12 20:03:01,072 - __main__ - INFO - Shutting down...
+2025-12-12 20:03:01,142 - __main__ - INFO - Shutdown complete
+2025-12-12 20:13:24,311 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:13:24,450 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:13:24,635 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:13:24,635 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:13:24,905 - __main__ - INFO - Exchange status: True
+2025-12-12 20:13:24,905 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:13:24,930 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:13:24,960 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:13:25,125 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-12 20:13:25,125 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-12 20:13:25,125 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-12 20:13:25,126 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:13:25,778 - exchange_client - INFO - Cancelled order: 3d7ab9d7-70be-4131-b4fb-fd35e83d6a52
+2025-12-12 20:13:26,234 - exchange_client - INFO - Cancelled order: d1da870c-62ec-42a6-916c-2a49f5ab0e61
+2025-12-12 20:13:26,335 - exchange_client - INFO - Cancelled 2 orders
+2025-12-12 20:13:26,335 - __main__ - INFO - Cancelled 2 orders
+2025-12-12 20:13:26,335 - __main__ - INFO - Fetching fills since 2025-12-13 01:02:59.307458+00:00
+2025-12-12 20:13:26,531 - state_manager - INFO - Processing 1 fills
+2025-12-12 20:13:26,580 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:13:26,581 - __main__ - INFO - Processed 1 fills
+2025-12-12 20:13:26,581 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 60.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:13:26,813 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:13:26,813 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:13:26,813 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:13:26,854 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:13:27,195 - state_manager - INFO - Processing 1 fills
+2025-12-12 20:13:27,237 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:13:27,237 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:13:31,981 - __main__ - INFO - Received shutdown signal
+2025-12-12 20:13:31,982 - __main__ - INFO - Shutting down...
+2025-12-12 20:13:32,053 - __main__ - INFO - Shutdown complete
+2025-12-12 20:27:00,631 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:27:00,675 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:27:00,858 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:27:00,858 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:27:01,227 - __main__ - INFO - Exchange status: True
+2025-12-12 20:27:01,227 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:27:01,263 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:27:01,298 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:27:01,562 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:27:01,562 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:27:01,562 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:27:01,562 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:27:01,825 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:27:01,826 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:27:01,826 - __main__ - INFO - Fetching fills since 2025-12-13 01:02:59.307458+00:00
+2025-12-12 20:27:02,083 - state_manager - INFO - Processing 1 new fills (skipped 0 duplicates)
+2025-12-12 20:27:02,143 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:27:02,143 - __main__ - INFO - Processed 1 fills
+2025-12-12 20:27:02,143 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:27:02,143 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:80.0 NO:0.0'}
+2025-12-12 20:27:02,210 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 80.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:27:02,471 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:27:02,471 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:27:02,471 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:27:02,512 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:27:02,668 - strategy - INFO - KXPRESPERSON-28-JVAN Order Book: bid=0.010 ask=0.310 mid=0.160 spread=0.300
+2025-12-12 20:27:02,669 - strategy - INFO - KXPRESPERSON-28-JVAN Position: YES=80.0 NO=0.0 net=80.0
+2025-12-12 20:27:02,669 - strategy - INFO - KXPRESPERSON-28-JVAN Skew calculation: net_pos=80.0 → skew=0.0480
+2025-12-12 20:27:02,669 - strategy - INFO - KXPRESPERSON-28-JVAN Target prices (before rounding): bid=0.082 ask=0.142
+2025-12-12 20:27:02,669 - strategy - INFO - KXPRESPERSON-28-JVAN Sizes: bid=-30 ask=-30
+2025-12-12 20:27:02,884 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:27:02,885 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:80.0 NO:0.0'}
+2025-12-12 20:27:07,663 - strategy - INFO - KXPRESPERSON-28-JVAN Order Book: bid=0.010 ask=0.310 mid=0.160 spread=0.300
+2025-12-12 20:27:07,663 - strategy - INFO - KXPRESPERSON-28-JVAN Position: YES=80.0 NO=0.0 net=80.0
+2025-12-12 20:27:07,663 - strategy - INFO - KXPRESPERSON-28-JVAN Skew calculation: net_pos=80.0 → skew=0.0480
+2025-12-12 20:27:07,664 - strategy - INFO - KXPRESPERSON-28-JVAN Target prices (before rounding): bid=0.082 ask=0.142
+2025-12-12 20:27:07,664 - strategy - INFO - KXPRESPERSON-28-JVAN Sizes: bid=-30 ask=-30
+2025-12-12 20:27:07,858 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:31:31,046 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:31:31,180 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:31:31,408 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:31:31,408 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:31:31,754 - __main__ - INFO - Exchange status: True
+2025-12-12 20:31:31,754 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:31:31,785 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:31:31,815 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:31:32,191 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:31:32,191 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:31:32,191 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:31:32,191 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:31:32,341 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:31:32,341 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:31:32,342 - __main__ - INFO - Fetching fills since 2025-12-13 01:02:59.307458+00:00
+2025-12-12 20:31:32,497 - state_manager - INFO - Processing 1 new fills (skipped 0 duplicates)
+2025-12-12 20:31:32,544 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:31:32,544 - __main__ - INFO - Processed 1 fills
+2025-12-12 20:31:32,544 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:31:32,544 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:90.0 NO:0.0'}
+2025-12-12 20:31:32,615 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 90.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:31:32,845 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:31:32,845 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:31:32,845 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:31:32,883 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:31:33,053 - strategy - INFO - KXPRESPERSON-28-JVAN: Spread too narrow (0.020 < 0.060) - NO QUOTE
+2025-12-12 20:31:33,244 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:31:33,244 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:90.0 NO:0.0'}
+2025-12-12 20:38:33,693 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:38:33,737 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:38:33,951 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:38:33,951 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:38:34,228 - __main__ - INFO - Exchange status: True
+2025-12-12 20:38:34,229 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:38:34,257 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:38:34,291 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:38:34,492 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:38:34,492 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:38:34,492 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:38:34,493 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:38:34,660 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:38:34,660 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:38:34,660 - __main__ - INFO - Fetching fills since 2025-12-13 01:02:59.307458+00:00
+2025-12-12 20:38:34,979 - state_manager - INFO - Processing 1 new fills (skipped 0 duplicates)
+2025-12-12 20:38:35,026 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:38:35,026 - __main__ - INFO - Processed 1 fills
+2025-12-12 20:38:35,026 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:38:35,027 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:100.0 NO:0.0'}
+2025-12-12 20:38:35,098 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 100.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:38:35,340 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:38:35,340 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:38:35,340 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:38:35,378 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:38:35,615 - __main__ - ERROR - Error processing market KXMJSCHEDULE-27: 'NoneType' object is not iterable
+2025-12-12 20:38:35,796 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:38:35,796 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:100.0 NO:0.0'}
+2025-12-12 20:38:40,548 - __main__ - ERROR - Error processing market KXMJSCHEDULE-27: 'NoneType' object is not iterable
+2025-12-12 20:38:40,841 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:38:45,553 - __main__ - ERROR - Error processing market KXMJSCHEDULE-27: 'NoneType' object is not iterable
+2025-12-12 20:38:45,712 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:41:11,456 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:41:11,501 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:41:11,740 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:41:11,740 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:41:12,096 - __main__ - INFO - Exchange status: True
+2025-12-12 20:41:12,096 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:41:12,129 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:41:12,163 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:41:12,548 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:41:12,548 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:41:12,548 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:41:12,549 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:41:12,700 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:41:12,700 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:41:12,701 - __main__ - CRITICAL - Fatal error: can't compare offset-naive and offset-aware datetimes
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 350, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 133, in startup
+    if self.state.risk_state.last_fill_timestamp > one_hour_ago:
+TypeError: can't compare offset-naive and offset-aware datetimes
+2025-12-12 20:44:32,112 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:44:32,156 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:44:32,415 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:44:32,416 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:44:32,592 - __main__ - INFO - Exchange status: True
+2025-12-12 20:44:32,592 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:44:32,624 - state_manager - INFO - Loaded 1 positions
+2025-12-12 20:44:32,658 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:44:32,883 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:44:32,883 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:44:32,883 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:44:32,883 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:44:33,116 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:44:33,116 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:44:33,116 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 20:44:33,354 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 20:44:33,401 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:44:33,436 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:44:33,436 - __main__ - INFO - Processed 2 fills
+2025-12-12 20:44:33,436 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:44:33,436 - state_manager - INFO - Saving state: 1 positions - {'KXPRESPERSON-28-JVAN': 'YES:120.0 NO:0.0'}
+2025-12-12 20:44:33,503 - __main__ - INFO - State summary: {'num_positions': 1, 'num_open_orders': 0, 'total_exposure': 120.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:44:33,882 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:44:33,882 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:44:33,882 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:44:33,920 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:44:34,139 - strategy - WARNING - KXMJSCHEDULE-27: Invalid order book (missing bid/ask)
+2025-12-12 20:44:34,409 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:44:34,409 - state_manager - INFO - Saving state: 2 positions - {'KXPRESPERSON-28-JVAN': 'YES:120.0 NO:0.0', 'KXMJSCHEDULE-27': 'YES:0 NO:0'}
+2025-12-12 20:44:39,088 - strategy - WARNING - KXMJSCHEDULE-27: Invalid order book (missing bid/ask)
+2025-12-12 20:44:39,295 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:53:41,052 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:53:41,098 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:53:42,149 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:53:42,149 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:53:42,333 - __main__ - INFO - Exchange status: True
+2025-12-12 20:53:42,333 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:53:42,365 - state_manager - INFO - Loaded 2 positions
+2025-12-12 20:53:42,399 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:53:42,739 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-12 20:53:42,739 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-12 20:53:42,739 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-12 20:53:42,739 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:53:42,898 - exchange_client - INFO - Cancelled 0 orders
+2025-12-12 20:53:42,898 - __main__ - INFO - Cancelled 0 orders
+2025-12-12 20:53:42,899 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 20:53:43,184 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 20:53:43,231 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:53:43,266 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:53:43,266 - __main__ - INFO - Processed 2 fills
+2025-12-12 20:53:43,266 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:53:43,266 - state_manager - INFO - Saving state: 2 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:140.0 NO:0.0'}
+2025-12-12 20:53:43,343 - __main__ - INFO - State summary: {'num_positions': 2, 'num_open_orders': 0, 'total_exposure': 140.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:53:43,634 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:53:43,634 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:53:43,634 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:53:43,672 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0 NO=0 net=0
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0 → skew=0.0000
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 20:53:43,865 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33 (NO price: 0.67)
+2025-12-12 20:53:44,171 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: 50f5acd6-6112-44b8-9fec-e3b5c206bde1
+2025-12-12 20:53:44,482 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.67 - ID: b61115e5-1de5-46e0-b51b-293286c0b0ec
+2025-12-12 20:53:44,677 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:53:44,677 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:140.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0 NO:0'}
+2025-12-12 20:53:48,729 - __main__ - INFO - Received shutdown signal
+2025-12-12 20:53:48,729 - __main__ - INFO - Shutting down...
+2025-12-12 20:53:48,730 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:140.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0 NO:0'}
+2025-12-12 20:53:48,801 - __main__ - INFO - Shutdown complete
+2025-12-12 20:57:37,183 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 20:57:37,228 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 20:57:37,447 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 20:57:37,447 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 20:57:37,714 - __main__ - INFO - Exchange status: True
+2025-12-12 20:57:37,714 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 20:57:37,750 - state_manager - INFO - Loaded 3 positions
+2025-12-12 20:57:37,784 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 20:57:38,024 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-12 20:57:38,024 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-12 20:57:38,024 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-12 20:57:38,024 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 20:57:38,588 - exchange_client - INFO - Cancelled order: b61115e5-1de5-46e0-b51b-293286c0b0ec
+2025-12-12 20:57:38,871 - exchange_client - INFO - Cancelled order: 50f5acd6-6112-44b8-9fec-e3b5c206bde1
+2025-12-12 20:57:38,971 - exchange_client - INFO - Cancelled 2 orders
+2025-12-12 20:57:38,971 - __main__ - INFO - Cancelled 2 orders
+2025-12-12 20:57:38,971 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 20:57:39,161 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 20:57:39,213 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:57:39,251 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 20:57:39,251 - __main__ - INFO - Processed 2 fills
+2025-12-12 20:57:39,251 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 20:57:39,251 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:160.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 20:57:39,321 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 160.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 20:57:39,590 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 20:57:39,590 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 20:57:39,590 - __main__ - INFO - Starting main event loop...
+2025-12-12 20:57:39,635 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 20:57:39,851 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33 (NO price: 0.67)
+2025-12-12 20:57:40,137 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: b94171b4-de79-437d-a365-e0df3e7badde
+2025-12-12 20:57:40,437 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.67 - ID: 6643a42f-e8c2-492e-afae-f13a63553947
+2025-12-12 20:57:40,603 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 20:57:40,603 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:160.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.500 mid=0.385 spread=0.230
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.355 ask=0.415
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.36
+2025-12-12 20:57:44,795 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.42 (NO price: 0.58)
+2025-12-12 20:57:44,835 - __main__ - INFO - Cancelling order: BID 10@0.27 (target now 0.36, diff=0.090)
+2025-12-12 20:57:44,835 - __main__ - INFO - Cancelling order: ASK 10@0.67 (target now 0.58, diff=0.090)
+2025-12-12 20:57:44,998 - exchange_client - INFO - Cancelled order: b94171b4-de79-437d-a365-e0df3e7badde
+2025-12-12 20:57:45,211 - exchange_client - INFO - Cancelled order: 6643a42f-e8c2-492e-afae-f13a63553947
+2025-12-12 20:57:45,571 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.36 - ID: 4177cc16-eb30-4b3c-93fc-04fa85e739a0
+2025-12-12 20:57:45,830 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.58 - ID: 83d99741-03c0-4b11-b0b2-a34ee0fe573c
+2025-12-12 20:57:46,115 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:10:21,543 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 21:10:21,588 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 21:10:21,785 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 21:10:21,786 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 21:10:22,029 - __main__ - INFO - Exchange status: True
+2025-12-12 21:10:22,029 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 21:10:22,065 - state_manager - INFO - Loaded 3 positions
+2025-12-12 21:10:22,102 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 21:10:22,424 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-12 21:10:22,425 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-12 21:10:22,425 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-12 21:10:22,425 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 21:10:22,875 - exchange_client - INFO - Cancelled order: 83d99741-03c0-4b11-b0b2-a34ee0fe573c
+2025-12-12 21:10:23,336 - exchange_client - INFO - Cancelled order: 4177cc16-eb30-4b3c-93fc-04fa85e739a0
+2025-12-12 21:10:23,437 - exchange_client - INFO - Cancelled 2 orders
+2025-12-12 21:10:23,437 - __main__ - INFO - Cancelled 2 orders
+2025-12-12 21:10:23,437 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 21:10:23,600 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 21:10:23,685 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:10:23,759 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:10:23,759 - __main__ - INFO - Processed 2 fills
+2025-12-12 21:10:23,760 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 21:10:23,760 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:180.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:10:23,820 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 180.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 21:10:24,036 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 21:10:24,036 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 21:10:24,036 - __main__ - INFO - Starting main event loop...
+2025-12-12 21:10:24,076 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 21:10:24,356 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-12 21:10:24,356 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:10:24,356 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:10:24,356 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 21:10:24,356 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:10:24,357 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 21:10:24,357 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-12 21:10:24,569 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: e0d46900-038e-4a2b-b3fe-df9436662d47
+2025-12-12 21:10:24,733 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.33 - ID: da1ba092-5d6d-4137-b29d-c10a7ca21012
+2025-12-12 21:10:24,909 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:10:24,909 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:180.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.670 mid=0.470 spread=0.400
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.440 ask=0.500
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.44
+2025-12-12 21:10:29,253 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.50
+2025-12-12 21:10:29,288 - __main__ - INFO - Cancelling order: BID 10@0.27 (target now 0.44, diff=0.170)
+2025-12-12 21:10:29,288 - __main__ - INFO - Cancelling order: ASK 10@0.33 (target now 0.50, diff=0.170)
+2025-12-12 21:10:29,461 - exchange_client - INFO - Cancelled order: e0d46900-038e-4a2b-b3fe-df9436662d47
+2025-12-12 21:10:29,629 - exchange_client - INFO - Cancelled order: da1ba092-5d6d-4137-b29d-c10a7ca21012
+2025-12-12 21:10:29,897 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.44 - ID: 5dbe3a19-20be-41cf-8c7d-e0837f99cd13
+2025-12-12 21:10:30,040 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.50 - ID: 050fa643-44da-49f8-88c4-e305c0209a34
+2025-12-12 21:10:30,211 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.440 ask=0.500 mid=0.470 spread=0.060
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.440 ask=0.500
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.44
+2025-12-12 21:10:34,228 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.50
+2025-12-12 21:10:34,287 - __main__ - INFO - Received shutdown signal
+2025-12-12 21:10:34,287 - __main__ - INFO - Shutting down...
+2025-12-12 21:10:34,287 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:180.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:10:34,353 - __main__ - INFO - Shutdown complete
+2025-12-12 21:15:39,143 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 21:15:39,280 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 21:15:39,476 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 21:15:39,476 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 21:15:39,842 - __main__ - INFO - Exchange status: True
+2025-12-12 21:15:39,843 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 21:15:39,870 - state_manager - INFO - Loaded 3 positions
+2025-12-12 21:15:39,900 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 21:15:40,292 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-12 21:15:40,293 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-12 21:15:40,293 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-12 21:15:40,293 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 21:15:40,876 - exchange_client - INFO - Cancelled order: 050fa643-44da-49f8-88c4-e305c0209a34
+2025-12-12 21:15:41,273 - exchange_client - INFO - Cancelled order: 5dbe3a19-20be-41cf-8c7d-e0837f99cd13
+2025-12-12 21:15:41,373 - exchange_client - INFO - Cancelled 2 orders
+2025-12-12 21:15:41,374 - __main__ - INFO - Cancelled 2 orders
+2025-12-12 21:15:41,374 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 21:15:41,565 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 21:15:41,623 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:15:41,696 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:15:41,696 - __main__ - INFO - Processed 2 fills
+2025-12-12 21:15:41,696 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 21:15:41,696 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:200.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:15:41,761 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 200.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 21:15:42,018 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 21:15:42,018 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 21:15:42,018 - __main__ - INFO - Starting main event loop...
+2025-12-12 21:15:42,059 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 21:15:42,302 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-12 21:15:42,630 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: afc55ce5-f563-4328-8bfb-930fff684026
+2025-12-12 21:15:42,817 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.33 - ID: 5e07597d-84af-42ed-8e9b-04323c88e52e
+2025-12-12 21:15:42,997 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:15:42,997 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:200.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:15:48,097 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.330 mid=0.300 spread=0.060
+2025-12-12 21:15:48,097 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:15:48,097 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:15:48,097 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 21:15:48,097 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:15:48,098 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 21:15:48,098 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-12 21:15:48,299 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:18:00,396 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 21:18:00,531 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 21:18:00,743 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 21:18:00,743 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 21:18:01,095 - __main__ - INFO - Exchange status: True
+2025-12-12 21:18:01,095 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 21:18:01,131 - state_manager - INFO - Loaded 3 positions
+2025-12-12 21:18:01,168 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 21:18:01,451 - __main__ - CRITICAL - Fatal error: Invalid isoformat string: '2025-12-13T02:15:43.42496+00:00'
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 356, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 113, in startup
+    exchange_orders = self.exchange.get_open_orders()
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 191, in get_open_orders
+    return self._retry_request(_fetch)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 52, in _retry_request
+    return func(*args, **kwargs)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 185, in _fetch
+    created_at=datetime.fromisoformat(order_data.get('created_time', '').replace('Z', '+00:00')),
+ValueError: Invalid isoformat string: '2025-12-13T02:15:43.42496+00:00'
+2025-12-12 21:19:33,107 - __main__ - INFO - Initializing Dora Bot...
+2025-12-12 21:19:33,153 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-12 21:19:33,358 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-12 21:19:33,358 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-12 21:19:33,646 - __main__ - INFO - Exchange status: True
+2025-12-12 21:19:33,646 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-12 21:19:33,682 - state_manager - INFO - Loaded 3 positions
+2025-12-12 21:19:33,718 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-12 21:19:34,110 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-12 21:19:34,110 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-12 21:19:34,110 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-12 21:19:34,110 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-12 21:19:34,666 - exchange_client - INFO - Cancelled order: 5e07597d-84af-42ed-8e9b-04323c88e52e
+2025-12-12 21:19:34,965 - exchange_client - INFO - Cancelled order: afc55ce5-f563-4328-8bfb-930fff684026
+2025-12-12 21:19:35,066 - exchange_client - INFO - Cancelled 2 orders
+2025-12-12 21:19:35,066 - __main__ - INFO - Cancelled 2 orders
+2025-12-12 21:19:35,067 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-12 21:19:35,232 - state_manager - INFO - Processing 2 new fills (skipped 0 duplicates)
+2025-12-12 21:19:35,281 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:19:35,344 - state_manager - INFO - Fill processed: KXPRESPERSON-28-JVAN yes 10@0.30, PnL delta: 0.00
+2025-12-12 21:19:35,344 - __main__ - INFO - Processed 2 fills
+2025-12-12 21:19:35,344 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-12 21:19:35,344 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:19:35,405 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-12 21:19:35,689 - __main__ - INFO - Account balance: $42.70, Payout: $0.00, Total: $42.70
+2025-12-12 21:19:35,689 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-12 21:19:35,689 - __main__ - INFO - Starting main event loop...
+2025-12-12 21:19:35,728 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-12 21:19:36,739 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-12 21:19:36,739 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:19:36,740 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:19:36,740 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-12 21:19:36,740 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:19:36,740 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-12 21:19:36,740 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-12 21:19:36,965 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: 946b90c3-a12e-4bfb-a5a0-f43741549422
+2025-12-12 21:19:37,283 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.33 - ID: 57319f9a-667b-4e5c-97df-edb17c902b80
+2025-12-12 21:19:37,446 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:19:37,446 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:19:40,907 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.500 mid=0.385 spread=0.230
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.355 ask=0.415
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.36
+2025-12-12 21:19:40,908 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.42
+2025-12-12 21:19:40,942 - __main__ - INFO - Cancelling order: BID 10@0.27 (target now 0.36, diff=0.090)
+2025-12-12 21:19:40,942 - __main__ - INFO - Cancelling order: ASK 10@0.33 (target now 0.42, diff=0.090)
+2025-12-12 21:19:41,093 - exchange_client - INFO - Cancelled order: 946b90c3-a12e-4bfb-a5a0-f43741549422
+2025-12-12 21:19:41,241 - exchange_client - INFO - Cancelled order: 57319f9a-667b-4e5c-97df-edb17c902b80
+2025-12-12 21:19:41,409 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.36 - ID: 3471b8d3-4017-4927-9ba4-62ecb78d1ee7
+2025-12-12 21:19:41,594 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.42 - ID: 665ab484-5073-41bb-a5da-f4375dadd784
+2025-12-12 21:19:41,748 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-12 21:19:45,824 - __main__ - INFO - Received shutdown signal
+2025-12-12 21:19:45,825 - __main__ - INFO - Shutting down...
+2025-12-12 21:19:45,825 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-12 21:19:45,891 - __main__ - INFO - Shutdown complete

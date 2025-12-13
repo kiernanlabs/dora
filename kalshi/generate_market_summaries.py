@@ -339,6 +339,7 @@ def main():
     parser.add_argument('--output', type=str, default='market_summaries.csv', help='Output CSV path.')
     parser.add_argument('--include-info-risk', action='store_true', help='Call OpenAI for information risk per market.')
     parser.add_argument('--max-markets', type=int, default=0, help='Maximum number of markets to process (0 = no limit).')
+    parser.add_argument('--batch-size', type=int, default=100, help='Write progress to CSV after this many new markets.')
     args = parser.parse_args()
 
     use_demo = not args.prod
@@ -367,17 +368,9 @@ def main():
     rows = []
     processed_markets = 0
     skipped_markets = 0
-    total_markets = 0
-
-    # Precompute total market count (raw)
-    for event in events:
-        event_ticker = event.get('ticker') or event.get('event_ticker')
-        if not event_ticker:
-            continue
-        total_markets += len(fetch_markets_for_event(service, event_ticker=event_ticker, status="open"))
-
+    total_events = len(events)
     if existing_keys:
-        print(f"Total markets (raw): {total_markets}; previously processed: {len(existing_keys)}")
+        print(f"Previously processed markets: {len(existing_keys)}")
     for event in events:
         event_ticker = event.get('ticker') or event.get('event_ticker')
         event_title = event.get('title')
@@ -417,8 +410,17 @@ def main():
 
             processed_markets += 1
             current_index = processed_markets + skipped_markets
-            total = total_markets if total_markets else "?"
-            print(f"Processed {current_index}/{total} markets ({processed_markets} new, {skipped_markets} skipped)")
+            print(f"Processed {current_index} markets so far ({processed_markets} new, {skipped_markets} skipped) across {total_events} events")
+
+            # Batch write progress
+            if args.batch_size > 0 and processed_markets % args.batch_size == 0:
+                temp_new_df = pd.DataFrame(rows) if rows else pd.DataFrame()
+                if existing_df is not None:
+                    combined_df = pd.concat([existing_df, temp_new_df], ignore_index=True) if not temp_new_df.empty else existing_df
+                else:
+                    combined_df = temp_new_df
+                combined_df.to_csv(args.output, index=False)
+                print(f"Checkpoint: wrote progress through {processed_markets} new markets to {args.output}")
             if max_markets and processed_markets >= max_markets:
                 print(f"Reached max markets limit ({max_markets}); stopping early.")
                 break
