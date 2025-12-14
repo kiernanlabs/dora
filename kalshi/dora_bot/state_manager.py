@@ -116,14 +116,14 @@ class StateManager:
             fills: List of fills to process
         """
         if not fills:
-            return
+            return 0
 
         # Filter out fills we've already processed
         new_fills = [f for f in fills if f.fill_id not in self.logged_fills]
 
         if not new_fills:
             logger.debug(f"Skipping {len(fills)} already-processed fills")
-            return
+            return 0
 
         logger.info(f"Processing {len(new_fills)} new fills (skipped {len(fills) - len(new_fills)} duplicates)")
 
@@ -164,6 +164,8 @@ class StateManager:
             self.logged_fills.add(fill.fill_id)
 
             logger.info(f"Fill processed: {fill.market_id} {fill.side} {fill.size}@{fill.price:.2f}, PnL delta: {pnl_delta:.2f}")
+        
+        return len(new_fills)
 
     def get_inventory(self, market_id: str) -> Position:
         """Get position for a market.

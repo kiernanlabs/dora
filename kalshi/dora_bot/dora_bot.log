@@ -2017,3 +2017,385 @@ requests.exceptions.HTTPError: 502 Server Error: Bad Gateway for url: https://de
 2025-12-13 18:54:13,283 - __main__ - INFO - Shutting down...
 2025-12-13 18:54:13,283 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
 2025-12-13 18:54:13,350 - __main__ - INFO - Shutdown complete
+2025-12-13 19:04:52,708 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 19:04:52,759 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 19:04:52,940 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 19:04:52,940 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 19:04:53,199 - __main__ - INFO - Exchange status: True
+2025-12-13 19:04:53,199 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 19:04:53,232 - state_manager - INFO - Loaded 4 positions
+2025-12-13 19:04:53,267 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 19:04:53,309 - dynamo - INFO - Loaded 4 fill IDs from trade log
+2025-12-13 19:04:53,309 - state_manager - INFO - Loaded 4 logged fill IDs
+2025-12-13 19:04:53,784 - __main__ - INFO - Found 1 open orders on exchange
+2025-12-13 19:04:53,784 - state_manager - INFO - Reconciling state with 1 exchange orders
+2025-12-13 19:04:53,784 - state_manager - INFO - State reconciled: 1 open orders
+2025-12-13 19:04:53,784 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 19:04:54,384 - exchange_client - INFO - Cancelled order: 4e00ad1d-6109-467d-9289-ceeaa2c617a3
+2025-12-13 19:04:54,484 - exchange_client - INFO - Cancelled 1 orders
+2025-12-13 19:04:54,484 - __main__ - INFO - Cancelled 1 orders
+2025-12-13 19:04:54,484 - __main__ - INFO - Fetching fills from 2025-12-12 23:27:11.030189+00:00 (24hrs before last fill) to now
+2025-12-13 19:04:54,969 - __main__ - INFO - Processed 4 fills
+2025-12-13 19:04:54,969 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 19:04:54,969 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:04:55,044 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 230.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T23:27:11.030189+00:00'}
+2025-12-13 19:04:55,211 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 19:04:56,341 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 19:04:58,421 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 19:04:58,421 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 19:04:58,421 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 19:04:58,421 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 19:04:58,421 - __main__ - INFO - Starting main event loop...
+2025-12-13 19:04:58,457 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:04:58,794 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:04:58,794 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:04:58,794 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:04:58,795 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:04:58,795 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:04:58,795 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:04:58,795 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:04:59,021 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.42 - ID: bcb6cea8-884e-4c2f-88ce-616a19d5d217
+2025-12-13 19:04:59,192 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:04:59,192 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:05:03,886 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:03,886 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:03,887 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:03,887 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:03,887 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:03,887 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:03,887 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:04,073 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:08,846 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:08,847 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:09,034 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:13,914 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:13,915 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:14,112 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:18,975 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:18,975 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:18,976 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:18,976 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:18,976 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:18,976 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:18,976 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:19,248 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:24,909 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:24,910 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:25,114 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:29,724 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:29,724 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:29,908 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:34,743 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:34,744 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:34,952 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:39,760 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:39,760 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:39,760 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:39,760 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:39,760 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:39,761 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:39,761 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:39,965 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 19:05:44,789 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:44,789 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:44,789 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 19:05:44,789 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 19:05:44,789 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 19:05:44,789 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 19:05:44,790 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 19:05:44,986 - state_manager - INFO - Processing 1 new fills (skipped 1 duplicates)
+2025-12-13 19:05:45,055 - state_manager - INFO - Fill processed: KXMICHCOACH-26-JFIS yes 5@0.42, PnL delta: -4.20
+2025-12-13 19:05:45,056 - __main__ - INFO - Processed 2 new fills, Daily PnL: $-4.20
+2025-12-13 19:05:49,438 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:05:49,791 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:05:49,791 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:49,791 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:05:49,792 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:05:49,792 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:05:49,792 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:05:49,792 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:05:49,792 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:05:49,829 - __main__ - INFO - Cancelling order: BID 10@0.42 (target now 0.39, diff=0.030)
+2025-12-13 19:05:50,131 - exchange_client - INFO - Cancelled order: bcb6cea8-884e-4c2f-88ce-616a19d5d217
+2025-12-13 19:05:50,444 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: 357f6a82-de4a-4bd9-b2c1-2ff5e1e86274
+2025-12-13 19:05:50,626 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 5@0.45 - ID: 5b12974c-92c1-45b6-94c9-36d2a6e55c5a
+2025-12-13 19:05:50,793 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:05:50,793 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:05:55,720 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 25)] (converted from no_bids=[[55, 25]])
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:05:55,721 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:05:55,918 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:05:59,734 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 25)] (converted from no_bids=[[55, 25]])
+2025-12-13 19:05:59,734 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:05:59,734 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:05:59,734 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:05:59,734 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:05:59,735 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:05:59,735 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:05:59,735 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:05:59,945 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:06:04,746 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 25)] (converted from no_bids=[[55, 25]])
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:06:04,746 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:06:04,747 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:06:04,953 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:09:12,377 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 19:09:12,425 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 19:09:12,617 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 19:09:12,617 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 19:09:12,825 - __main__ - INFO - Exchange status: True
+2025-12-13 19:09:12,825 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 19:09:12,860 - state_manager - INFO - Loaded 4 positions
+2025-12-13 19:09:12,895 - state_manager - INFO - Loaded risk state: daily_pnl=-4.20, halted=False
+2025-12-13 19:09:12,939 - dynamo - INFO - Loaded 5 fill IDs from trade log
+2025-12-13 19:09:12,939 - state_manager - INFO - Loaded 5 logged fill IDs
+2025-12-13 19:09:13,326 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 19:09:13,327 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 19:09:13,327 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 19:09:13,327 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 19:09:14,856 - exchange_client - INFO - Cancelled order: 5b12974c-92c1-45b6-94c9-36d2a6e55c5a
+2025-12-13 19:09:15,172 - exchange_client - INFO - Cancelled order: 357f6a82-de4a-4bd9-b2c1-2ff5e1e86274
+2025-12-13 19:09:15,272 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 19:09:15,272 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 19:09:15,272 - __main__ - INFO - Fetching fills from 2025-12-13 00:05:41.114441+00:00 (24hrs before last fill) to now
+2025-12-13 19:09:15,448 - __main__ - INFO - Processed 5 fills
+2025-12-13 19:09:15,448 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 19:09:15,448 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:09:15,522 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 225.0, 'daily_pnl': -4.2, 'trading_halted': False, 'last_fill': '2025-12-14T00:05:41.114441+00:00'}
+2025-12-13 19:09:15,684 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 19:09:16,780 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 19:09:18,889 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 19:09:18,889 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 19:09:18,889 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 19:09:18,889 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 19:09:18,889 - __main__ - INFO - Starting main event loop...
+2025-12-13 19:09:18,927 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:09:19,295 - exchange_client - INFO - logging current orders: []
+2025-12-13 19:09:19,296 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:09:19,296 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:09:19,608 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: 35877b96-4a47-41d3-bdc3-b43083913f14
+2025-12-13 19:09:19,760 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 5@0.45 - ID: 2c808ff7-fc2f-4367-9961-2a33c45e2a50
+2025-12-13 19:09:20,081 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:09:20,081 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:09:33,492 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 19:09:33,538 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 19:09:33,727 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 19:09:33,728 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 19:09:33,927 - __main__ - INFO - Exchange status: True
+2025-12-13 19:09:33,927 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 19:09:33,960 - state_manager - INFO - Loaded 4 positions
+2025-12-13 19:09:33,994 - state_manager - INFO - Loaded risk state: daily_pnl=-4.20, halted=False
+2025-12-13 19:09:34,037 - dynamo - INFO - Loaded 5 fill IDs from trade log
+2025-12-13 19:09:34,037 - state_manager - INFO - Loaded 5 logged fill IDs
+2025-12-13 19:09:34,395 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 19:09:34,395 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 19:09:34,395 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 19:09:34,395 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 19:09:34,854 - exchange_client - INFO - Cancelled order: 2c808ff7-fc2f-4367-9961-2a33c45e2a50
+2025-12-13 19:09:35,253 - exchange_client - INFO - Cancelled order: 35877b96-4a47-41d3-bdc3-b43083913f14
+2025-12-13 19:09:35,353 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 19:09:35,354 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 19:09:35,354 - __main__ - INFO - Fetching fills from 2025-12-13 00:05:41.114441+00:00 (24hrs before last fill) to now
+2025-12-13 19:09:35,651 - __main__ - INFO - Processed 5 fills
+2025-12-13 19:09:35,651 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 19:09:35,651 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:09:35,720 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 225.0, 'daily_pnl': -4.2, 'trading_halted': False, 'last_fill': '2025-12-14T00:05:41.114441+00:00'}
+2025-12-13 19:09:35,886 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 19:09:36,999 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 19:09:39,093 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 19:09:39,093 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 19:09:39,093 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 19:09:39,093 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 19:09:39,093 - __main__ - INFO - Starting main event loop...
+2025-12-13 19:09:39,131 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:09:39,477 - exchange_client - INFO - logging current orders: []
+2025-12-13 19:09:39,477 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:09:39,477 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:09:39,477 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:09:39,478 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:09:39,478 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:09:39,478 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:09:39,478 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:09:39,478 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:09:39,673 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: deda927b-7e8c-4679-8c32-cb1be9506ae5
+2025-12-13 19:09:39,844 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 5@0.45 - ID: 4c555b61-fea0-4ba5-80d7-20d629aa4e27
+2025-12-13 19:09:40,116 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:09:40,116 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:09:44,667 - exchange_client - INFO - logging current orders: [Order(order_id='4c555b61-fea0-4ba5-80d7-20d629aa4e27', market_id='KXMICHCOACH-26-JFIS', side='no', price=0.45, size=5, filled_size=-5, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 9, 40, 594469, tzinfo=datetime.timezone.utc), tif='gtc'), Order(order_id='deda927b-7e8c-4679-8c32-cb1be9506ae5', market_id='KXMICHCOACH-26-JFIS', side='yes', price=0.39, size=10, filled_size=-10, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 9, 40, 419897, tzinfo=datetime.timezone.utc), tif='gtc')]
+2025-12-13 19:09:44,667 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 25)] (converted from no_bids=[[55, 25]])
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:09:44,668 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:09:44,860 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:09:50,665 - exchange_client - INFO - logging current orders: [Order(order_id='4c555b61-fea0-4ba5-80d7-20d629aa4e27', market_id='KXMICHCOACH-26-JFIS', side='no', price=0.45, size=5, filled_size=-5, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 9, 40, 594469, tzinfo=datetime.timezone.utc), tif='gtc'), Order(order_id='deda927b-7e8c-4679-8c32-cb1be9506ae5', market_id='KXMICHCOACH-26-JFIS', side='yes', price=0.39, size=10, filled_size=-10, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 9, 40, 419897, tzinfo=datetime.timezone.utc), tif='gtc')]
+2025-12-13 19:09:50,665 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 25)] (converted from no_bids=[[55, 25]])
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:09:50,665 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:09:50,902 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:12:12,998 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 19:12:13,134 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 19:12:13,331 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 19:12:13,331 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 19:12:13,666 - __main__ - INFO - Exchange status: True
+2025-12-13 19:12:13,667 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 19:12:13,700 - state_manager - INFO - Loaded 4 positions
+2025-12-13 19:12:13,731 - state_manager - INFO - Loaded risk state: daily_pnl=-4.20, halted=False
+2025-12-13 19:12:13,771 - dynamo - INFO - Loaded 5 fill IDs from trade log
+2025-12-13 19:12:13,771 - state_manager - INFO - Loaded 5 logged fill IDs
+2025-12-13 19:12:14,141 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 19:12:14,141 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 19:12:14,141 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 19:12:14,141 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 19:12:14,629 - exchange_client - INFO - Cancelled order: 4c555b61-fea0-4ba5-80d7-20d629aa4e27
+2025-12-13 19:12:14,876 - exchange_client - INFO - Cancelled order: deda927b-7e8c-4679-8c32-cb1be9506ae5
+2025-12-13 19:12:14,977 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 19:12:14,977 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 19:12:14,977 - __main__ - INFO - Fetching fills from 2025-12-13 00:05:41.114441+00:00 (24hrs before last fill) to now
+2025-12-13 19:12:15,122 - __main__ - INFO - Processed 5 fills
+2025-12-13 19:12:15,122 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 19:12:15,122 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:12:15,194 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 225.0, 'daily_pnl': -4.2, 'trading_halted': False, 'last_fill': '2025-12-14T00:05:41.114441+00:00'}
+2025-12-13 19:12:15,381 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 19:12:16,481 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 19:12:18,567 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 19:12:18,567 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 19:12:18,567 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 19:12:18,567 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 19:12:18,567 - __main__ - INFO - Starting main event loop...
+2025-12-13 19:12:18,606 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:12:19,124 - exchange_client - INFO - logging current orders: []
+2025-12-13 19:12:19,124 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:12:19,125 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:12:19,460 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: c16e9296-4768-4b60-b12d-15554c62f409
+2025-12-13 19:12:19,611 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 5@0.45 - ID: 257aa41e-72ab-4ecb-b270-61b9dc460828
+2025-12-13 19:12:19,796 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:12:19,796 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:12:23,913 - exchange_client - INFO - logging current orders: [Order(order_id='257aa41e-72ab-4ecb-b270-61b9dc460828', market_id='KXMICHCOACH-26-JFIS', side='no', price=0.45, size=5, filled_size=-5, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 20, 121068, tzinfo=datetime.timezone.utc), tif='gtc'), Order(order_id='c16e9296-4768-4b60-b12d-15554c62f409', market_id='KXMICHCOACH-26-JFIS', side='yes', price=0.39, size=10, filled_size=-10, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 19, 965140, tzinfo=datetime.timezone.utc), tif='gtc')]
+2025-12-13 19:12:23,914 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:12:23,914 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:12:24,125 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:12:28,971 - exchange_client - INFO - logging current orders: [Order(order_id='257aa41e-72ab-4ecb-b270-61b9dc460828', market_id='KXMICHCOACH-26-JFIS', side='no', price=0.45, size=5, filled_size=-5, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 20, 121068, tzinfo=datetime.timezone.utc), tif='gtc'), Order(order_id='c16e9296-4768-4b60-b12d-15554c62f409', market_id='KXMICHCOACH-26-JFIS', side='yes', price=0.39, size=10, filled_size=-10, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 19, 965140, tzinfo=datetime.timezone.utc), tif='gtc')]
+2025-12-13 19:12:28,971 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:12:28,971 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:12:28,971 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:12:28,971 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:12:28,971 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:12:28,972 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:12:28,972 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:12:28,972 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:12:29,170 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:12:34,870 - exchange_client - INFO - logging current orders: [Order(order_id='257aa41e-72ab-4ecb-b270-61b9dc460828', market_id='KXMICHCOACH-26-JFIS', side='no', price=0.45, size=5, filled_size=-5, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 20, 121068, tzinfo=datetime.timezone.utc), tif='gtc'), Order(order_id='c16e9296-4768-4b60-b12d-15554c62f409', market_id='KXMICHCOACH-26-JFIS', side='yes', price=0.39, size=10, filled_size=-10, status='resting', created_at=datetime.datetime(2025, 12, 14, 0, 12, 19, 965140, tzinfo=datetime.timezone.utc), tif='gtc')]
+2025-12-13 19:12:34,870 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:12:34,870 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:12:35,088 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:20:55,520 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 19:20:55,565 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 19:20:55,748 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 19:20:55,748 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 19:20:55,986 - __main__ - INFO - Exchange status: True
+2025-12-13 19:20:55,987 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 19:20:56,015 - state_manager - INFO - Loaded 4 positions
+2025-12-13 19:20:56,045 - state_manager - INFO - Loaded risk state: daily_pnl=-4.20, halted=False
+2025-12-13 19:20:56,088 - dynamo - INFO - Loaded 5 fill IDs from trade log
+2025-12-13 19:20:56,088 - state_manager - INFO - Loaded 5 logged fill IDs
+2025-12-13 19:20:56,378 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 19:20:56,378 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 19:20:56,378 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 19:20:56,378 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 19:20:57,010 - exchange_client - INFO - Cancelled order: 257aa41e-72ab-4ecb-b270-61b9dc460828
+2025-12-13 19:20:57,526 - exchange_client - INFO - Cancelled order: c16e9296-4768-4b60-b12d-15554c62f409
+2025-12-13 19:20:57,626 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 19:20:57,627 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 19:20:57,627 - __main__ - INFO - Fetching fills from 2025-12-13 00:05:41.114441+00:00 (24hrs before last fill) to now
+2025-12-13 19:20:57,919 - __main__ - INFO - Processed 5 fills
+2025-12-13 19:20:57,920 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 19:20:57,920 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 19:20:57,999 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 225.0, 'daily_pnl': -4.2, 'trading_halted': False, 'last_fill': '2025-12-14T00:05:41.114441+00:00'}
+2025-12-13 19:20:58,237 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 19:20:59,355 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 19:21:01,461 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 19:21:01,461 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 19:21:01,461 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 19:21:01,461 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 19:21:01,461 - __main__ - INFO - Starting main event loop...
+2025-12-13 19:21:01,500 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 19:21:01,879 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 19:21:01,879 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 19:21:01,879 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 19:21:01,879 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0300
+2025-12-13 19:21:01,879 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.390 ask=0.450
+2025-12-13 19:21:01,879 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=5
+2025-12-13 19:21:01,880 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 19:21:01,880 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 5@0.45
+2025-12-13 19:21:02,093 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: 3178528d-8cb5-4add-ac43-57fb43fd8a39
+2025-12-13 19:21:02,244 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 5@0.45 - ID: 05777b4a-d1b1-4913-b7eb-8b0644532fca
+2025-12-13 19:21:02,244 - __main__ - INFO - getting fills prior to: 2025-12-14 00:05:41.114441+00:00
+2025-12-13 19:21:02,396 - __main__ - INFO - Processed 1 new fills, Daily PnL: $-4.20
+2025-12-13 19:21:02,397 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}

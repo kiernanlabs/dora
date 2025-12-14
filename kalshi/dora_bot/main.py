@@ -185,8 +185,8 @@ class DoraBot:
                 # Process fills
                 fills = self.exchange.get_fills(since=self.state.risk_state.last_fill_timestamp)
                 if fills:
-                    self.state.update_from_fills(fills)
-                    logger.info(f"Processed {len(fills)} new fills, Daily PnL: ${self.state.risk_state.daily_pnl:.2f}")
+                    new_fills = self.state.update_from_fills(fills)
+                    logger.info(f"Processed {len(new_fills)} new fills, Daily PnL: ${self.state.risk_state.daily_pnl:.2f}")
 
                 # Periodic state persistence (every 10 loops)
                 if self.loop_count % 10 == 0:

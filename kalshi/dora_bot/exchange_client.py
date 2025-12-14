@@ -110,11 +110,12 @@ class KalshiExchangeClient:
 
         raise last_error
 
-    def get_order_book(self, market_id: str) -> OrderBook:
+    def get_order_book(self, market_id: str, exclude_own_orders: bool = True) -> OrderBook:
         """Fetch order book for a market.
 
         Args:
             market_id: Market ticker symbol
+            exclude_own_orders: If True, filter out the bot's own orders from the order book
 
         Returns:
             OrderBook object with current market state
@@ -128,6 +129,43 @@ class KalshiExchangeClient:
             # 'no' array = NO bids (people buying NO at a NO price)
             yes_bids_raw = orderbook_data.get('yes', [])
             no_bids_raw = orderbook_data.get('no', [])
+
+            # Get bot's own orders to filter them out
+            own_orders_by_price = {'yes': {}, 'no': {}}
+            if exclude_own_orders:
+                try:
+                    own_orders = self.get_open_orders(market_id=market_id)
+                    for order in own_orders:
+                        # Group by side and price (in cents)
+                        price_cents = int(order.price * 100)
+                        if order.side in own_orders_by_price:
+                            if price_cents not in own_orders_by_price[order.side]:
+                                own_orders_by_price[order.side][price_cents] = 0
+                            own_orders_by_price[order.side][price_cents] += order.size
+                except Exception as e:
+                    logger.warning(f"Failed to fetch own orders for filtering, using full order book: {e}")
+
+                logger.debug(f"logging current orders: {own_orders}")
+
+            # Filter out bot's own YES bids
+            yes_bids_filtered = []
+            for price_cents, size in yes_bids_raw:
+                own_size = own_orders_by_price['yes'].get(price_cents, 0)
+                remaining_size = size - own_size
+                if remaining_size > 0:
+                    yes_bids_filtered.append([price_cents, remaining_size])
+
+            # Filter out bot's own NO bids
+            no_bids_filtered = []
+            for price_cents, size in no_bids_raw:
+                own_size = own_orders_by_price['no'].get(100-price_cents, 0)
+                remaining_size = size - own_size
+                if remaining_size > 0:
+                    no_bids_filtered.append([price_cents, remaining_size])
+
+            # Use filtered data
+            yes_bids_raw = yes_bids_filtered
+            no_bids_raw = no_bids_filtered
 
             # Convert NO bids to YES asks immediately
             # If someone bids X cents for NO, they're effectively asking (100-X) cents for YES
