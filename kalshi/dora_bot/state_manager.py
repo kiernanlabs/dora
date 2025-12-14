@@ -45,6 +45,10 @@ class StateManager:
             # Load positions
             self.positions = self.dynamo.get_positions()
             logger.info(f"Loaded {len(self.positions)} positions")
+            if self.positions:
+                logger.info("Positions loaded:")
+                for market_id, position in self.positions.items():
+                    logger.info(f"  {market_id}: net_yes={position.net_yes_qty}, realized_pnl={position.realized_pnl:.2f}")
 
             # Load risk state
             self.risk_state = self.dynamo.get_risk_state()
@@ -70,7 +74,7 @@ class StateManager:
         try:
             # Log what we're saving
             if self.positions:
-                pos_summary = {mid: f"YES:{p.yes_qty} NO:{p.no_qty}" for mid, p in self.positions.items()}
+                pos_summary = {mid: f"net_yes:{p.net_yes_qty}" for mid, p in self.positions.items()}
                 logger.info(f"Saving state: {len(self.positions)} positions - {pos_summary}")
             else:
                 logger.debug("Saving state: no positions yet")
@@ -125,6 +129,9 @@ class StateManager:
             logger.debug(f"Skipping {len(fills)} already-processed fills")
             return 0
 
+        # Sort fills by timestamp (oldest first)
+        new_fills = sorted(new_fills, key=lambda f: f.timestamp)
+
         logger.info(f"Processing {len(new_fills)} new fills (skipped {len(fills) - len(new_fills)} duplicates)")
 
         for fill in new_fills:
@@ -144,10 +151,12 @@ class StateManager:
             if self.risk_state.last_fill_timestamp is None or fill.timestamp > self.risk_state.last_fill_timestamp:
                 self.risk_state.last_fill_timestamp = fill.timestamp
 
+            order_type = 'bid' if fill.side == 'yes' else 'ask'
             # Log trade to DynamoDB (only once per fill_id)
             self.dynamo.log_trade({
                 'market_id': fill.market_id,
                 'side': fill.side,
+                'type': order_type,
                 'price': fill.price,
                 'size': fill.size,
                 'fill_price': fill.price,
@@ -164,7 +173,7 @@ class StateManager:
             self.logged_fills.add(fill.fill_id)
 
             logger.info(f"Fill processed: {fill.market_id} {fill.side} {fill.size}@{fill.price:.2f}, PnL delta: {pnl_delta:.2f}")
-        
+
         return len(new_fills)
 
     def get_inventory(self, market_id: str) -> Position:

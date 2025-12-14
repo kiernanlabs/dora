@@ -99,54 +99,73 @@ class Fill:
 
 @dataclass
 class Position:
-    """Position in a specific market."""
+    """Position in a specific market.
+
+    Tracks a single net YES position which can be positive (long) or negative (short).
+    - net_yes_qty > 0: Long YES contracts
+    - net_yes_qty < 0: Short YES contracts (equivalent to long NO)
+
+    avg_buy_price: Weighted average price of bid fills (buying YES)
+    avg_sell_price: Weighted average price of ask fills (selling YES)
+    """
     market_id: str
-    yes_qty: int = 0  # Positive = long, negative = short
-    no_qty: int = 0
-    avg_cost_yes: float = 0.0
-    avg_cost_no: float = 0.0
+    net_yes_qty: int = 0  # Positive = long YES, negative = short YES (long NO)
+    avg_buy_price: float = 0.0  # Average price from bid fills
+    avg_sell_price: float = 0.0  # Average price from ask fills
     realized_pnl: float = 0.0
 
     @property
     def net_position(self) -> int:
-        """Net position (yes_qty - no_qty)."""
-        return self.yes_qty - self.no_qty
+        """Net position (alias for net_yes_qty for compatibility)."""
+        return self.net_yes_qty
 
     @property
     def total_exposure(self) -> int:
-        """Total exposure (absolute value)."""
-        return abs(self.yes_qty) + abs(self.no_qty)
+        """Total exposure (absolute value of net position)."""
+        return abs(self.net_yes_qty)
 
     def update_from_fill(self, fill: Fill):
-        """Update position from a fill."""
+        """Update position from a fill.
+
+        Args:
+            fill: Fill object with side='yes' (bid fill) or side='no' (ask fill)
+        """
         if fill.side == "yes":
-            # Buying YES
-            if self.yes_qty >= 0:
-                # Adding to long or opening long
-                total_cost = self.avg_cost_yes * self.yes_qty + fill.price * fill.size
-                self.yes_qty += fill.size
-                self.avg_cost_yes = total_cost / self.yes_qty if self.yes_qty > 0 else 0
+            # Bid fill - buying YES contracts
+            if self.net_yes_qty >= 0:
+                # Adding to long position - update average buy price
+                total_cost = self.avg_buy_price * self.net_yes_qty + fill.price * fill.size
+                self.net_yes_qty += fill.size
+                self.avg_buy_price = total_cost / self.net_yes_qty if self.net_yes_qty > 0 else 0
             else:
-                # Closing short position
-                realized = (-self.avg_cost_yes - fill.price) * min(abs(self.yes_qty), fill.size)
+                # Closing short position - realize P&L
+                # When short, we sold at avg_sell_price, now buying back at fill.price
+                close_qty = min(abs(self.net_yes_qty), fill.size)
+                realized = (self.avg_sell_price - fill.price) * close_qty
                 self.realized_pnl += realized
-                self.yes_qty += fill.size
-                if self.yes_qty > 0:
-                    self.avg_cost_yes = fill.price
+                self.net_yes_qty += fill.size
+
+                if self.net_yes_qty > 0:
+                    # Flipped to long, this fill price becomes avg buy price for remainder
+                    self.avg_buy_price = fill.price
         else:
-            # Selling YES (buying NO)
-            if self.yes_qty <= 0:
-                # Adding to short or opening short
-                total_cost = self.avg_cost_yes * abs(self.yes_qty) + fill.price * fill.size
-                self.yes_qty -= fill.size
-                self.avg_cost_yes = total_cost / abs(self.yes_qty) if self.yes_qty != 0 else 0
+            # Ask fill - selling YES contracts (side='no' means buying NO = selling YES)
+            if self.net_yes_qty <= 0:
+                # Adding to short position - update average sell price
+                total_cost = self.avg_sell_price * abs(self.net_yes_qty) + fill.price * fill.size
+                self.net_yes_qty -= fill.size
+                self.avg_sell_price = total_cost / abs(self.net_yes_qty) if self.net_yes_qty != 0 else 0
             else:
-                # Closing long position
-                realized = (fill.price - self.avg_cost_yes) * min(self.yes_qty, fill.size)
+                # Closing long position - realize P&L
+                # When long, we bought at avg_buy_price, now selling at fill.price
+                close_qty = min(self.net_yes_qty, fill.size)
+                realized = (fill.price - self.avg_buy_price) * close_qty
                 self.realized_pnl += realized
-                self.yes_qty -= fill.size
-                if self.yes_qty < 0:
-                    self.avg_cost_yes = fill.price
+                self.net_yes_qty -= fill.size
+
+                if self.net_yes_qty < 0:
+                    # Flipped to short, this fill price becomes avg sell price for remainder
+                    self.avg_sell_price = fill.price
 
 
 @dataclass
@@ -159,6 +178,7 @@ class MarketConfig:
     min_spread: float = 0.06  # Minimum spread required to quote
     quote_size: int = 10
     inventory_skew_factor: float = 0.5  # How aggressively to skew quotes based on inventory
+    fair_value: Optional[float] = None  # Override mid-price with custom fair value
     toxicity_score: Optional[float] = None
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
@@ -205,8 +225,8 @@ class TargetOrder:
         - bid (buy YES at X) matches order: side="yes", price=X
         - ask (sell YES at X) matches order: side="no", price=X (same YES price!)
         """
-        # Check market and size
-        if order.market_id != self.market_id or order.size < self.size:
+        # Check market and size (require exact size match)
+        if order.market_id != self.market_id or order.size != self.size:
             return False
 
         # Match bid/ask to yes/no

@@ -127,8 +127,8 @@ class KalshiExchangeClient:
             # Extract raw data from Kalshi API
             # 'yes' array = YES bids (people buying YES at a YES price)
             # 'no' array = NO bids (people buying NO at a NO price)
-            yes_bids_raw = orderbook_data.get('yes', [])
-            no_bids_raw = orderbook_data.get('no', [])
+            yes_bids_raw = orderbook_data.get('yes', []) or []
+            no_bids_raw = orderbook_data.get('no', []) or []
 
             # Get bot's own orders to filter them out
             own_orders_by_price = {'yes': {}, 'no': {}}

@@ -47,23 +47,16 @@ class RiskManager:
             return False, f"Trading halted: {state.risk_state.halt_reason}"
 
         # Check market-specific inventory limits
-        new_position_yes = position.yes_qty
-        new_position_no = position.no_qty
-
         # TargetOrder.side is "bid" or "ask"
-        # bid = buying YES, ask = buying NO (selling YES)
+        # bid = buying YES (increases net_yes_qty), ask = selling YES (decreases net_yes_qty)
         if order.side == "bid":
-            new_position_yes += order.size
+            new_net_position = position.net_yes_qty + order.size
         else:  # order.side == "ask"
-            new_position_no += order.size
+            new_net_position = position.net_yes_qty - order.size
 
-        # Check YES inventory limit
-        if abs(new_position_yes) > market_config.max_inventory_yes:
-            return False, f"YES inventory limit exceeded: {abs(new_position_yes)} > {market_config.max_inventory_yes}"
-
-        # Check NO inventory limit
-        if abs(new_position_no) > market_config.max_inventory_no:
-            return False, f"NO inventory limit exceeded: {abs(new_position_no)} > {market_config.max_inventory_no}"
+        # Check inventory limit (applies to both long and short)
+        if abs(new_net_position) > market_config.max_inventory_yes:
+            return False, f"Inventory limit exceeded: {abs(new_net_position)} > {market_config.max_inventory_yes}"
 
         # Check global exposure limit
         # Calculate what total exposure would be if this order fills
@@ -116,14 +109,10 @@ class RiskManager:
             return False, "Market disabled in config"
 
         # Check if position is near limits (warning, not hard stop)
-        yes_util = abs(position.yes_qty) / market_config.max_inventory_yes if market_config.max_inventory_yes > 0 else 0
-        no_util = abs(position.no_qty) / market_config.max_inventory_no if market_config.max_inventory_no > 0 else 0
+        utilization = abs(position.net_yes_qty) / market_config.max_inventory_yes if market_config.max_inventory_yes > 0 else 0
 
-        if yes_util > 0.9:
-            logger.warning(f"{market_id}: YES inventory at {yes_util*100:.0f}% of limit")
-
-        if no_util > 0.9:
-            logger.warning(f"{market_id}: NO inventory at {no_util*100:.0f}% of limit")
+        if utilization > 0.9:
+            logger.warning(f"{market_id}: Inventory at {utilization*100:.0f}% of limit (net_yes={position.net_yes_qty})")
 
         return True, None
 
@@ -149,15 +138,25 @@ class RiskManager:
         Args:
             position: Current position
             market_config: Market configuration
-            side: 'yes' or 'no'
+            side: 'bid' or 'ask' (bid=buy YES, ask=sell YES)
 
         Returns:
             Maximum allowed size
         """
-        if side == "yes":
-            remaining = market_config.max_inventory_yes - abs(position.yes_qty)
-        else:
-            remaining = market_config.max_inventory_no - abs(position.no_qty)
+        if side == "bid":
+            # Buying YES - check how much room before hitting long limit
+            if position.net_yes_qty >= 0:
+                remaining = market_config.max_inventory_yes - position.net_yes_qty
+            else:
+                # Short position, buying brings us toward 0 then long
+                remaining = market_config.max_inventory_yes + abs(position.net_yes_qty)
+        else:  # ask
+            # Selling YES - check how much room before hitting short limit
+            if position.net_yes_qty <= 0:
+                remaining = market_config.max_inventory_yes - abs(position.net_yes_qty)
+            else:
+                # Long position, selling brings us toward 0 then short
+                remaining = market_config.max_inventory_yes + position.net_yes_qty
 
         return max(0, remaining)
 
@@ -174,7 +173,7 @@ class RiskManager:
             base_size: Desired base size
             position: Current position
             market_config: Market configuration
-            side: 'yes' or 'no'
+            side: 'bid' or 'ask' (bid=buy YES, ask=sell YES)
 
         Returns:
             Adjusted size (0 if should not quote)
@@ -184,11 +183,8 @@ class RiskManager:
         if max_size == 0:
             return 0
 
-        # Calculate inventory utilization
-        if side == "yes":
-            utilization = abs(position.yes_qty) / market_config.max_inventory_yes
-        else:
-            utilization = abs(position.no_qty) / market_config.max_inventory_no
+        # Calculate inventory utilization based on net position
+        utilization = abs(position.net_yes_qty) / market_config.max_inventory_yes if market_config.max_inventory_yes > 0 else 0
 
         # Reduce size as we approach limits
         if utilization > 0.8:

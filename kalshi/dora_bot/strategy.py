@@ -43,8 +43,12 @@ class MarketMaker:
             logger.info(f"{config.market_id}: Spread too narrow ({order_book.spread:.3f} < {config.min_spread:.3f}) - NO QUOTE")
             return []
 
-        # Calculate fair value (mid price)
-        fair_value = order_book.mid_price
+        # Calculate fair value - use config override if set, otherwise mid price
+        if config.fair_value is not None:
+            fair_value = config.fair_value
+            logger.info(f"{config.market_id} Using config fair_value={fair_value:.3f} (mid={order_book.mid_price:.3f})")
+        else:
+            fair_value = order_book.mid_price
 
         # Calculate inventory skew
         # Positive net position = long YES, should encourage selling (widen bid, tighten ask)
@@ -53,8 +57,8 @@ class MarketMaker:
         skew = self._calculate_skew(net_position, config)
 
         # Log order book state
-        logger.info(f"{config.market_id} Order Book: bid={order_book.best_bid:.3f} ask={order_book.best_ask:.3f} mid={fair_value:.3f} spread={order_book.spread:.3f}")
-        logger.info(f"{config.market_id} Position: YES={position.yes_qty} NO={position.no_qty} net={net_position}")
+        logger.info(f"{config.market_id} Order Book: bid={order_book.best_bid:.3f} ask={order_book.best_ask:.3f} mid={order_book.mid_price:.3f} spread={order_book.spread:.3f}")
+        logger.info(f"{config.market_id} Position: net_yes={position.net_yes_qty}")
         logger.info(f"{config.market_id} Skew calculation: net_pos={net_position} → skew={skew:.4f}")
 
         # Determine target bid/ask prices
@@ -71,14 +75,14 @@ class MarketMaker:
         # Determine sizes based on inventory
         bid_size = self._calculate_size(
             base_size=config.quote_size,
-            position_qty=position.yes_qty,
+            position_qty=position.net_yes_qty,
             max_inventory=config.max_inventory_yes,
             side="bid"
         )
 
         ask_size = self._calculate_size(
             base_size=config.quote_size,
-            position_qty=position.yes_qty,
+            position_qty=position.net_yes_qty,
             max_inventory=config.max_inventory_yes,
             side="ask"
         )
@@ -129,6 +133,8 @@ class MarketMaker:
         max_pos = max(config.max_inventory_yes, config.max_inventory_no)
         normalized_pos = net_position / max_pos if max_pos > 0 else 0
 
+        normalized_pos = max(-1.0, min(1.0, normalized_pos))
+
         # Skew proportional to position and skew factor
         # If long (positive), skew > 0 → widen bid, tighten ask to encourage selling
         # If short (negative), skew < 0 → tighten bid, widen ask to encourage buying
@@ -146,8 +152,12 @@ class MarketMaker:
     ) -> tuple[float, float]:
         """Calculate target bid and ask prices.
 
+        Strategy: Place just inside the current spread, then apply skew.
+        Fall back to min_spread from fair_value only if inside prices
+        would violate minimum spread requirements.
+
         Args:
-            fair_value: Fair value (mid price)
+            fair_value: Fair value (mid price or config override)
             min_spread: Minimum required spread
             skew: Inventory skew adjustment
             best_bid: Current best bid
@@ -156,29 +166,38 @@ class MarketMaker:
         Returns:
             Tuple of (target_bid, target_ask)
         """
-        # Base quotes: place at half the min spread from fair value
-        half_spread = min_spread / 2.0
-
-        # Apply skew
-        # Skew > 0: widen bid (lower), tighten ask (higher toward fair)
-        # Skew < 0: tighten bid (higher toward fair), widen ask (lower)
-        target_bid = fair_value - half_spread - skew
-        target_ask = fair_value + half_spread - skew
-
-        # Try to be one tick inside the best quotes (join the best bid/ask)
-        # But only if it doesn't violate our minimum spread
+        # Start by placing one tick inside the current spread
         inside_bid = best_bid + self.TICK_SIZE
         inside_ask = best_ask - self.TICK_SIZE
 
-        # Use inside bid if it maintains spread and is better than our target
-        if inside_bid < target_ask - min_spread and inside_bid > target_bid:
-            target_bid = inside_bid
+        # Apply skew adjustment
+        # Skew > 0 (long): lower bid, lower ask to encourage selling
+        # Skew < 0 (short): raise bid, raise ask to encourage buying
+        market_bid = inside_bid - skew
+        market_ask = inside_ask - skew
 
-        # Use inside ask if it maintains spread and is better than our target
-        if inside_ask > target_bid + min_spread and inside_ask < target_ask:
-            target_ask = inside_ask
+        fair_value_bid = fair_value - skew
+        fair_value_ask = fair_value - skew
 
-        return target_bid, target_ask
+        # If the market is telling us better prices than fair value levels, use those
+        target_bid = min(market_bid, fair_value_bid)
+        target_ask = max(market_ask, fair_value_ask)    
+
+        # Ensure we maintain minimum spread
+        current_target_spread = target_ask - target_bid
+        if current_target_spread < min_spread:
+            # Fall back to placing at half min_spread from fair value
+            half_spread = min_spread / 2.0
+            target_bid = fair_value - half_spread - skew
+            target_ask = fair_value + half_spread - skew
+
+        # Safety: ensure bid doesn't exceed ask
+        if target_bid >= target_ask:
+            half_spread = min_spread / 2.0
+            target_bid = fair_value - half_spread - skew
+            target_ask = fair_value + half_spread - skew
+
+        return max(target_bid,0.01), min(target_ask,0.99)
 
     def _calculate_size(
         self,
@@ -208,6 +227,8 @@ class MarketMaker:
         if side == "bid":
             # Bidding (buying YES) - reduce if long
             if position_qty > 0:
+                if utilization >= 1.0:
+                    return 0
                 # Scale size down as we approach limit
                 if utilization > 0.8:
                     size_factor = (1.0 - utilization) / 0.2
@@ -219,12 +240,14 @@ class MarketMaker:
         else:
             # Asking (selling YES) - reduce if short
             if position_qty < 0:
+                if utilization >= 1.0:
+                    return 0
                 if utilization > 0.8:
                     size_factor = (1.0 - utilization) / 0.2
                     return int(base_size * size_factor)
                  
             # If not close to limit, return base or remaining capacity (if position is negative)
-            return int(min(base_size, max_inventory + position_qty))
+            return int(min(base_size, abs(max_inventory + position_qty)))
 
     def _round_price(self, price: float) -> float:
         """Round price to tick size.

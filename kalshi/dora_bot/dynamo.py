@@ -15,28 +15,38 @@ logger = logging.getLogger(__name__)
 class DynamoDBClient:
     """Client for interacting with DynamoDB tables."""
 
+    # Table name suffixes by environment
+    TABLE_SUFFIXES = {
+        'demo': '_demo',
+        'prod': '_prod'
+    }
+
     def __init__(
         self,
         region: str = "us-east-1",
-        market_config_table: str = "dora_market_config",
-        state_table: str = "dora_state",
-        trade_log_table: str = "dora_trade_log",
-        decision_log_table: str = "dora_decision_log"
+        environment: str = "demo"
     ):
         """Initialize DynamoDB client.
 
         Args:
             region: AWS region
-            market_config_table: Table name for market configs
-            state_table: Table name for state
-            trade_log_table: Table name for trade logs
-            decision_log_table: Table name for decision logs
+            environment: Environment name ('demo' or 'prod') - determines table suffix
         """
+        if environment not in self.TABLE_SUFFIXES:
+            raise ValueError(f"Invalid environment: {environment}. Must be one of: {list(self.TABLE_SUFFIXES.keys())}")
+
+        self.environment = environment
+        suffix = self.TABLE_SUFFIXES[environment]
+
         self.dynamodb = boto3.resource('dynamodb', region_name=region)
-        self.market_config_table = self.dynamodb.Table(market_config_table)
-        self.state_table = self.dynamodb.Table(state_table)
-        self.trade_log_table = self.dynamodb.Table(trade_log_table)
-        self.decision_log_table = self.dynamodb.Table(decision_log_table)
+        self.market_config_table = self.dynamodb.Table(f"dora_market_config{suffix}")
+        self.state_table = self.dynamodb.Table(f"dora_state{suffix}")
+        self.trade_log_table = self.dynamodb.Table(f"dora_trade_log{suffix}")
+        self.decision_log_table = self.dynamodb.Table(f"dora_decision_log{suffix}")
+
+        logger.info(f"DynamoDB initialized for {environment} environment with tables: "
+                    f"dora_market_config{suffix}, dora_state{suffix}, "
+                    f"dora_trade_log{suffix}, dora_decision_log{suffix}")
 
     @staticmethod
     def _serialize_decimal(obj: Any) -> Any:
@@ -87,6 +97,7 @@ class DynamoDBClient:
                 min_spread=item.get('min_spread', 0.06),
                 quote_size=item.get('quote_size', 10),
                 inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
+                fair_value=item.get('fair_value'),
                 toxicity_score=item.get('toxicity_score'),
                 updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
             )
@@ -118,6 +129,7 @@ class DynamoDBClient:
                     min_spread=item.get('min_spread', 0.06),
                     quote_size=item.get('quote_size', 10),
                     inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
+                    fair_value=item.get('fair_value'),
                     toxicity_score=item.get('toxicity_score'),
                     updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
                 )
@@ -151,6 +163,9 @@ class DynamoDBClient:
                 'updated_at': datetime.utcnow().isoformat()
             }
 
+            if config.fair_value is not None:
+                item['fair_value'] = self._to_dynamo_item(config.fair_value)
+
             if config.toxicity_score is not None:
                 item['toxicity_score'] = self._to_dynamo_item(config.toxicity_score)
 
@@ -179,10 +194,9 @@ class DynamoDBClient:
             for market_id, pos_data in positions_data.items():
                 positions[market_id] = Position(
                     market_id=market_id,
-                    yes_qty=pos_data.get('yes_qty', 0),
-                    no_qty=pos_data.get('no_qty', 0),
-                    avg_cost_yes=pos_data.get('avg_cost_yes', 0.0),
-                    avg_cost_no=pos_data.get('avg_cost_no', 0.0),
+                    net_yes_qty=pos_data.get('net_yes_qty', 0),
+                    avg_buy_price=pos_data.get('avg_buy_price', 0.0),
+                    avg_sell_price=pos_data.get('avg_sell_price', 0.0),
                     realized_pnl=pos_data.get('realized_pnl', 0.0)
                 )
 
@@ -204,10 +218,9 @@ class DynamoDBClient:
             positions_data = {}
             for market_id, pos in positions.items():
                 positions_data[market_id] = self._to_dynamo_item({
-                    'yes_qty': pos.yes_qty,
-                    'no_qty': pos.no_qty,
-                    'avg_cost_yes': pos.avg_cost_yes,
-                    'avg_cost_no': pos.avg_cost_no,
+                    'net_yes_qty': pos.net_yes_qty,
+                    'avg_buy_price': pos.avg_buy_price,
+                    'avg_sell_price': pos.avg_sell_price,
                     'realized_pnl': pos.realized_pnl
                 })
 

@@ -79,7 +79,8 @@ class DoraBot:
 
         # Initialize components
         self.exchange = KalshiExchangeClient(kalshi_client)
-        self.dynamo = DynamoDBClient(region=aws_region)
+        environment = "demo" if use_demo else "prod"
+        self.dynamo = DynamoDBClient(region=aws_region, environment=environment)
         self.state = StateManager(self.dynamo)
         self.strategy = MarketMaker()
 
@@ -136,6 +137,12 @@ class DoraBot:
             # The logged_fills set will prevent duplicate logging
             self.state.update_from_fills(fills)
             logger.info(f"Processed {len(fills)} fills")
+            
+        else:
+            logger.info("No previous fills logged, fetching all fills")
+            fills = self.exchange.get_fills()
+            self.state.update_from_fills(fills)
+            logger.info(f"Processed {len(fills)} fills")
 
         # 7. Save positions to DynamoDB after reconciliation
         logger.info("Saving reconciled state to DynamoDB...")
@@ -185,8 +192,8 @@ class DoraBot:
                 # Process fills
                 fills = self.exchange.get_fills(since=self.state.risk_state.last_fill_timestamp)
                 if fills:
-                    new_fills = self.state.update_from_fills(fills)
-                    logger.info(f"Processed {len(new_fills)} new fills, Daily PnL: ${self.state.risk_state.daily_pnl:.2f}")
+                    num_new_fills = self.state.update_from_fills(fills) or 0
+                    logger.info(f"Processed {num_new_fills} new fills, Daily PnL: ${self.state.risk_state.daily_pnl:.2f}")
 
                 # Periodic state persistence (every 10 loops)
                 if self.loop_count % 10 == 0:
@@ -233,6 +240,11 @@ class DoraBot:
             # 3. Compute target quotes
             target_orders = self.strategy.compute_quotes(order_book, position, config)
 
+            # Handle None or empty target_orders
+            if target_orders is None:
+                logger.warning(f"{market_id}: compute_quotes returned None, treating as empty list")
+                target_orders = []
+
             # Log decision to DynamoDB
             self.dynamo.log_decision({
                 'market_id': market_id,
@@ -243,15 +255,13 @@ class DoraBot:
                     'mid': order_book.mid_price
                 },
                 'inventory': {
-                    'yes_qty': position.yes_qty,
-                    'no_qty': position.no_qty,
-                    'net': position.net_position
+                    'net_yes_qty': position.net_yes_qty
                 },
                 'target_quotes': [
                     {'side': t.side, 'price': t.price, 'size': t.size}
                     for t in target_orders
-                ],
-                'num_targets': len(target_orders)
+                ] if target_orders else [],
+                'num_targets': len(target_orders) if target_orders else 0
             })
 
             if not target_orders:
@@ -289,7 +299,7 @@ class DoraBot:
                     logger.debug(f"Order blocked by risk: {market_id} {target.side} {target.size}@{target.price:.2f} - {reason}")
 
         except Exception as e:
-            logger.error(f"Error processing market {market_id}: {e}")
+            logger.error(f"Error processing market {market_id}: {e}", exc_info=True)
 
     def diff_orders(
         self,
