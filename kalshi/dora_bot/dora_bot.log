@@ -656,3 +656,1364 @@ ValueError: Invalid isoformat string: '2025-12-13T02:15:43.42496+00:00'
 2025-12-12 21:19:45,825 - __main__ - INFO - Shutting down...
 2025-12-12 21:19:45,825 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
 2025-12-12 21:19:45,891 - __main__ - INFO - Shutdown complete
+2025-12-13 17:45:01,940 - asyncio - DEBUG - Using selector: EpollSelector
+2025-12-13 17:45:01,941 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 17:45:01,976 - botocore.hooks - DEBUG - Changing event name from creating-client-class.iot-data to creating-client-class.iot-data-plane
+2025-12-13 17:45:01,977 - botocore.hooks - DEBUG - Changing event name from before-call.apigateway to before-call.api-gateway
+2025-12-13 17:45:01,977 - botocore.hooks - DEBUG - Changing event name from request-created.machinelearning.Predict to request-created.machine-learning.Predict
+2025-12-13 17:45:01,978 - botocore.hooks - DEBUG - Changing event name from before-parameter-build.autoscaling.CreateLaunchConfiguration to before-parameter-build.auto-scaling.CreateLaunchConfiguration
+2025-12-13 17:45:01,978 - botocore.hooks - DEBUG - Changing event name from before-parameter-build.route53 to before-parameter-build.route-53
+2025-12-13 17:45:01,978 - botocore.hooks - DEBUG - Changing event name from request-created.cloudsearchdomain.Search to request-created.cloudsearch-domain.Search
+2025-12-13 17:45:01,979 - botocore.hooks - DEBUG - Changing event name from docs.*.autoscaling.CreateLaunchConfiguration.complete-section to docs.*.auto-scaling.CreateLaunchConfiguration.complete-section
+2025-12-13 17:45:01,980 - botocore.hooks - DEBUG - Changing event name from before-parameter-build.logs.CreateExportTask to before-parameter-build.cloudwatch-logs.CreateExportTask
+2025-12-13 17:45:01,980 - botocore.hooks - DEBUG - Changing event name from docs.*.logs.CreateExportTask.complete-section to docs.*.cloudwatch-logs.CreateExportTask.complete-section
+2025-12-13 17:45:01,980 - botocore.hooks - DEBUG - Changing event name from before-parameter-build.cloudsearchdomain.Search to before-parameter-build.cloudsearch-domain.Search
+2025-12-13 17:45:01,980 - botocore.hooks - DEBUG - Changing event name from docs.*.cloudsearchdomain.Search.complete-section to docs.*.cloudsearch-domain.Search.complete-section
+2025-12-13 17:45:02,168 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/boto3/data/dynamodb/2012-08-10/resources-1.json
+2025-12-13 17:45:02,170 - botocore.utils - DEBUG - IMDS ENDPOINT: http://169.254.169.254/
+2025-12-13 17:45:02,171 - botocore.credentials - DEBUG - Looking for credentials via: env
+2025-12-13 17:45:02,171 - botocore.credentials - DEBUG - Looking for credentials via: assume-role
+2025-12-13 17:45:02,171 - botocore.credentials - DEBUG - Looking for credentials via: assume-role-with-web-identity
+2025-12-13 17:45:02,171 - botocore.credentials - DEBUG - Looking for credentials via: sso
+2025-12-13 17:45:02,171 - botocore.credentials - DEBUG - Looking for credentials via: shared-credentials-file
+2025-12-13 17:45:02,171 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 17:45:02,176 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/endpoints.json
+2025-12-13 17:45:02,204 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/sdk-default-configuration.json
+2025-12-13 17:45:02,204 - botocore.hooks - DEBUG - Event choose-service-name: calling handler <function handle_service_name_alias at 0x76bd71129000>
+2025-12-13 17:45:02,220 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/dynamodb/2012-08-10/service-2.json.gz
+2025-12-13 17:45:02,235 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/dynamodb/2012-08-10/endpoint-rule-set-1.json.gz
+2025-12-13 17:45:02,236 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/partitions.json
+2025-12-13 17:45:02,237 - botocore.hooks - DEBUG - Event creating-client-class.dynamodb: calling handler <function add_generate_presigned_url at 0x76bd71098820>
+2025-12-13 17:45:02,237 - botocore.configprovider - DEBUG - Looking for endpoint for dynamodb via: environment_service
+2025-12-13 17:45:02,237 - botocore.configprovider - DEBUG - Looking for endpoint for dynamodb via: environment_global
+2025-12-13 17:45:02,237 - botocore.configprovider - DEBUG - Looking for endpoint for dynamodb via: config_service
+2025-12-13 17:45:02,237 - botocore.configprovider - DEBUG - Looking for endpoint for dynamodb via: config_global
+2025-12-13 17:45:02,237 - botocore.configprovider - DEBUG - No configured endpoint found.
+2025-12-13 17:45:02,238 - botocore.endpoint - DEBUG - Setting dynamodb timeout as (60, 60)
+2025-12-13 17:45:02,239 - botocore.loaders - DEBUG - Loading JSON file: /home/joe/dora/.venv/lib/python3.10/site-packages/botocore/data/_retry.json
+2025-12-13 17:45:02,240 - botocore.client - DEBUG - Registering retry handlers for service: dynamodb
+2025-12-13 17:45:02,240 - boto3.resources.factory - DEBUG - Loading dynamodb:dynamodb
+2025-12-13 17:45:02,240 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.ServiceResource: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec550>
+2025-12-13 17:45:02,243 - boto3.resources.factory - DEBUG - Loading dynamodb:Table
+2025-12-13 17:45:02,244 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec5e0>
+2025-12-13 17:45:02,244 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec550>
+2025-12-13 17:45:02,244 - boto3.resources.factory - DEBUG - Loading dynamodb:Table
+2025-12-13 17:45:02,245 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec5e0>
+2025-12-13 17:45:02,245 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec550>
+2025-12-13 17:45:02,245 - boto3.resources.factory - DEBUG - Loading dynamodb:Table
+2025-12-13 17:45:02,245 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec5e0>
+2025-12-13 17:45:02,246 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec550>
+2025-12-13 17:45:02,246 - boto3.resources.factory - DEBUG - Loading dynamodb:Table
+2025-12-13 17:45:02,248 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec5e0>
+2025-12-13 17:45:02,248 - botocore.hooks - DEBUG - Event creating-resource-class.dynamodb.Table: calling handler <function lazy_call.<locals>._handler at 0x76bd70fec550>
+2025-12-13 17:45:02,249 - boto3.resources.action - DEBUG - Calling dynamodb:get_item with {'TableName': 'dora_state', 'Key': {'key': 'global_config'}}
+2025-12-13 17:45:02,249 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.GetItem: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:02,249 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,249 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,249 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:02,250 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:02,250 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:02,250 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_state'}
+2025-12-13 17:45:02,250 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:02,251 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:02,251 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:02,251 - botocore.endpoint - DEBUG - Making request for OperationModel(name=GetItem) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.GetItem', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_state", "Key": {"key": {"S": "global_config"}}}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:02,251 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:02,251 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:02,251 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:02,252 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:02,252 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224502Z
+x-amz-target:DynamoDB_20120810.GetItem
+
+content-type;host;x-amz-date;x-amz-target
+948b25225d5eb99910b0d90a4a144c3afea20520726d736f09e500b64f4fc983
+2025-12-13 17:45:02,252 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224502Z
+20251213/us-east-1/dynamodb/aws4_request
+c4306e6e6094d3337151c4b17e2b5718ce21ad14ea318002fd62c95ee97aee7b
+2025-12-13 17:45:02,252 - botocore.auth - DEBUG - Signature:
+9094af6b4711640fdecfe3c8080c42b63ca7cf9eee7e692be4e122a152144cc2
+2025-12-13 17:45:02,252 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:02,252 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:02,253 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.GetItem', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224502Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=9094af6b4711640fdecfe3c8080c42b63ca7cf9eee7e692be4e122a152144cc2', 'amz-sdk-invocation-id': b'ee6443c3-770f-4e7c-897c-ed9fbe34b262', 'amz-sdk-request': b'attempt=1', 'Content-Length': '67'}>
+2025-12-13 17:45:02,253 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:02,254 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): dynamodb.us-east-1.amazonaws.com:443
+2025-12-13 17:45:02,439 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 228
+2025-12-13 17:45:02,440 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '228', 'Connection': 'keep-alive', 'x-amzn-requestid': '47RVSAKAASUPQSFC4UD5GTGLTFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '3277218687'}
+2025-12-13 17:45:02,440 - botocore.parsers - DEBUG - Response body:
+b'{"Item":{"cancel_on_startup":{"BOOL":true},"max_daily_loss":{"N":"100"},"max_total_exposure":{"N":"500"},"loop_interval_ms":{"N":"5000"},"key":{"S":"global_config"},"risk_aversion_k":{"N":"0.5"},"trading_enabled":{"BOOL":true}}}'
+2025-12-13 17:45:02,441 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.GetItem: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:02,441 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:02,441 - botocore.hooks - DEBUG - Event after-call.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,441 - boto3.resources.action - DEBUG - Response: {'Item': {'cancel_on_startup': True, 'max_daily_loss': Decimal('100'), 'max_total_exposure': Decimal('500'), 'loop_interval_ms': Decimal('5000'), 'key': 'global_config', 'risk_aversion_k': Decimal('0.5'), 'trading_enabled': True}, 'ResponseMetadata': {'RequestId': '47RVSAKAASUPQSFC4UD5GTGLTFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '228', 'connection': 'keep-alive', 'x-amzn-requestid': '47RVSAKAASUPQSFC4UD5GTGLTFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '3277218687'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:02,441 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 17:45:02,441 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 17:45:02,445 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:02,716 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/exchange/status HTTP/1.1" 200 84
+2025-12-13 17:45:02,717 - __main__ - INFO - Exchange status: True
+2025-12-13 17:45:02,717 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 17:45:02,717 - boto3.resources.action - DEBUG - Calling dynamodb:get_item with {'TableName': 'dora_state', 'Key': {'key': 'positions'}}
+2025-12-13 17:45:02,717 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.GetItem: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:02,717 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,717 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:02,718 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_state'}
+2025-12-13 17:45:02,718 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:02,718 - botocore.endpoint - DEBUG - Making request for OperationModel(name=GetItem) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.GetItem', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_state", "Key": {"key": {"S": "positions"}}}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:02,718 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:02,719 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:02,719 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:02,719 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:02,719 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224502Z
+x-amz-target:DynamoDB_20120810.GetItem
+
+content-type;host;x-amz-date;x-amz-target
+ffb9b63f8f130c5046d63ebc6e4ea10b5a8bf1d8c43f4d5f0994da1df726b04e
+2025-12-13 17:45:02,719 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224502Z
+20251213/us-east-1/dynamodb/aws4_request
+8e08ddcb9235859266c04aabd986ff75962b191f7c857f6e8cc2688fbbec2a79
+2025-12-13 17:45:02,719 - botocore.auth - DEBUG - Signature:
+9566d30cc202a32fde71a49de13064709f1f4bf2fd16ebc75131f1a19a72d8bd
+2025-12-13 17:45:02,719 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:02,719 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:02,719 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.GetItem', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224502Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=9566d30cc202a32fde71a49de13064709f1f4bf2fd16ebc75131f1a19a72d8bd', 'amz-sdk-invocation-id': b'636694ff-68ac-43ba-aae2-d6a4031accbe', 'amz-sdk-request': b'attempt=1', 'Content-Length': '63'}>
+2025-12-13 17:45:02,720 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:02,741 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 494
+2025-12-13 17:45:02,742 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '494', 'Connection': 'keep-alive', 'x-amzn-requestid': '9HDT9N54V15K4CR9JSOMVV9VJ7VV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '900182656'}
+2025-12-13 17:45:02,742 - botocore.parsers - DEBUG - Response body:
+b'{"Item":{"key":{"S":"positions"},"positions":{"M":{"KXMJSCHEDULE-27":{"M":{"avg_cost_no":{"N":"0"},"realized_pnl":{"N":"0"},"yes_qty":{"N":"0"},"avg_cost_yes":{"N":"0"},"no_qty":{"N":"0"}}},"KXPRESPERSON-28-JVAN":{"M":{"avg_cost_no":{"N":"0"},"realized_pnl":{"N":"0"},"yes_qty":{"N":"220"},"avg_cost_yes":{"N":"0.3"},"no_qty":{"N":"0"}}},"KXNFLANYTD-25DEC14BALCIN-NOTD":{"M":{"avg_cost_no":{"N":"0"},"realized_pnl":{"N":"0"},"yes_qty":{"N":"0"},"avg_cost_yes":{"N":"0"},"no_qty":{"N":"0"}}}}}}}'
+2025-12-13 17:45:02,742 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.GetItem: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:02,742 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event after-call.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,743 - boto3.resources.action - DEBUG - Response: {'Item': {'key': 'positions', 'positions': {'KXMJSCHEDULE-27': {'avg_cost_no': Decimal('0'), 'realized_pnl': Decimal('0'), 'yes_qty': Decimal('0'), 'avg_cost_yes': Decimal('0'), 'no_qty': Decimal('0')}, 'KXPRESPERSON-28-JVAN': {'avg_cost_no': Decimal('0'), 'realized_pnl': Decimal('0'), 'yes_qty': Decimal('220'), 'avg_cost_yes': Decimal('0.3'), 'no_qty': Decimal('0')}, 'KXNFLANYTD-25DEC14BALCIN-NOTD': {'avg_cost_no': Decimal('0'), 'realized_pnl': Decimal('0'), 'yes_qty': Decimal('0'), 'avg_cost_yes': Decimal('0'), 'no_qty': Decimal('0')}}}, 'ResponseMetadata': {'RequestId': '9HDT9N54V15K4CR9JSOMVV9VJ7VV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '494', 'connection': 'keep-alive', 'x-amzn-requestid': '9HDT9N54V15K4CR9JSOMVV9VJ7VV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '900182656'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:02,743 - state_manager - INFO - Loaded 3 positions
+2025-12-13 17:45:02,743 - boto3.resources.action - DEBUG - Calling dynamodb:get_item with {'TableName': 'dora_state', 'Key': {'key': 'risk_state'}}
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.GetItem: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:02,743 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.GetItem: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:02,744 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_state'}
+2025-12-13 17:45:02,744 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:02,744 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:02,744 - botocore.hooks - DEBUG - Event before-call.dynamodb.GetItem: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:02,744 - botocore.endpoint - DEBUG - Making request for OperationModel(name=GetItem) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.GetItem', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_state", "Key": {"key": {"S": "risk_state"}}}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:02,744 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:02,744 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:02,744 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.GetItem: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:02,745 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:02,745 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224502Z
+x-amz-target:DynamoDB_20120810.GetItem
+
+content-type;host;x-amz-date;x-amz-target
+0780c256aeb6d4e9fba8c6a423661fc817b8190edc195733b0e34fff28b26eea
+2025-12-13 17:45:02,745 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224502Z
+20251213/us-east-1/dynamodb/aws4_request
+f823a5af65aa9999b0d4166df3716cac734096e79c137a19d9bb3a4a618d6b36
+2025-12-13 17:45:02,745 - botocore.auth - DEBUG - Signature:
+4e9c2ec2a092071196798ee288bd19777eaa6380c2ec24bf7df884446dbf9df7
+2025-12-13 17:45:02,745 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:02,745 - botocore.hooks - DEBUG - Event request-created.dynamodb.GetItem: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:02,745 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.GetItem', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224502Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=4e9c2ec2a092071196798ee288bd19777eaa6380c2ec24bf7df884446dbf9df7', 'amz-sdk-invocation-id': b'c90db687-04b0-4071-b1c8-967c4513ed5a', 'amz-sdk-request': b'attempt=1', 'Content-Length': '64'}>
+2025-12-13 17:45:02,745 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:02,767 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 202
+2025-12-13 17:45:02,767 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '202', 'Connection': 'keep-alive', 'x-amzn-requestid': 'ISHIC9VLCPP1QSLHGBS255BI6RVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '840548808'}
+2025-12-13 17:45:02,767 - botocore.parsers - DEBUG - Response body:
+b'{"Item":{"last_updated":{"S":"2025-12-13T02:19:45.859349"},"daily_pnl":{"N":"0"},"trading_halted":{"BOOL":false},"key":{"S":"risk_state"},"last_fill_timestamp":{"S":"2025-12-13T01:02:59.307458+00:00"}}}'
+2025-12-13 17:45:02,768 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.GetItem: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:02,768 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:02,768 - botocore.hooks - DEBUG - Event after-call.dynamodb.GetItem: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,768 - boto3.resources.action - DEBUG - Response: {'Item': {'last_updated': '2025-12-13T02:19:45.859349', 'daily_pnl': Decimal('0'), 'trading_halted': False, 'key': 'risk_state', 'last_fill_timestamp': '2025-12-13T01:02:59.307458+00:00'}, 'ResponseMetadata': {'RequestId': 'ISHIC9VLCPP1QSLHGBS255BI6RVV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '202', 'connection': 'keep-alive', 'x-amzn-requestid': 'ISHIC9VLCPP1QSLHGBS255BI6RVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '840548808'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:02,768 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 17:45:02,768 - boto3.resources.action - DEBUG - Calling dynamodb:scan with {'TableName': 'dora_trade_log', 'ProjectionExpression': 'fill_id'}
+2025-12-13 17:45:02,768 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.Scan: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:02,768 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.Scan: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,769 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.Scan: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,769 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.Scan: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:02,769 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.Scan: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:02,769 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.Scan: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:02,769 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_trade_log'}
+2025-12-13 17:45:02,769 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:02,770 - botocore.hooks - DEBUG - Event before-call.dynamodb.Scan: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:02,770 - botocore.hooks - DEBUG - Event before-call.dynamodb.Scan: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:02,770 - botocore.endpoint - DEBUG - Making request for OperationModel(name=Scan) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.Scan', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_trade_log", "ProjectionExpression": "fill_id"}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:02,770 - botocore.hooks - DEBUG - Event request-created.dynamodb.Scan: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:02,770 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.Scan: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:02,770 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.Scan: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:02,770 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:02,770 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224502Z
+x-amz-target:DynamoDB_20120810.Scan
+
+content-type;host;x-amz-date;x-amz-target
+90b66823ad5809f3f3f773540791287f189bdfc69028a59292b92aa6d378d0c4
+2025-12-13 17:45:02,770 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224502Z
+20251213/us-east-1/dynamodb/aws4_request
+3844fdeaa65542d656a1d944ca877da0bd1cc5ed0a3a2cae668e3bcb8c509b9e
+2025-12-13 17:45:02,771 - botocore.auth - DEBUG - Signature:
+35d90d0a9433d9bfabf572f82c16e8fbc85aafa08fce6cb79e53de6ce7e05446
+2025-12-13 17:45:02,771 - botocore.hooks - DEBUG - Event request-created.dynamodb.Scan: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:02,771 - botocore.hooks - DEBUG - Event request-created.dynamodb.Scan: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:02,771 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.Scan', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224502Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=35d90d0a9433d9bfabf572f82c16e8fbc85aafa08fce6cb79e53de6ce7e05446', 'amz-sdk-invocation-id': b'49aeced9-0b84-4424-a1e3-da296eaf1031', 'amz-sdk-request': b'attempt=1', 'Content-Length': '66'}>
+2025-12-13 17:45:02,771 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:02,809 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 152
+2025-12-13 17:45:02,809 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '152', 'Connection': 'keep-alive', 'x-amzn-RequestId': 'SBEB4PCHD4EALIHRIMKS2DMILFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '416524160'}
+2025-12-13 17:45:02,809 - botocore.parsers - DEBUG - Response body:
+b'{"Count":2,"Items":[{"fill_id":{"S":"9cc8e50a-40dd-4a96-94fb-62af9a7350ff"}},{"fill_id":{"S":"18d41aeb-5931-6c3e-628d-9f77788661b3"}}],"ScannedCount":2}'
+2025-12-13 17:45:02,809 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.Scan: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:02,810 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:02,810 - botocore.hooks - DEBUG - Event after-call.dynamodb.Scan: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:02,810 - boto3.resources.action - DEBUG - Response: {'Items': [{'fill_id': '9cc8e50a-40dd-4a96-94fb-62af9a7350ff'}, {'fill_id': '18d41aeb-5931-6c3e-628d-9f77788661b3'}], 'Count': 2, 'ScannedCount': 2, 'ResponseMetadata': {'RequestId': 'SBEB4PCHD4EALIHRIMKS2DMILFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:03 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '152', 'connection': 'keep-alive', 'x-amzn-requestid': 'SBEB4PCHD4EALIHRIMKS2DMILFVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '416524160'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:02,810 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 17:45:02,810 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 17:45:02,811 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:03,124 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/portfolio/orders HTTP/1.1" 200 None
+2025-12-13 17:45:03,129 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 17:45:03,130 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 17:45:03,130 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 17:45:03,130 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 17:45:03,131 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:03,762 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/portfolio/orders HTTP/1.1" 200 None
+2025-12-13 17:45:03,827 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:04,262 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "DELETE /trade-api/v2/portfolio/orders/665ab484-5073-41bb-a5da-f4375dadd784 HTTP/1.1" 200 722
+2025-12-13 17:45:04,263 - exchange_client - INFO - Cancelled order: 665ab484-5073-41bb-a5da-f4375dadd784
+2025-12-13 17:45:04,364 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:04,741 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "DELETE /trade-api/v2/portfolio/orders/3471b8d3-4017-4927-9ba4-62ecb78d1ee7 HTTP/1.1" 200 722
+2025-12-13 17:45:04,742 - exchange_client - INFO - Cancelled order: 3471b8d3-4017-4927-9ba4-62ecb78d1ee7
+2025-12-13 17:45:04,845 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 17:45:04,845 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 17:45:04,846 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 17:45:04,847 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:05,184 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/portfolio/fills?min_ts=1765501379307 HTTP/1.1" 200 887
+2025-12-13 17:45:05,185 - state_manager - DEBUG - Skipping 2 already-processed fills
+2025-12-13 17:45:05,185 - __main__ - INFO - Processed 2 fills
+2025-12-13 17:45:05,186 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 17:45:05,186 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 17:45:05,186 - boto3.resources.action - DEBUG - Calling dynamodb:put_item with {'TableName': 'dora_state', 'Item': {'key': 'positions', 'positions': {'KXMJSCHEDULE-27': {'yes_qty': Decimal('0.0'), 'no_qty': Decimal('0.0'), 'avg_cost_yes': Decimal('0.0'), 'avg_cost_no': Decimal('0.0'), 'realized_pnl': Decimal('0.0')}, 'KXPRESPERSON-28-JVAN': {'yes_qty': Decimal('220.0'), 'no_qty': Decimal('0.0'), 'avg_cost_yes': Decimal('0.3'), 'avg_cost_no': Decimal('0.0'), 'realized_pnl': Decimal('0.0')}, 'KXNFLANYTD-25DEC14BALCIN-NOTD': {'yes_qty': Decimal('0.0'), 'no_qty': Decimal('0.0'), 'avg_cost_yes': Decimal('0.0'), 'avg_cost_no': Decimal('0.0'), 'realized_pnl': Decimal('0.0')}}}}
+2025-12-13 17:45:05,186 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.PutItem: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:05,186 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,186 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,186 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:05,187 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:05,187 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:05,187 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_state'}
+2025-12-13 17:45:05,187 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:05,187 - botocore.hooks - DEBUG - Event before-call.dynamodb.PutItem: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:05,187 - botocore.hooks - DEBUG - Event before-call.dynamodb.PutItem: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:05,187 - botocore.endpoint - DEBUG - Making request for OperationModel(name=PutItem) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.PutItem', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_state", "Item": {"key": {"S": "positions"}, "positions": {"M": {"KXMJSCHEDULE-27": {"M": {"yes_qty": {"N": "0.0"}, "no_qty": {"N": "0.0"}, "avg_cost_yes": {"N": "0.0"}, "avg_cost_no": {"N": "0.0"}, "realized_pnl": {"N": "0.0"}}}, "KXPRESPERSON-28-JVAN": {"M": {"yes_qty": {"N": "220.0"}, "no_qty": {"N": "0.0"}, "avg_cost_yes": {"N": "0.3"}, "avg_cost_no": {"N": "0.0"}, "realized_pnl": {"N": "0.0"}}}, "KXNFLANYTD-25DEC14BALCIN-NOTD": {"M": {"yes_qty": {"N": "0.0"}, "no_qty": {"N": "0.0"}, "avg_cost_yes": {"N": "0.0"}, "avg_cost_no": {"N": "0.0"}, "realized_pnl": {"N": "0.0"}}}}}}}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:05,188 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:05,188 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.PutItem: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:05,188 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.PutItem: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:05,188 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:05,188 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224505Z
+x-amz-target:DynamoDB_20120810.PutItem
+
+content-type;host;x-amz-date;x-amz-target
+adad1180caa5c39d4ff342a4eac8aee4088b4e5f4051ee862705eb53b69d5dc9
+2025-12-13 17:45:05,188 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224505Z
+20251213/us-east-1/dynamodb/aws4_request
+37a47ad4c94e6e1599baf86a22f3be3a5c7b20f0dad89e4ef84b08912dae81ff
+2025-12-13 17:45:05,188 - botocore.auth - DEBUG - Signature:
+f376830ca596f4c1d4dd49886aa172341c4e2eca1d3bb86e22fdae4cefd6b6b6
+2025-12-13 17:45:05,188 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:05,189 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:05,189 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.PutItem', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224505Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=f376830ca596f4c1d4dd49886aa172341c4e2eca1d3bb86e22fdae4cefd6b6b6', 'amz-sdk-invocation-id': b'6943149e-30e2-45cd-8b14-4d5464b8ec84', 'amz-sdk-request': b'attempt=1', 'Content-Length': '605'}>
+2025-12-13 17:45:05,189 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:05,242 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 2
+2025-12-13 17:45:05,242 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:06 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '2', 'Connection': 'keep-alive', 'x-amzn-RequestId': 'A1JE8ACU3KPNP1U0SOVNCEPLJNVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '2745614147'}
+2025-12-13 17:45:05,242 - botocore.parsers - DEBUG - Response body:
+b'{}'
+2025-12-13 17:45:05,243 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.PutItem: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:05,243 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:05,243 - botocore.hooks - DEBUG - Event after-call.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,243 - boto3.resources.action - DEBUG - Response: {'ResponseMetadata': {'RequestId': 'A1JE8ACU3KPNP1U0SOVNCEPLJNVV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:06 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '2', 'connection': 'keep-alive', 'x-amzn-requestid': 'A1JE8ACU3KPNP1U0SOVNCEPLJNVV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '2745614147'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:05,243 - dynamo - DEBUG - Saved 3 positions to DynamoDB
+2025-12-13 17:45:05,243 - boto3.resources.action - DEBUG - Calling dynamodb:put_item with {'TableName': 'dora_state', 'Item': {'key': 'risk_state', 'daily_pnl': Decimal('0.0'), 'trading_halted': False, 'last_updated': '2025-12-13T22:45:05.243732', 'last_fill_timestamp': '2025-12-13T01:02:59.307458+00:00'}}
+2025-12-13 17:45:05,243 - botocore.hooks - DEBUG - Event provide-client-params.dynamodb.PutItem: calling handler <function copy_dynamodb_params at 0x76bd70570040>
+2025-12-13 17:45:05,244 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_condition_expressions of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,244 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_attribute_value_input of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,244 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function generate_idempotent_uuid at 0x76bd7112a9e0>
+2025-12-13 17:45:05,244 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function _handle_request_validation_mode_member at 0x76bd70f4d1b0>
+2025-12-13 17:45:05,244 - botocore.hooks - DEBUG - Event before-parameter-build.dynamodb.PutItem: calling handler <function block_endpoint_discovery_required_operations at 0x76bd710f9090>
+2025-12-13 17:45:05,244 - botocore.regions - DEBUG - Calling endpoint provider with parameters: {'Region': 'us-east-1', 'UseDualStack': False, 'UseFIPS': False, 'AccountIdEndpointMode': 'preferred', 'ResourceArn': 'dora_state'}
+2025-12-13 17:45:05,244 - botocore.regions - DEBUG - Endpoint provider result: https://dynamodb.us-east-1.amazonaws.com
+2025-12-13 17:45:05,245 - botocore.hooks - DEBUG - Event before-call.dynamodb.PutItem: calling handler <function add_recursion_detection_header at 0x76bd7112a560>
+2025-12-13 17:45:05,245 - botocore.hooks - DEBUG - Event before-call.dynamodb.PutItem: calling handler <function inject_api_version_header_if_needed at 0x76bd70f4c280>
+2025-12-13 17:45:05,245 - botocore.endpoint - DEBUG - Making request for OperationModel(name=PutItem) with params: {'url_path': '/', 'query_string': '', 'method': 'POST', 'headers': {'X-Amz-Target': 'DynamoDB_20120810.PutItem', 'Content-Type': 'application/x-amz-json-1.0', 'User-Agent': 'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource'}, 'body': b'{"TableName": "dora_state", "Item": {"key": {"S": "risk_state"}, "daily_pnl": {"N": "0.0"}, "trading_halted": {"BOOL": false}, "last_updated": {"S": "2025-12-13T22:45:05.243732"}, "last_fill_timestamp": {"S": "2025-12-13T01:02:59.307458+00:00"}}}', 'url': 'https://dynamodb.us-east-1.amazonaws.com/', 'context': {'client_region': 'us-east-1', 'client_config': <botocore.config.Config object at 0x76bd70fbd5a0>, 'has_streaming_input': False, 'auth_type': None, 'unsigned_payload': None, 'auth_options': ['aws.auth#sigv4']}}
+2025-12-13 17:45:05,245 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <bound method RequestSigner.handler of <botocore.signers.RequestSigner object at 0x76bd70fbd990>>
+2025-12-13 17:45:05,245 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.PutItem: calling handler <function set_operation_specific_signer at 0x76bd7112a7a0>
+2025-12-13 17:45:05,245 - botocore.hooks - DEBUG - Event choose-signer.dynamodb.PutItem: calling handler <function _set_auth_scheme_preference_signer at 0x76bd70f4d2d0>
+2025-12-13 17:45:05,245 - botocore.auth - DEBUG - Calculating signature using v4 auth.
+2025-12-13 17:45:05,246 - botocore.auth - DEBUG - CanonicalRequest:
+POST
+/
+
+content-type:application/x-amz-json-1.0
+host:dynamodb.us-east-1.amazonaws.com
+x-amz-date:20251213T224505Z
+x-amz-target:DynamoDB_20120810.PutItem
+
+content-type;host;x-amz-date;x-amz-target
+f793001043850b7bb4493a12f2e6a66fdee5083086e0602c6e63bb24677eadde
+2025-12-13 17:45:05,246 - botocore.auth - DEBUG - StringToSign:
+AWS4-HMAC-SHA256
+20251213T224505Z
+20251213/us-east-1/dynamodb/aws4_request
+48d79c6f9ead9138b88115bbf62dfec9434fefe2af28aef814dd6f716f655603
+2025-12-13 17:45:05,246 - botocore.auth - DEBUG - Signature:
+1255da4c58068f0e1ae4f0e1d88d53afccce5e1e95e5d745a7f5b5721f0cd0ff
+2025-12-13 17:45:05,246 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <bound method UserAgentString.rebuild_and_replace_user_agent_handler of <botocore.useragent.UserAgentString object at 0x76bd70535a20>>
+2025-12-13 17:45:05,246 - botocore.hooks - DEBUG - Event request-created.dynamodb.PutItem: calling handler <function add_retry_headers at 0x76bd70f4caf0>
+2025-12-13 17:45:05,246 - botocore.endpoint - DEBUG - Sending http request: <AWSPreparedRequest stream_output=False, method=POST, url=https://dynamodb.us-east-1.amazonaws.com/, headers={'X-Amz-Target': b'DynamoDB_20120810.PutItem', 'Content-Type': b'application/x-amz-json-1.0', 'User-Agent': b'Boto3/1.42.9 md/Botocore#1.42.9 ua/2.1 os/linux#6.6.87.2-microsoft-standard-WSL2 md/arch#x86_64 lang/python#3.10.12 md/pyimpl#CPython m/D,n,Z,b,P cfg/retry-mode#legacy Botocore/1.42.9 Resource', 'X-Amz-Date': b'20251213T224505Z', 'Authorization': b'AWS4-HMAC-SHA256 Credential=AKIAYFNB2S2VMDQJV6QX/20251213/us-east-1/dynamodb/aws4_request, SignedHeaders=content-type;host;x-amz-date;x-amz-target, Signature=1255da4c58068f0e1ae4f0e1d88d53afccce5e1e95e5d745a7f5b5721f0cd0ff', 'amz-sdk-invocation-id': b'4c850dfd-3312-4073-9e58-68def3f4cb84', 'amz-sdk-request': b'attempt=1', 'Content-Length': '246'}>
+2025-12-13 17:45:05,246 - botocore.httpsession - DEBUG - Certificate path: /home/joe/dora/.venv/lib/python3.10/site-packages/certifi/cacert.pem
+2025-12-13 17:45:05,282 - urllib3.connectionpool - DEBUG - https://dynamodb.us-east-1.amazonaws.com:443 "POST / HTTP/1.1" 200 2
+2025-12-13 17:45:05,282 - botocore.parsers - DEBUG - Response headers: {'Server': 'Server', 'Date': 'Sat, 13 Dec 2025 22:45:06 GMT', 'Content-Type': 'application/x-amz-json-1.0', 'Content-Length': '2', 'Connection': 'keep-alive', 'x-amzn-RequestId': 'FHHI20M2PIRULBS6HGRIQNIL73VV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '2745614147'}
+2025-12-13 17:45:05,282 - botocore.parsers - DEBUG - Response body:
+b'{}'
+2025-12-13 17:45:05,283 - botocore.hooks - DEBUG - Event needs-retry.dynamodb.PutItem: calling handler <botocore.retryhandler.RetryHandler object at 0x76bd70536020>
+2025-12-13 17:45:05,283 - botocore.retryhandler - DEBUG - No retry needed.
+2025-12-13 17:45:05,283 - botocore.hooks - DEBUG - Event after-call.dynamodb.PutItem: calling handler <bound method TransformationInjector.inject_attribute_value_output of <boto3.dynamodb.transform.TransformationInjector object at 0x76bd70536f20>>
+2025-12-13 17:45:05,283 - boto3.resources.action - DEBUG - Response: {'ResponseMetadata': {'RequestId': 'FHHI20M2PIRULBS6HGRIQNIL73VV4KQNSO5AEMVJF66Q9ASUAAJG', 'HTTPStatusCode': 200, 'HTTPHeaders': {'server': 'Server', 'date': 'Sat, 13 Dec 2025 22:45:06 GMT', 'content-type': 'application/x-amz-json-1.0', 'content-length': '2', 'connection': 'keep-alive', 'x-amzn-requestid': 'FHHI20M2PIRULBS6HGRIQNIL73VV4KQNSO5AEMVJF66Q9ASUAAJG', 'x-amz-crc32': '2745614147'}, 'RetryAttempts': 0}}
+2025-12-13 17:45:05,283 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 17:45:05,284 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:05,504 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/portfolio/balance HTTP/1.1" 500 103
+2025-12-13 17:45:05,505 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 1.0s...
+2025-12-13 17:45:06,536 - urllib3.connectionpool - DEBUG - Starting new HTTPS connection (1): demo-api.kalshi.co:443
+2025-12-13 17:45:06,663 - urllib3.connectionpool - DEBUG - https://demo-api.kalshi.co:443 "GET /trade-api/v2/portfolio/balance HTTP/1.1" 500 103
+2025-12-13 17:45:06,664 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 2.0s...
+2025-12-13 17:48:41,695 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 17:48:41,749 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 17:48:42,106 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 17:48:42,106 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 17:48:42,401 - __main__ - INFO - Exchange status: True
+2025-12-13 17:48:42,401 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 17:48:42,453 - state_manager - INFO - Loaded 3 positions
+2025-12-13 17:48:42,503 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 17:48:42,564 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 17:48:42,564 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 17:48:42,987 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 17:48:42,987 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 17:48:42,987 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 17:48:42,987 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 17:48:43,210 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 17:48:43,210 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 17:48:43,211 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 17:48:43,639 - __main__ - INFO - Processed 2 fills
+2025-12-13 17:48:43,639 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 17:48:43,639 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 17:48:43,708 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 17:48:43,910 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 1.0s...
+2025-12-13 17:48:45,015 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance. Retrying in 2.0s...
+2025-12-13 17:48:47,090 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 17:48:47,090 - __main__ - CRITICAL - Fatal error: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 356, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 149, in startup
+    balance = self.exchange.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 274, in get_balance
+    return self._retry_request(_fetch)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 92, in _retry_request
+    raise last_error
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 82, in _retry_request
+    return func(*args, **kwargs)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 268, in _fetch
+    response = self.client.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 149, in get_balance
+    return self.get(self.portfolio_url + '/balance')
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 133, in get
+    self.raise_if_bad_response(response)
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 112, in raise_if_bad_response
+    response.raise_for_status()
+  File "/home/joe/dora/.venv/lib/python3.10/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 17:52:22,598 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 17:52:22,643 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 17:52:22,838 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 17:52:22,839 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 17:52:23,082 - __main__ - INFO - Exchange status: True
+2025-12-13 17:52:23,082 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 17:52:23,119 - state_manager - INFO - Loaded 3 positions
+2025-12-13 17:52:23,149 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 17:52:23,191 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 17:52:23,191 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 17:52:23,616 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 17:52:23,616 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 17:52:23,616 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 17:52:23,617 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 17:52:23,845 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 17:52:23,845 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 17:52:23,845 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 17:52:24,080 - __main__ - INFO - Processed 2 fills
+2025-12-13 17:52:24,080 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 17:52:24,080 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 17:52:24,152 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 17:52:24,366 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 17:52:25,467 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 17:55:09,998 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 17:55:10,042 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 17:55:10,236 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 17:55:10,237 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 17:55:10,490 - __main__ - INFO - Exchange status: True
+2025-12-13 17:55:10,490 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 17:55:10,526 - state_manager - INFO - Loaded 3 positions
+2025-12-13 17:55:10,561 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 17:55:10,605 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 17:55:10,605 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 17:55:10,854 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 17:55:10,854 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 17:55:10,854 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 17:55:10,854 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 17:55:11,072 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 17:55:11,072 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 17:55:11,072 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 17:55:11,401 - __main__ - INFO - Processed 2 fills
+2025-12-13 17:55:11,401 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 17:55:11,401 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 17:55:11,475 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 17:55:12,340 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 17:55:13,455 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 17:55:15,580 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 17:55:15,580 - __main__ - CRITICAL - Fatal error: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 356, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 149, in startup
+    balance = self.exchange.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 293, in get_balance
+    return self._retry_request(_fetch)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 111, in _retry_request
+    raise last_error
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 82, in _retry_request
+    return func(*args, **kwargs)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 287, in _fetch
+    response = self.client.get_balance()
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 168, in get_balance
+    return self.get(self.portfolio_url + '/balance')
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 152, in get
+    self.raise_if_bad_response(response)
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 131, in raise_if_bad_response
+    response.raise_for_status()
+  File "/home/joe/dora/.venv/lib/python3.10/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:01:10,467 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:01:10,514 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:01:10,708 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:01:10,708 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:01:10,988 - __main__ - INFO - Exchange status: True
+2025-12-13 18:01:10,988 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:01:11,024 - state_manager - INFO - Loaded 3 positions
+2025-12-13 18:01:11,058 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:01:11,101 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 18:01:11,101 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 18:01:11,546 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 18:01:11,546 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 18:01:11,546 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 18:01:11,546 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:01:11,727 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 18:01:11,727 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 18:01:11,727 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 18:01:12,037 - __main__ - INFO - Processed 2 fills
+2025-12-13 18:01:12,037 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:01:12,037 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:01:12,109 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 18:01:12,330 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:01:13,416 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:01:16,203 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:01:16,203 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:01:16,203 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:01:16,203 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:01:16,203 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:01:16,242 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:01:16,406 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10]], no_asks=[[50, 7]]
+2025-12-13 18:01:16,406 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-13 18:01:16,406 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:01:16,406 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:01:16,407 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-13 18:01:16,407 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:01:16,407 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-13 18:01:16,407 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-13 18:01:16,842 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: 295045e7-c8da-425e-a1d8-c3633671d15d
+2025-12-13 18:01:18,003 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.33 - ID: d61c87ff-13e2-4def-95a9-82e541ef6fae
+2025-12-13 18:01:18,199 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:01:18,200 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:01:21,531 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10], [27, 10]], no_asks=[[50, 7], [67, 10]]
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.500 mid=0.385 spread=0.230
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.355 ask=0.415
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.36
+2025-12-13 18:01:21,532 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.42
+2025-12-13 18:01:21,568 - __main__ - INFO - Cancelling order: BID 10@0.27 (target now 0.36, diff=0.090)
+2025-12-13 18:01:21,568 - __main__ - INFO - Cancelling order: ASK 10@0.33 (target now 0.42, diff=0.090)
+2025-12-13 18:01:21,848 - exchange_client - INFO - Cancelled order: 295045e7-c8da-425e-a1d8-c3633671d15d
+2025-12-13 18:01:21,992 - exchange_client - INFO - Cancelled order: d61c87ff-13e2-4def-95a9-82e541ef6fae
+2025-12-13 18:01:22,162 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.36 - ID: 06792ee3-39a2-4d59-a1c7-ce23d49af453
+2025-12-13 18:01:22,312 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.42 - ID: b8006862-4a7c-4256-bc73-fd3c7bfd6e61
+2025-12-13 18:01:22,468 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:01:26,562 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10], [36, 10]], no_asks=[[50, 7], [58, 10]]
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.360 ask=0.500 mid=0.430 spread=0.140
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.40
+2025-12-13 18:01:26,563 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.46
+2025-12-13 18:01:26,601 - __main__ - INFO - Cancelling order: BID 10@0.36 (target now 0.40, diff=0.040)
+2025-12-13 18:01:26,601 - __main__ - INFO - Cancelling order: ASK 10@0.42 (target now 0.46, diff=0.040)
+2025-12-13 18:01:26,765 - exchange_client - INFO - Cancelled order: 06792ee3-39a2-4d59-a1c7-ce23d49af453
+2025-12-13 18:01:26,933 - exchange_client - INFO - Cancelled order: b8006862-4a7c-4256-bc73-fd3c7bfd6e61
+2025-12-13 18:01:27,078 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.40 - ID: e07900bd-2da8-4ad1-b61e-54434f2326e5
+2025-12-13 18:01:27,224 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.46 - ID: 93042323-84cf-4651-b46b-bc25e6b7f09e
+2025-12-13 18:01:27,382 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:11:36,085 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:11:36,128 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:11:36,358 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:11:36,359 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:11:36,725 - __main__ - INFO - Exchange status: True
+2025-12-13 18:11:36,726 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:11:36,756 - state_manager - INFO - Loaded 3 positions
+2025-12-13 18:11:36,793 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:11:36,838 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 18:11:36,838 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 18:11:37,152 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 18:11:37,152 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 18:11:37,152 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 18:11:37,152 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:11:37,684 - exchange_client - INFO - Cancelled order: 93042323-84cf-4651-b46b-bc25e6b7f09e
+2025-12-13 18:11:38,161 - exchange_client - INFO - Cancelled order: e07900bd-2da8-4ad1-b61e-54434f2326e5
+2025-12-13 18:11:38,262 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 18:11:38,262 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 18:11:38,262 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 18:11:38,504 - __main__ - INFO - Processed 2 fills
+2025-12-13 18:11:38,505 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:11:38,505 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:11:38,582 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 18:11:38,749 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:11:39,860 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:11:42,802 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:11:42,802 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:11:42,802 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:11:42,802 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:11:42,802 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:11:42,847 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:11:42,989 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10]], no_asks=[[50, 7]]
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.100 ask=0.500 mid=0.300 spread=0.400
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-13 18:11:42,990 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-13 18:11:43,163 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD BID 10@0.27 - ID: b2d4ecb7-d78d-4bcb-9378-fe3e1f8ea93d
+2025-12-13 18:11:43,314 - exchange_client - INFO - Placed order: KXNFLANYTD-25DEC14BALCIN-NOTD ASK 10@0.33 - ID: 294b9ad1-435c-4e19-a0af-ec74e7fd2dbd
+2025-12-13 18:11:43,509 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:11:43,509 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:11:48,116 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10], [27, 10]], no_asks=[[50, 7], [67, 10]]
+2025-12-13 18:11:48,116 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.330 mid=0.300 spread=0.060
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-13 18:11:48,117 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-13 18:11:48,340 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:11:52,988 - exchange_client - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Raw orderbook: yes_bids=[[10, 10], [27, 10]], no_asks=[[50, 7], [67, 10]]
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Order Book: bid=0.270 ask=0.330 mid=0.300 spread=0.060
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Target prices (before rounding): bid=0.270 ask=0.330
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD Sizes: bid=10 ask=10
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → BID: 10@0.27
+2025-12-13 18:11:52,989 - strategy - INFO - KXNFLANYTD-25DEC14BALCIN-NOTD → ASK: 10@0.33
+2025-12-13 18:11:53,207 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:16:47,262 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:16:47,308 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:16:47,501 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:16:47,501 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:16:47,846 - __main__ - INFO - Exchange status: True
+2025-12-13 18:16:47,847 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:16:47,879 - state_manager - INFO - Loaded 3 positions
+2025-12-13 18:16:47,910 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:16:47,953 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 18:16:47,953 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 18:16:48,185 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 18:16:48,185 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 18:16:48,185 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 18:16:48,185 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:16:48,823 - exchange_client - INFO - Cancelled order: 294b9ad1-435c-4e19-a0af-ec74e7fd2dbd
+2025-12-13 18:16:49,233 - exchange_client - INFO - Cancelled order: b2d4ecb7-d78d-4bcb-9378-fe3e1f8ea93d
+2025-12-13 18:16:49,334 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 18:16:49,334 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 18:16:49,334 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 18:16:49,494 - __main__ - INFO - Processed 2 fills
+2025-12-13 18:16:49,494 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:16:49,494 - state_manager - INFO - Saving state: 3 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:16:49,563 - __main__ - INFO - State summary: {'num_positions': 3, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 18:16:49,726 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:16:50,861 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:16:53,025 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:16:53,026 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:16:53,026 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:16:53,026 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:16:53,026 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:16:53,063 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:16:53,244 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], no_asks=[[30, 100]]
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.700 mid=0.515 spread=0.370
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.485 ask=0.545
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:16:53,244 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:16:53,530 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.48 - ID: 70d605f6-afed-43a8-b57f-05fd1e543da6
+2025-12-13 18:16:53,783 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.54 - ID: 65fd0b05-9df2-44f8-a0e8-82ffd0be2c3a
+2025-12-13 18:16:53,971 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:16:53,971 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0 NO:0'}
+2025-12-13 18:16:58,240 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[30, 100], [46, 10]]
+2025-12-13 18:16:58,240 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:16:58,240 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:16:58,240 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:16:58,241 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:16:58,241 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:16:58,241 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:16:58,241 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:16:58,425 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:03,387 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[30, 100], [46, 10]]
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:03,388 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:03,572 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:08,223 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[30, 100], [46, 10]]
+2025-12-13 18:17:08,223 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:08,223 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:08,224 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:08,224 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:08,224 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:08,224 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:08,224 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:08,450 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:14,186 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[30, 100], [46, 10]]
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:14,187 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:14,377 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:19,193 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:19,193 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:19,193 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:19,193 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:19,193 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:19,193 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:19,194 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:19,194 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:19,414 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:24,173 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:24,174 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:24,367 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:29,229 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:29,230 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:29,423 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:34,191 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:34,191 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:34,191 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:34,191 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:34,192 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:34,192 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:34,192 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:34,192 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:34,404 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:39,234 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:39,234 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:39,235 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:39,460 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:44,053 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:17:44,218 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:44,219 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:44,457 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:44,458 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0 NO:0'}
+2025-12-13 18:17:50,045 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:50,045 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:50,238 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:17:55,046 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:17:55,046 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:17:55,047 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:17:55,248 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:00,085 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:18:00,085 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:18:00,085 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:00,085 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:00,086 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:18:00,086 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:00,086 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:18:00,086 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:18:00,364 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:05,057 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:18:05,058 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:18:05,325 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:10,049 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:18:10,049 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:18:10,049 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:10,049 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:10,049 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:18:10,050 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:10,050 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:18:10,050 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:18:10,262 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:15,110 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:18:15,110 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:18:15,110 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:15,110 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:15,110 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:18:15,110 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:15,111 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:18:15,111 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:18:15,442 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:20,921 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10]]
+2025-12-13 18:18:20,921 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.480 ask=0.540 mid=0.510 spread=0.060
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.480 ask=0.540
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.48
+2025-12-13 18:18:20,922 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.54
+2025-12-13 18:18:21,126 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:26,015 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [48, 10]], no_asks=[[46, 10], [47, 20]]
+2025-12-13 18:18:26,015 - strategy - INFO - KXMICHCOACH-26-JFIS: Spread too narrow (0.050 < 0.060) - NO QUOTE
+2025-12-13 18:18:26,222 - exchange_client - INFO - Cancelled order: 70d605f6-afed-43a8-b57f-05fd1e543da6
+2025-12-13 18:18:26,398 - exchange_client - INFO - Cancelled order: 65fd0b05-9df2-44f8-a0e8-82ffd0be2c3a
+2025-12-13 18:18:26,574 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:30,936 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], no_asks=[[47, 20]]
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.530 mid=0.430 spread=0.200
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:18:30,937 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:18:31,156 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.40 - ID: 29aae7e3-87c7-4cbb-ae81-fd317b7ea5f4
+2025-12-13 18:18:31,435 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.46 - ID: 4ce37cca-e5e9-4752-b057-b5dc11a5b024
+2025-12-13 18:18:31,704 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:35,770 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:18:35,959 - exchange_client - INFO - KXMICHCOACH-26-JFIS Raw orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], no_asks=[[47, 20], [54, 10]]
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0 NO=0 net=0
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0 → skew=0.0000
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:18:35,959 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:18:36,149 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:18:36,149 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0 NO:0'}
+2025-12-13 18:24:49,366 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:24:49,409 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:24:49,615 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:24:49,616 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:24:49,926 - __main__ - INFO - Exchange status: True
+2025-12-13 18:24:49,926 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:24:49,953 - state_manager - INFO - Loaded 4 positions
+2025-12-13 18:24:49,987 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:24:50,031 - dynamo - INFO - Loaded 2 fill IDs from trade log
+2025-12-13 18:24:50,032 - state_manager - INFO - Loaded 2 logged fill IDs
+2025-12-13 18:24:50,321 - __main__ - INFO - Found 2 open orders on exchange
+2025-12-13 18:24:50,321 - state_manager - INFO - Reconciling state with 2 exchange orders
+2025-12-13 18:24:50,321 - state_manager - INFO - State reconciled: 2 open orders
+2025-12-13 18:24:50,321 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:24:50,906 - exchange_client - INFO - Cancelled order: 4ce37cca-e5e9-4752-b057-b5dc11a5b024
+2025-12-13 18:24:51,193 - exchange_client - INFO - Cancelled order: 29aae7e3-87c7-4cbb-ae81-fd317b7ea5f4
+2025-12-13 18:24:51,294 - exchange_client - INFO - Cancelled 2 orders
+2025-12-13 18:24:51,294 - __main__ - INFO - Cancelled 2 orders
+2025-12-13 18:24:51,294 - __main__ - INFO - Fetching fills from 2025-12-12 01:02:59.307458+00:00 (24hrs before last fill) to now
+2025-12-13 18:24:51,476 - __main__ - INFO - Processed 2 fills
+2025-12-13 18:24:51,476 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:24:51,476 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:24:51,545 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 220.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T01:02:59.307458+00:00'}
+2025-12-13 18:24:51,717 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:24:52,819 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:24:54,907 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:24:54,908 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:24:54,908 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:24:54,908 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:24:54,908 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:24:54,947 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:24:55,218 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(53, 20)] (converted from no_bids=[[47, 20]])
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.530 mid=0.430 spread=0.200
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:24:55,219 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:24:55,431 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.40 - ID: 971fc128-c904-4d6f-9ff6-838597e65a8c
+2025-12-13 18:24:55,623 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.46 - ID: 84ad8845-8114-414f-93b9-41bbf106225f
+2025-12-13 18:24:55,798 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:24:55,799 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:25:01,133 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:01,134 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:01,336 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:06,012 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:06,012 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:06,012 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:06,012 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:06,012 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:06,013 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:06,013 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:06,013 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:06,254 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:10,996 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:10,996 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:11,182 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:16,212 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:16,213 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:16,431 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:21,015 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:21,016 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:21,192 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:26,049 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:26,050 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:26,237 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:32,044 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:32,045 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:32,238 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:37,085 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(53, 20), (46, 10)] (converted from no_bids=[[47, 20], [54, 10]])
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.400 ask=0.460 mid=0.430 spread=0.060
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.400 ask=0.460
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:25:37,085 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:25:37,427 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:42,037 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(46, 10), (45, 20)] (converted from no_bids=[[54, 10], [55, 20]])
+2025-12-13 18:25:42,037 - strategy - INFO - KXMICHCOACH-26-JFIS: Spread too narrow (0.050 < 0.060) - NO QUOTE
+2025-12-13 18:25:42,347 - exchange_client - INFO - Cancelled order: 971fc128-c904-4d6f-9ff6-838597e65a8c
+2025-12-13 18:25:42,525 - exchange_client - INFO - Cancelled order: 84ad8845-8114-414f-93b9-41bbf106225f
+2025-12-13 18:25:42,714 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:46,858 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:25:47,028 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:25:47,029 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:25:47,244 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.36 - ID: 5a8c2a54-e52e-4e34-b391-0e51b653b058
+2025-12-13 18:25:47,510 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.42 - ID: 2f21a641-1c64-4236-8e5e-cd8f79c7dd04
+2025-12-13 18:25:47,659 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:47,659 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:0.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:25:52,017 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:25:52,017 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:25:52,017 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:52,017 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:52,017 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:25:52,017 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:52,018 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:25:52,018 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:25:52,208 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:25:57,039 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:25:57,039 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:25:57,040 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:25:57,235 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:02,064 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:02,064 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:02,065 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:02,413 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:07,993 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:07,994 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:08,210 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:13,070 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 15]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:13,070 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:13,339 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:17,989 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 15]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:17,990 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:18,208 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:23,020 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:23,021 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:23,246 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:28,130 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:28,130 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:28,131 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:28,313 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:33,099 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 10)] (converted from no_bids=[[55, 20], [58, 10]])
+2025-12-13 18:26:33,099 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:33,100 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:33,338 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:38,808 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:26:39,111 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=0.0 NO=0.0 net=0.0
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=0.0 → skew=0.0000
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.360 ask=0.420
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:39,111 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:39,307 - state_manager - INFO - Processing 1 new fills (skipped 1 duplicates)
+2025-12-13 18:26:39,379 - state_manager - INFO - Fill processed: KXMICHCOACH-26-JFIS no 5@0.42, PnL delta: 0.00
+2025-12-13 18:26:39,379 - __main__ - INFO - Processed 2 new fills, Daily PnL: $0.00
+2025-12-13 18:26:39,380 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-5.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:26:43,985 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:43,985 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:44,221 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:48,966 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:48,966 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:49,237 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:53,994 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:53,994 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:54,171 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:26:59,018 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:26:59,018 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:26:59,237 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:04,080 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:27:04,081 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:27:04,265 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:10,141 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20), (42, 5)] (converted from no_bids=[[55, 20], [58, 5]])
+2025-12-13 18:27:10,141 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.420 mid=0.390 spread=0.060
+2025-12-13 18:27:10,141 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:27:10,141 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:27:10,141 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.363 ask=0.423
+2025-12-13 18:27:10,142 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:27:10,142 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.36
+2025-12-13 18:27:10,142 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.42
+2025-12-13 18:27:10,359 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:14,044 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [36, 10]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.360 ask=0.450 mid=0.405 spread=0.090
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-5.0 NO=0.0 net=-5.0
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-5.0 → skew=-0.0030
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.378 ask=0.438
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.38
+2025-12-13 18:27:14,044 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.44
+2025-12-13 18:27:14,079 - __main__ - INFO - Cancelling order: BID 10@0.36 (target now 0.38, diff=0.020)
+2025-12-13 18:27:14,079 - __main__ - INFO - Cancelling order: ASK 10@0.42 (target now 0.44, diff=0.020)
+2025-12-13 18:27:14,269 - exchange_client - INFO - Cancelled order: 5a8c2a54-e52e-4e34-b391-0e51b653b058
+2025-12-13 18:27:14,585 - exchange_client - ERROR - Failed to cancel order 2f21a641-1c64-4236-8e5e-cd8f79c7dd04: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/2f21a641-1c64-4236-8e5e-cd8f79c7dd04
+2025-12-13 18:27:14,760 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.38 - ID: 3a69929b-6cd3-4b96-93eb-90e92cadda97
+2025-12-13 18:27:14,931 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.44 - ID: 25d7e366-a3c5-4213-84a2-07c55792d885
+2025-12-13 18:27:15,121 - state_manager - INFO - Processing 1 new fills (skipped 1 duplicates)
+2025-12-13 18:27:15,220 - state_manager - INFO - Fill processed: KXMICHCOACH-26-JFIS no 5@0.42, PnL delta: 0.00
+2025-12-13 18:27:15,221 - __main__ - INFO - Processed 2 new fills, Daily PnL: $0.00
+2025-12-13 18:27:19,022 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [38, 10]], yes_asks=[(45, 20), (44, 10)] (converted from no_bids=[[55, 20], [56, 10]])
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.380 ask=0.440 mid=0.410 spread=0.060
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0060
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.386 ask=0.446
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.39
+2025-12-13 18:27:19,023 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.45
+2025-12-13 18:27:19,058 - __main__ - INFO - Cancelling order: ASK 10@0.42 (target now 0.45, diff=0.030)
+2025-12-13 18:27:19,058 - __main__ - INFO - Cancelling order: BID 10@0.38 (target now 0.39, diff=0.010)
+2025-12-13 18:27:19,058 - __main__ - INFO - Cancelling order: ASK 10@0.44 (target now 0.45, diff=0.010)
+2025-12-13 18:27:19,376 - exchange_client - ERROR - Failed to cancel order 2f21a641-1c64-4236-8e5e-cd8f79c7dd04: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/2f21a641-1c64-4236-8e5e-cd8f79c7dd04
+2025-12-13 18:27:19,523 - exchange_client - INFO - Cancelled order: 3a69929b-6cd3-4b96-93eb-90e92cadda97
+2025-12-13 18:27:19,681 - exchange_client - INFO - Cancelled order: 25d7e366-a3c5-4213-84a2-07c55792d885
+2025-12-13 18:27:19,859 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.39 - ID: 6ce5437a-24ef-48b8-8b15-54cf7979f954
+2025-12-13 18:27:19,995 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.45 - ID: f05cd4c4-c4b4-4e7e-9765-d964238023b1
+2025-12-13 18:27:20,156 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:24,034 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [39, 10]], yes_asks=[(45, 30)] (converted from no_bids=[[55, 30]])
+2025-12-13 18:27:24,034 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.390 ask=0.450 mid=0.420 spread=0.060
+2025-12-13 18:27:24,034 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:27:24,034 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0060
+2025-12-13 18:27:24,035 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.396 ask=0.456
+2025-12-13 18:27:24,035 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=10
+2025-12-13 18:27:24,035 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.40
+2025-12-13 18:27:24,035 - strategy - INFO - KXMICHCOACH-26-JFIS → ASK: 10@0.46
+2025-12-13 18:27:24,071 - __main__ - INFO - Cancelling order: ASK 10@0.42 (target now 0.46, diff=0.040)
+2025-12-13 18:27:24,072 - __main__ - INFO - Cancelling order: BID 10@0.39 (target now 0.40, diff=0.010)
+2025-12-13 18:27:24,072 - __main__ - INFO - Cancelling order: ASK 10@0.45 (target now 0.46, diff=0.010)
+2025-12-13 18:27:24,237 - exchange_client - ERROR - Failed to cancel order 2f21a641-1c64-4236-8e5e-cd8f79c7dd04: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/2f21a641-1c64-4236-8e5e-cd8f79c7dd04
+2025-12-13 18:27:24,370 - exchange_client - INFO - Cancelled order: 6ce5437a-24ef-48b8-8b15-54cf7979f954
+2025-12-13 18:27:24,522 - exchange_client - INFO - Cancelled order: f05cd4c4-c4b4-4e7e-9765-d964238023b1
+2025-12-13 18:27:24,656 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.40 - ID: 97d26e22-3e59-45fb-991f-34f57bc4282b
+2025-12-13 18:27:24,835 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS ASK 10@0.46 - ID: db44e50d-17fc-496a-9d18-3981dad07eb9
+2025-12-13 18:27:25,010 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:28,869 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:27:29,103 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000], [40, 10]], yes_asks=[(46, 10), (45, 20)] (converted from no_bids=[[54, 10], [55, 20]])
+2025-12-13 18:27:29,104 - strategy - INFO - KXMICHCOACH-26-JFIS: Spread too narrow (0.050 < 0.060) - NO QUOTE
+2025-12-13 18:27:29,284 - exchange_client - ERROR - Failed to cancel order 2f21a641-1c64-4236-8e5e-cd8f79c7dd04: 404 Client Error: Not Found for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/orders/2f21a641-1c64-4236-8e5e-cd8f79c7dd04
+2025-12-13 18:27:29,458 - exchange_client - INFO - Cancelled order: 97d26e22-3e59-45fb-991f-34f57bc4282b
+2025-12-13 18:27:29,631 - exchange_client - INFO - Cancelled order: db44e50d-17fc-496a-9d18-3981dad07eb9
+2025-12-13 18:27:29,810 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:27:29,810 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:37:41,683 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:37:41,730 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:37:41,925 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:37:41,925 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:37:42,198 - __main__ - INFO - Exchange status: True
+2025-12-13 18:37:42,199 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:37:42,235 - state_manager - INFO - Loaded 4 positions
+2025-12-13 18:37:42,267 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:37:42,315 - dynamo - INFO - Loaded 4 fill IDs from trade log
+2025-12-13 18:37:42,315 - state_manager - INFO - Loaded 4 logged fill IDs
+2025-12-13 18:37:42,632 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 18:37:42,632 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 18:37:42,632 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 18:37:42,632 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:37:42,896 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 18:37:42,896 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 18:37:42,896 - __main__ - INFO - Fetching fills from 2025-12-12 23:27:11.030189+00:00 (24hrs before last fill) to now
+2025-12-13 18:37:43,152 - __main__ - INFO - Processed 4 fills
+2025-12-13 18:37:43,152 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:37:43,152 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:37:43,219 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 230.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T23:27:11.030189+00:00'}
+2025-12-13 18:37:43,422 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:37:44,527 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:37:46,636 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:37:46,636 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:37:46,636 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:37:46,636 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:37:46,636 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:37:46,681 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:37:46,832 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:37:46,833 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:37:46,833 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:37:46,833 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:37:46,833 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:37:46,833 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:37:47,063 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:37:47,063 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:37:51,829 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:37:51,829 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:37:51,829 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:37:51,830 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:37:51,830 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:37:51,830 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:37:52,020 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:37:56,962 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:37:56,962 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:37:56,962 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:37:56,962 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:37:56,962 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:37:56,963 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:37:57,170 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:38:01,958 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:38:01,958 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:38:01,958 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:38:01,958 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:38:01,958 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:38:01,958 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:38:02,144 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:38:06,990 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:38:06,990 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:38:06,990 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:38:06,990 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:38:06,991 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:38:06,991 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:38:07,208 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:38:11,864 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:38:11,864 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:38:11,864 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:38:11,865 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:38:11,865 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:38:11,865 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:38:12,088 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:38:17,831 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:38:17,831 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:38:17,831 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:38:17,832 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:38:17,832 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:38:17,832 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=0 ask=0
+2025-12-13 18:38:18,045 - __main__ - INFO - Processed 1 new fills, Daily PnL: $0.00
+2025-12-13 18:49:12,884 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:49:12,928 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:49:13,150 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:49:13,150 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:49:13,392 - __main__ - INFO - Exchange status: True
+2025-12-13 18:49:13,392 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:49:13,423 - state_manager - INFO - Loaded 4 positions
+2025-12-13 18:49:13,457 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:49:13,499 - dynamo - INFO - Loaded 4 fill IDs from trade log
+2025-12-13 18:49:13,499 - state_manager - INFO - Loaded 4 logged fill IDs
+2025-12-13 18:49:13,937 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 18:49:13,937 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 18:49:13,937 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 18:49:13,937 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:49:14,189 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 18:49:14,189 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 18:49:14,189 - __main__ - INFO - Fetching fills from 2025-12-12 23:27:11.030189+00:00 (24hrs before last fill) to now
+2025-12-13 18:49:14,473 - exchange_client - WARNING - Request failed (attempt 1/3): 502 Server Error: Bad Gateway for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/fills?min_ts=1765582031030 [Response: <html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+</body>
+</html>
+]. Retrying in 1.0s...
+2025-12-13 18:49:15,584 - exchange_client - WARNING - Request failed (attempt 2/3): 502 Server Error: Bad Gateway for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/fills?min_ts=1765582031030 [Response: <html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+</body>
+</html>
+]. Retrying in 2.0s...
+2025-12-13 18:49:18,672 - exchange_client - ERROR - Request failed after 3 attempts: 502 Server Error: Bad Gateway for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/fills?min_ts=1765582031030 [Response: <html>
+<head><title>502 Bad Gateway</title></head>
+<body>
+<center><h1>502 Bad Gateway</h1></center>
+</body>
+</html>
+]
+2025-12-13 18:49:18,672 - __main__ - CRITICAL - Fatal error: 502 Server Error: Bad Gateway for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/fills?min_ts=1765582031030
+Traceback (most recent call last):
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 359, in main
+    await bot.startup()
+  File "/home/joe/dora/kalshi/dora_bot/main.py", line 134, in startup
+    fills = self.exchange.get_fills(since=fetch_from)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 277, in get_fills
+    return self._retry_request(_fetch)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 111, in _retry_request
+    raise last_error
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 82, in _retry_request
+    return func(*args, **kwargs)
+  File "/home/joe/dora/kalshi/dora_bot/exchange_client.py", line 259, in _fetch
+    response = self.client.get("/trade-api/v2/portfolio/fills", params=params)
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 152, in get
+    self.raise_if_bad_response(response)
+  File "/home/joe/dora/kalshi/dora_bot/../kalshi-starter-code-python-main/clients.py", line 131, in raise_if_bad_response
+    response.raise_for_status()
+  File "/home/joe/dora/.venv/lib/python3.10/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 502 Server Error: Bad Gateway for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/fills?min_ts=1765582031030
+2025-12-13 18:54:07,553 - __main__ - INFO - Initializing Dora Bot...
+2025-12-13 18:54:07,598 - botocore.credentials - INFO - Found credentials in shared credentials file: ~/.aws/credentials
+2025-12-13 18:54:07,792 - __main__ - INFO - Bot initialized in DEMO mode
+2025-12-13 18:54:07,792 - __main__ - INFO - === STARTUP SEQUENCE ===
+2025-12-13 18:54:08,060 - __main__ - INFO - Exchange status: True
+2025-12-13 18:54:08,060 - state_manager - INFO - Loading state from DynamoDB...
+2025-12-13 18:54:08,087 - state_manager - INFO - Loaded 4 positions
+2025-12-13 18:54:08,121 - state_manager - INFO - Loaded risk state: daily_pnl=0.00, halted=False
+2025-12-13 18:54:08,163 - dynamo - INFO - Loaded 4 fill IDs from trade log
+2025-12-13 18:54:08,163 - state_manager - INFO - Loaded 4 logged fill IDs
+2025-12-13 18:54:08,614 - __main__ - INFO - Found 0 open orders on exchange
+2025-12-13 18:54:08,615 - state_manager - INFO - Reconciling state with 0 exchange orders
+2025-12-13 18:54:08,615 - state_manager - INFO - State reconciled: 0 open orders
+2025-12-13 18:54:08,615 - __main__ - INFO - Cancelling all orders on startup (config: cancel_on_startup=True)
+2025-12-13 18:54:08,780 - exchange_client - INFO - Cancelled 0 orders
+2025-12-13 18:54:08,780 - __main__ - INFO - Cancelled 0 orders
+2025-12-13 18:54:08,780 - __main__ - INFO - Fetching fills from 2025-12-12 23:27:11.030189+00:00 (24hrs before last fill) to now
+2025-12-13 18:54:08,984 - __main__ - INFO - Processed 4 fills
+2025-12-13 18:54:08,985 - __main__ - INFO - Saving reconciled state to DynamoDB...
+2025-12-13 18:54:08,985 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:54:09,059 - __main__ - INFO - State summary: {'num_positions': 4, 'num_open_orders': 0, 'total_exposure': 230.0, 'daily_pnl': 0.0, 'trading_halted': False, 'last_fill': '2025-12-13T23:27:11.030189+00:00'}
+2025-12-13 18:54:09,221 - exchange_client - WARNING - Request failed (attempt 1/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 1.0s...
+2025-12-13 18:54:10,364 - exchange_client - WARNING - Request failed (attempt 2/3): 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]. Retrying in 2.0s...
+2025-12-13 18:54:12,526 - exchange_client - ERROR - Request failed after 3 attempts: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance [API Error: N/A - N/A]
+2025-12-13 18:54:12,527 - exchange_client - WARNING - Failed to fetch balance, continuing without it: 500 Server Error: Internal Server Error for url: https://demo-api.kalshi.co/trade-api/v2/portfolio/balance
+2025-12-13 18:54:12,527 - __main__ - WARNING - Could not fetch account balance - continuing with state from DynamoDB
+2025-12-13 18:54:12,527 - __main__ - INFO - === STARTUP COMPLETE ===
+2025-12-13 18:54:12,527 - __main__ - INFO - Starting main event loop...
+2025-12-13 18:54:12,568 - __main__ - INFO - Refreshed configs: 1 enabled markets
+2025-12-13 18:54:12,844 - exchange_client - INFO - KXMICHCOACH-26-JFIS Orderbook: yes_bids=[[1, 80], [18, 200], [19, 100], [28, 60000], [29, 30000], [32, 4000], [33, 2000]], yes_asks=[(45, 20)] (converted from no_bids=[[55, 20]])
+2025-12-13 18:54:12,844 - strategy - INFO - KXMICHCOACH-26-JFIS Order Book: bid=0.330 ask=0.450 mid=0.390 spread=0.120
+2025-12-13 18:54:12,844 - strategy - INFO - KXMICHCOACH-26-JFIS Position: YES=-10.0 NO=0.0 net=-10.0
+2025-12-13 18:54:12,844 - strategy - INFO - KXMICHCOACH-26-JFIS Skew calculation: net_pos=-10.0 → skew=-0.0600
+2025-12-13 18:54:12,845 - strategy - INFO - KXMICHCOACH-26-JFIS Target prices (before rounding): bid=0.420 ask=0.480
+2025-12-13 18:54:12,845 - strategy - INFO - KXMICHCOACH-26-JFIS Sizes: bid=10 ask=0
+2025-12-13 18:54:12,845 - strategy - INFO - KXMICHCOACH-26-JFIS → BID: 10@0.42
+2025-12-13 18:54:13,173 - exchange_client - INFO - Placed order: KXMICHCOACH-26-JFIS BID 10@0.42 - ID: 4e00ad1d-6109-467d-9289-ceeaa2c617a3
+2025-12-13 18:54:13,282 - __main__ - INFO - Received shutdown signal
+2025-12-13 18:54:13,283 - __main__ - INFO - Shutting down...
+2025-12-13 18:54:13,283 - state_manager - INFO - Saving state: 4 positions - {'KXMJSCHEDULE-27': 'YES:0.0 NO:0.0', 'KXMICHCOACH-26-JFIS': 'YES:-10.0 NO:0.0', 'KXPRESPERSON-28-JVAN': 'YES:220.0 NO:0.0', 'KXNFLANYTD-25DEC14BALCIN-NOTD': 'YES:0.0 NO:0.0'}
+2025-12-13 18:54:13,350 - __main__ - INFO - Shutdown complete

@@ -324,6 +324,43 @@ class DynamoDBClient:
 
     # Trade logging
 
+    def get_all_fill_ids(self) -> set:
+        """Retrieve all fill_ids from the trade log table.
+
+        Returns:
+            Set of fill_ids that have been logged
+        """
+        try:
+            fill_ids = set()
+
+            # Scan the table to get all fill_ids
+            # Use pagination to handle large result sets
+            response = self.trade_log_table.scan(
+                ProjectionExpression='fill_id'
+            )
+
+            for item in response.get('Items', []):
+                fill_id = item.get('fill_id')
+                if fill_id and fill_id != 'unknown':
+                    fill_ids.add(fill_id)
+
+            # Handle pagination
+            while 'LastEvaluatedKey' in response:
+                response = self.trade_log_table.scan(
+                    ProjectionExpression='fill_id',
+                    ExclusiveStartKey=response['LastEvaluatedKey']
+                )
+                for item in response.get('Items', []):
+                    fill_id = item.get('fill_id')
+                    if fill_id and fill_id != 'unknown':
+                        fill_ids.add(fill_id)
+
+            logger.info(f"Loaded {len(fill_ids)} fill IDs from trade log")
+            return fill_ids
+        except ClientError as e:
+            logger.error(f"Error fetching fill IDs: {e}")
+            return set()
+
     def fill_exists(self, fill_id: str) -> bool:
         """Check if a fill has already been logged to the trade log.
 

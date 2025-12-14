@@ -82,12 +82,31 @@ class KalshiExchangeClient:
                 return func(*args, **kwargs)
             except (HTTPError, RequestException) as e:
                 last_error = e
+
+                # Try to extract API error details
+                error_details = ""
+                if hasattr(e, 'response') and e.response is not None:
+                    try:
+                        error_data = e.response.json()
+                        error_details = f" [API Error: {error_data.get('code', 'N/A')} - {error_data.get('message', 'N/A')}"
+                        if 'details' in error_data:
+                            error_details += f", Details: {error_data['details']}"
+                        if 'service' in error_data:
+                            error_details += f", Service: {error_data['service']}"
+                        error_details += "]"
+                    except:
+                        # If JSON parsing fails, include raw response text
+                        try:
+                            error_details = f" [Response: {e.response.text[:200]}]"
+                        except:
+                            pass
+
                 if attempt < self.max_retries - 1:
                     delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
-                    logger.warning(f"Request failed (attempt {attempt + 1}/{self.max_retries}): {e}. Retrying in {delay}s...")
+                    logger.warning(f"Request failed (attempt {attempt + 1}/{self.max_retries}): {e}{error_details}. Retrying in {delay}s...")
                     time.sleep(delay)
                 else:
-                    logger.error(f"Request failed after {self.max_retries} attempts: {e}")
+                    logger.error(f"Request failed after {self.max_retries} attempts: {e}{error_details}")
 
         raise last_error
 
@@ -104,18 +123,19 @@ class KalshiExchangeClient:
             response = self.client.get(f"/trade-api/v2/markets/{market_id}/orderbook")
             orderbook_data = response.get('orderbook', {})
 
-            # Extract bid/ask levels from yes and no sides
-            yes_bids = orderbook_data.get('yes', [])
-            no_asks = orderbook_data.get('no', [])
+            # Extract raw data from Kalshi API
+            # 'yes' array = YES bids (people buying YES at a YES price)
+            # 'no' array = NO bids (people buying NO at a NO price)
+            yes_bids_raw = orderbook_data.get('yes', [])
+            no_bids_raw = orderbook_data.get('no', [])
 
-            # Log raw order book data for debugging
-            logger.debug(f"{market_id} Raw orderbook: yes_bids={yes_bids}, no_asks={no_asks}")
+            # Convert NO bids to YES asks immediately
+            # If someone bids X cents for NO, they're effectively asking (100-X) cents for YES
+            # Example: NO bid at 58¢ = YES ask at 42¢
+            yes_asks_converted = [(100 - level[0], level[1]) for level in no_bids_raw]
 
-            # In Kalshi order book API:
-            # - 'yes' array contains YES orders (people buying YES)
-            # - 'no' array contains NO orders (people buying NO = selling YES)
-            # - All prices in the API are YES prices (the yes_price field)
-            # So: best_bid = highest YES price, best_ask = lowest NO price (already in YES terms!)
+            # Log converted order book data for debugging
+            logger.info(f"{market_id} Orderbook: yes_bids={yes_bids_raw}, yes_asks={yes_asks_converted} (converted from no_bids={no_bids_raw})")
 
             # Process bid levels (YES bids, up to 3 levels)
             # Sort YES bids by price descending (highest first = best bid)
@@ -123,8 +143,8 @@ class KalshiExchangeClient:
             best_bid = None
             bid_size = 0
 
-            if yes_bids:
-                yes_bids_sorted = sorted(yes_bids, key=lambda x: x[0], reverse=True)
+            if yes_bids_raw:
+                yes_bids_sorted = sorted(yes_bids_raw, key=lambda x: x[0], reverse=True)
                 for i, level in enumerate(yes_bids_sorted[:3]):  # Take up to 3 levels
                     price = level[0] / 100.0  # Convert cents to decimal
                     size = level[1]
@@ -135,22 +155,20 @@ class KalshiExchangeClient:
                         bid_size = size
             else:
                 # No bids means nobody wants to buy YES at any price -> bid is effectively $0.01
-                logger.info(f"{market_id} No YES bids in order book, using $0.01 as best bid")
-                best_bid = 0.01
+                logger.info(f"{market_id} No YES bids in order book, using $0.00 as best bid")
+                best_bid = 0.00
                 bid_size = 0
 
-            # Process ask levels (NO orders = people selling YES, up to 3 levels)
-            # Sort NO orders by price ascending (lowest YES price first = best YES ask)
-            # NOTE: Prices in 'no' array are already YES prices from the API!
+            # Process ask levels (YES asks converted from NO bids, up to 3 levels)
+            # Sort YES asks by price ascending (lowest first = best ask)
             ask_levels = []
             best_ask = None
             ask_size = 0
 
-            if no_asks:
-                no_asks_sorted = sorted(no_asks, key=lambda x: x[0])
-                for i, level in enumerate(no_asks_sorted[:3]):  # Take up to 3 levels
-                    # Price is already the YES price (yes_price field from Kalshi API)
-                    # NO order at yes_price=33 means selling YES at $0.33
+            if yes_asks_converted:
+                yes_asks_sorted = sorted(yes_asks_converted, key=lambda x: x[0])
+
+                for i, level in enumerate(yes_asks_sorted[:3]):  # Take up to 3 levels
                     yes_price = level[0] / 100.0  # Convert cents to decimal
                     size = level[1]
                     ask_levels.append((yes_price, size))
@@ -159,9 +177,9 @@ class KalshiExchangeClient:
                         best_ask = yes_price
                         ask_size = size
             else:
-                # No NO asks means nobody wants to sell YES at any price -> ask is effectively $0.99
-                logger.info(f"{market_id} No NO asks in order book, using $0.99 as best ask")
-                best_ask = 0.99
+                # No NO bids means nobody wants to buy NO at any price -> ask is effectively $0.99
+                logger.info(f"{market_id} No NO bids in order book (no YES asks), using $1.00 as best ask")
+                best_ask = 1.0
                 ask_size = 0
 
             return OrderBook(
@@ -258,11 +276,11 @@ class KalshiExchangeClient:
 
         return self._retry_request(_fetch)
 
-    def get_balance(self) -> Balance:
+    def get_balance(self) -> Optional[Balance]:
         """Fetch account balance.
 
         Returns:
-            Balance object
+            Balance object, or None if the request fails
         """
         def _fetch():
             response = self.client.get_balance()
@@ -271,7 +289,11 @@ class KalshiExchangeClient:
                 payout=response.get('payout', 0) / 100.0
             )
 
-        return self._retry_request(_fetch)
+        try:
+            return self._retry_request(_fetch)
+        except Exception as e:
+            logger.warning(f"Failed to fetch balance, continuing without it: {e}")
+            return None
 
     def place_order(
         self,
@@ -364,16 +386,35 @@ class KalshiExchangeClient:
         Returns:
             True if successful, False otherwise
         """
-        def _cancel():
-            try:
-                self.client.delete(f"/trade-api/v2/portfolio/orders/{order_id}")
-                logger.info(f"Cancelled order: {order_id}")
-                return True
-            except Exception as e:
-                logger.error(f"Failed to cancel order {order_id}: {e}")
-                return False
+        try:
+            self.client.delete(f"/trade-api/v2/portfolio/orders/{order_id}")
+            logger.info(f"Cancelled order: {order_id}")
+            return True
+        except HTTPError as e:
+            # Handle 404 - order doesn't exist, verify by checking open orders
+            if e.response is not None and e.response.status_code == 404:
+                logger.info(f"Order {order_id} returned 404, verifying it doesn't exist...")
 
-        return self._retry_request(_cancel)
+                # Fetch all open orders to confirm the order is truly gone
+                try:
+                    open_orders = self.get_open_orders()
+                    order_exists = any(order.order_id == order_id for order in open_orders)
+
+                    if not order_exists:
+                        logger.info(f"Confirmed order {order_id} does not exist (already filled/cancelled), treating as successful cancel")
+                        return True
+                    else:
+                        logger.error(f"Order {order_id} returned 404 but still appears in open orders list - unexpected state")
+                        return False
+                except Exception as verify_error:
+                    logger.error(f"Failed to verify if order {order_id} exists: {verify_error}")
+                    return False
+
+            logger.error(f"Failed to cancel order {order_id}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to cancel order {order_id}: {e}")
+            return False
 
     def cancel_all_orders(self, market_id: Optional[str] = None) -> int:
         """Cancel all open orders, optionally filtered by market.

@@ -90,7 +90,7 @@ class MarketMaker:
         # The exchange_client will handle converting to Kalshi API format
         targets = []
 
-        if bid_size > 0 and target_bid > 0.01:  # Min price is 0.01
+        if bid_size > 0 and target_bid >= 0.01:  # Min price is 0.01
             rounded_bid = self._round_price(target_bid)
             targets.append(TargetOrder(
                 market_id=config.market_id,
@@ -100,7 +100,7 @@ class MarketMaker:
             ))
             logger.info(f"{config.market_id} → BID: {bid_size}@{rounded_bid:.2f}")
 
-        if ask_size > 0 and target_ask < 0.99:  # Max price is 0.99
+        if ask_size > 0 and target_ask <= 0.99:  # Max price is 0.99
             rounded_ask = self._round_price(target_ask)
             targets.append(TargetOrder(
                 market_id=config.market_id,
@@ -212,16 +212,19 @@ class MarketMaker:
                 if utilization > 0.8:
                     size_factor = (1.0 - utilization) / 0.2
                     return int(base_size * size_factor)
+        
+            # If not close to limit, return base or remaining capacity (if position is positive)
+            return int(min(base_size, max_inventory - position_qty))
+
         else:
             # Asking (selling YES) - reduce if short
             if position_qty < 0:
                 if utilization > 0.8:
                     size_factor = (1.0 - utilization) / 0.2
                     return int(base_size * size_factor)
-
-        # Check we don't exceed limits
-        remaining = max_inventory - abs(position_qty)
-        return int(min(base_size, remaining))
+                 
+            # If not close to limit, return base or remaining capacity (if position is negative)
+            return int(min(base_size, max_inventory + position_qty))
 
     def _round_price(self, price: float) -> float:
         """Round price to tick size.

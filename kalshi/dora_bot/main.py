@@ -145,9 +145,12 @@ class DoraBot:
         summary = self.state.get_state_summary()
         logger.info(f"State summary: {summary}")
 
-        # 9. Check balance
+        # 9. Check balance (optional, doesn't block startup if it fails)
         balance = self.exchange.get_balance()
-        logger.info(f"Account balance: ${balance.balance:.2f}, Payout: ${balance.payout:.2f}, Total: ${balance.total:.2f}")
+        if balance:
+            logger.info(f"Account balance: ${balance.balance:.2f}, Payout: ${balance.payout:.2f}, Total: ${balance.total:.2f}")
+        else:
+            logger.warning("Could not fetch account balance - continuing with state from DynamoDB")
 
         logger.info("=== STARTUP COMPLETE ===")
 

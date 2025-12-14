@@ -50,6 +50,10 @@ class StateManager:
             self.risk_state = self.dynamo.get_risk_state()
             logger.info(f"Loaded risk state: daily_pnl={self.risk_state.daily_pnl:.2f}, halted={self.risk_state.trading_halted}")
 
+            # Load logged fills to prevent duplicate processing
+            self.logged_fills = self.dynamo.get_all_fill_ids()
+            logger.info(f"Loaded {len(self.logged_fills)} logged fill IDs")
+
             self.last_sync_time = datetime.utcnow()
             return True
 
