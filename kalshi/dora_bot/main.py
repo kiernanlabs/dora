@@ -5,8 +5,10 @@ import os
 import time
 import logging
 import asyncio
+import signal
+import base64
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
@@ -21,16 +23,28 @@ from state_manager import StateManager
 from risk_manager import RiskManager
 from strategy import MarketMaker
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('dora_bot.log')
-    ]
-)
-logger = logging.getLogger(__name__)
+
+def setup_logging() -> logging.Logger:
+    """Configure logging based on environment.
+
+    In container mode (CONTAINER_MODE=true), logs only to stdout.
+    Otherwise, logs to both stdout and file.
+    """
+    handlers = [logging.StreamHandler()]
+
+    # Only add file handler if not in container mode
+    if os.getenv('CONTAINER_MODE', 'false').lower() != 'true':
+        handlers.append(logging.FileHandler('dora_bot.log'))
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=handlers
+    )
+    return logging.getLogger(__name__)
+
+
+logger = setup_logging()
 
 
 class DoraBot:
@@ -45,31 +59,52 @@ class DoraBot:
         """
         logger.info("Initializing Dora Bot...")
 
-        # Get the parent kalshi directory (where .env is located)
-        kalshi_dir = os.path.join(os.path.dirname(__file__), '..')
+        # Determine if running in container mode
+        container_mode = os.getenv('CONTAINER_MODE', 'false').lower() == 'true'
 
-        # Load environment variables
-        load_dotenv(os.path.join(kalshi_dir, '.env'))
+        if container_mode:
+            # Container mode: load credentials from environment variables
+            logger.info("Running in container mode - loading credentials from environment")
+            keyid = os.getenv('KALSHI_KEY_ID')
+            private_key_b64 = os.getenv('KALSHI_PRIVATE_KEY')
+
+            if not keyid or not private_key_b64:
+                raise ValueError("Missing KALSHI_KEY_ID or KALSHI_PRIVATE_KEY environment variables")
+
+            # Decode base64-encoded private key
+            try:
+                private_key_pem = base64.b64decode(private_key_b64)
+                private_key = serialization.load_pem_private_key(
+                    private_key_pem,
+                    password=None
+                )
+            except Exception as e:
+                raise ValueError(f"Failed to decode private key: {e}")
+        else:
+            # Local mode: load credentials from .env file
+            kalshi_dir = os.path.join(os.path.dirname(__file__), '..')
+            load_dotenv(os.path.join(kalshi_dir, '.env'))
+
+            keyid = os.getenv('DEMO_KEYID') if use_demo else os.getenv('PROD_KEYID')
+            keyfile = os.getenv('DEMO_KEYFILE') if use_demo else os.getenv('PROD_KEYFILE')
+
+            if not keyid or not keyfile:
+                raise ValueError("Missing API credentials in .env file")
+
+            # Resolve keyfile path relative to kalshi directory
+            keyfile_path = os.path.join(kalshi_dir, keyfile)
+
+            if not os.path.exists(keyfile_path):
+                raise FileNotFoundError(f"Private key file not found: {keyfile_path}")
+
+            with open(keyfile_path, "rb") as key_file:
+                private_key = serialization.load_pem_private_key(
+                    key_file.read(),
+                    password=None
+                )
 
         # Initialize Kalshi client
         env = Environment.DEMO if use_demo else Environment.PROD
-        keyid = os.getenv('DEMO_KEYID') if use_demo else os.getenv('PROD_KEYID')
-        keyfile = os.getenv('DEMO_KEYFILE') if use_demo else os.getenv('PROD_KEYFILE')
-
-        if not keyid or not keyfile:
-            raise ValueError(f"Missing API credentials in .env file")
-
-        # Resolve keyfile path relative to kalshi directory
-        keyfile_path = os.path.join(kalshi_dir, keyfile)
-
-        if not os.path.exists(keyfile_path):
-            raise FileNotFoundError(f"Private key file not found: {keyfile_path}")
-
-        with open(keyfile_path, "rb") as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(),
-                password=None
-            )
 
         kalshi_client = KalshiHttpClient(
             key_id=keyid,
@@ -210,8 +245,13 @@ class DoraBot:
 
                 await asyncio.sleep(sleep_time)
 
+                # Check for graceful shutdown signal (SIGTERM from container orchestrator)
+                if shutdown_handler.shutdown_requested:
+                    logger.info("Graceful shutdown requested")
+                    break
+
             except KeyboardInterrupt:
-                logger.info("Received shutdown signal")
+                logger.info("Received KeyboardInterrupt")
                 break
             except Exception as e:
                 logger.error(f"Error in main loop: {e}", exc_info=True)
@@ -354,22 +394,75 @@ class DoraBot:
         return to_cancel, to_place
 
 
+class GracefulShutdown:
+    """Handle graceful shutdown signals for container environments."""
+
+    def __init__(self):
+        self.shutdown_requested = False
+        self.bot: Optional[DoraBot] = None
+
+    def register_signals(self):
+        """Register signal handlers for SIGTERM and SIGINT."""
+        signal.signal(signal.SIGTERM, self._signal_handler)
+        signal.signal(signal.SIGINT, self._signal_handler)
+        logger.info("Registered signal handlers for graceful shutdown")
+
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals."""
+        sig_name = signal.Signals(signum).name
+        logger.info(f"Received {sig_name}, initiating graceful shutdown...")
+        self.shutdown_requested = True
+
+    def set_bot(self, bot: DoraBot):
+        """Set the bot instance for shutdown handling."""
+        self.bot = bot
+
+
+# Global shutdown handler
+shutdown_handler = GracefulShutdown()
+
+
 async def main():
     """Main entry point."""
-    # Parse command line args
-    use_demo = True  # Default to demo
-    if len(sys.argv) > 1 and sys.argv[1] == '--prod':
-        use_demo = False
+    # Register signal handlers
+    shutdown_handler.register_signals()
+
+    # Determine mode from environment or command line
+    # Environment variable takes precedence (for container mode)
+    use_demo_env = os.getenv('USE_DEMO', '').lower()
+    if use_demo_env:
+        use_demo = use_demo_env == 'true'
+    else:
+        # Fall back to command line args
+        use_demo = True  # Default to demo
+        if len(sys.argv) > 1 and sys.argv[1] == '--prod':
+            use_demo = False
+
+    if not use_demo:
         logger.warning("Running in PRODUCTION mode!")
+    else:
+        logger.info("Running in DEMO mode")
+
+    # Get AWS region from environment or default
+    aws_region = os.getenv('AWS_REGION', 'us-east-1')
 
     # Create and run bot
-    bot = DoraBot(use_demo=use_demo)
+    bot = DoraBot(use_demo=use_demo, aws_region=aws_region)
+    shutdown_handler.set_bot(bot)
 
     try:
         await bot.startup()
         await bot.run_loop()
     except Exception as e:
         logger.critical(f"Fatal error: {e}", exc_info=True)
+        # Attempt graceful cleanup
+        if bot:
+            try:
+                logger.info("Attempting graceful cleanup after fatal error...")
+                bot.exchange.cancel_all_orders()
+                bot.state.save_to_dynamo()
+            except Exception as cleanup_error:
+                logger.error(f"Cleanup failed: {cleanup_error}")
         sys.exit(1)
 
 

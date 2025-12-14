@@ -1,0 +1,32 @@
+[Unit]
+Description=Dora Bot - Kalshi Market Making Bot
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/dora/kalshi/dora_bot
+ExecStart=/home/ec2-user/dora/venv/bin/python -u main.py --prod
+Restart=always
+RestartSec=10
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Logging - systemd will capture stdout/stderr to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dora-bot
+
+# Graceful shutdown - send SIGTERM, wait 30s before SIGKILL
+TimeoutStopSec=30
+KillSignal=SIGTERM
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ec2-user/dora/kalshi/dora_bot
+
+[Install]
+WantedBy=multi-user.target
