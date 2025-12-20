@@ -5,9 +5,7 @@ import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
-# Add parent directory to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'kalshi-starter-code-python-main'))
-from clients import KalshiHttpClient, Environment
+from kalshi_client import KalshiHttpClient, Environment
 
 from exchange_client import KalshiExchangeClient
 

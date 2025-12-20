@@ -7,10 +7,10 @@ import numpy as np
 import json
 from openai import OpenAI
 
-# Import from the starter code
+# Import from dora_bot
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), 'kalshi-starter-code-python-main'))
-from clients import KalshiHttpClient, Environment
+sys.path.append(os.path.join(os.path.dirname(__file__), 'dora_bot'))
+from kalshi_client import KalshiHttpClient, Environment
 
 class KalshiService:
     """Service class for interacting with Kalshi API."""

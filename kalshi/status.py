@@ -9,12 +9,11 @@ from collections import defaultdict
 
 # Add paths for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'kalshi-starter-code-python-main'))
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'dora_bot'))
 
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
-from clients import KalshiHttpClient, Environment
+from kalshi_client import KalshiHttpClient, Environment
 from exchange_client import KalshiExchangeClient
 
 
