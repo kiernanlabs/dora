@@ -1,47 +1,86 @@
 #!/bin/bash
 # Deploy Dora Bot to EC2 instance
-# Usage: ./deploy-to-ec2.sh <ec2-host> [ssh-key-path]
+# Usage: ./deploy-to-ec2.sh <ec2-ip> <ssh-key-path> [--setup]
+#
+# Examples:
+#   First time setup:  ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem --setup
+#   Update code only:  ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem
 
 set -e
 
-EC2_HOST="${1}"
-SSH_KEY="${2:---}"  # Use default SSH key if not specified
+EC2_IP="${1}"
+SSH_KEY="${2}"
+SETUP_MODE="${3}"
+
 REMOTE_USER="ec2-user"
 REMOTE_DIR="/home/${REMOTE_USER}/dora"
 
-if [ -z "$EC2_HOST" ]; then
-    echo "Usage: $0 <ec2-host> [ssh-key-path]"
-    echo "Example: $0 ec2-user@1.2.3.4 ~/.ssh/my-key.pem"
+if [ -z "$EC2_IP" ] || [ -z "$SSH_KEY" ]; then
+    echo "Usage: $0 <ec2-ip> <ssh-key-path> [--setup]"
+    echo ""
+    echo "Examples:"
+    echo "  First time:  $0 3.84.220.98 ./DoraBot-RSA.pem --setup"
+    echo "  Update:      $0 3.84.220.98 ./DoraBot-RSA.pem"
     exit 1
 fi
 
-# Build SSH command
-if [ "$SSH_KEY" != "--" ]; then
-    SSH_CMD="ssh -i $SSH_KEY"
-    SCP_CMD="scp -i $SSH_KEY"
-else
-    SSH_CMD="ssh"
-    SCP_CMD="scp"
-fi
+# Ensure key has correct permissions
+chmod 600 "$SSH_KEY" 2>/dev/null || true
+
+SSH_CMD="ssh -i $SSH_KEY -o StrictHostKeyChecking=accept-new ${REMOTE_USER}@${EC2_IP}"
+SCP_CMD="scp -i $SSH_KEY -o StrictHostKeyChecking=accept-new"
 
 GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 log() {
     echo -e "${GREEN}[DEPLOY]${NC} $1"
 }
 
-# Get the script's directory (kalshi/)
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1"
+}
+
+# Get the kalshi directory (parent of ec2/)
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-log "Deploying from $SCRIPT_DIR to $EC2_HOST..."
+log "Deploying from $SCRIPT_DIR to ${REMOTE_USER}@${EC2_IP}..."
 
-# Create remote directory
-log "Creating remote directory structure..."
-$SSH_CMD $EC2_HOST "mkdir -p $REMOTE_DIR/kalshi"
+# ============================================
+# FIRST TIME SETUP (if --setup flag is passed)
+# ============================================
+if [ "$SETUP_MODE" == "--setup" ]; then
+    log "Running first-time setup..."
+
+    $SSH_CMD << 'SETUP_SCRIPT'
+set -e
+echo "[REMOTE] Updating system packages..."
+if command -v dnf &> /dev/null; then
+    sudo dnf update -y
+    sudo dnf install -y python3.11 python3.11-pip git rsync
+elif command -v apt &> /dev/null; then
+    sudo apt update && sudo apt upgrade -y
+    sudo apt install -y python3.11 python3.11-venv python3-pip git rsync
+fi
+
+echo "[REMOTE] Creating directory structure..."
+mkdir -p ~/dora/kalshi
+
+echo "[REMOTE] First-time setup complete"
+SETUP_SCRIPT
+
+fi
+
+# ============================================
+# SYNC CODE
+# ============================================
+log "Syncing code to EC2..."
+
+# Create remote directory structure
+$SSH_CMD "mkdir -p $REMOTE_DIR/kalshi"
 
 # Sync code (excluding secrets and unnecessary files)
-log "Syncing code..."
 rsync -avz --progress \
     --exclude '.env' \
     --exclude '*.pem' \
@@ -52,39 +91,87 @@ rsync -avz --progress \
     --exclude '*.log' \
     --exclude 'venv' \
     --exclude '.venv' \
-    -e "$SSH_CMD" \
-    "$SCRIPT_DIR/" "$EC2_HOST:$REMOTE_DIR/kalshi/"
+    --exclude 'market_summaries.csv' \
+    -e "ssh -i $SSH_KEY -o StrictHostKeyChecking=accept-new" \
+    "$SCRIPT_DIR/" "${REMOTE_USER}@${EC2_IP}:$REMOTE_DIR/kalshi/"
 
-# Sync .env.example if .env doesn't exist
-log "Checking .env file..."
-$SSH_CMD $EC2_HOST "[ -f $REMOTE_DIR/kalshi/.env ] || cp $REMOTE_DIR/kalshi/.env.example $REMOTE_DIR/kalshi/.env 2>/dev/null || true"
+# ============================================
+# COPY SECRETS (if they exist locally and not on remote)
+# ============================================
+log "Checking secrets..."
 
-# Install/update dependencies
-log "Installing dependencies..."
-$SSH_CMD $EC2_HOST "cd $REMOTE_DIR && \
-    python3 -m venv venv 2>/dev/null || python3.11 -m venv venv && \
-    source venv/bin/activate && \
-    pip install --upgrade pip && \
-    pip install -r kalshi/dora_bot/requirements.txt && \
-    pip install -r kalshi/kalshi-starter-code-python-main/requirements.txt"
+# Copy .env if it exists locally and doesn't exist remotely
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    REMOTE_ENV_EXISTS=$($SSH_CMD "[ -f $REMOTE_DIR/kalshi/.env ] && echo 'yes' || echo 'no'")
+    if [ "$REMOTE_ENV_EXISTS" == "no" ]; then
+        log "Copying .env file..."
+        $SCP_CMD "$SCRIPT_DIR/.env" "${REMOTE_USER}@${EC2_IP}:$REMOTE_DIR/kalshi/.env"
+    else
+        warn ".env already exists on remote, skipping (delete remote file to update)"
+    fi
+fi
 
-# Update systemd service
-log "Updating systemd service..."
-$SSH_CMD $EC2_HOST "sudo cp $REMOTE_DIR/kalshi/ec2/dora-bot.service /etc/systemd/system/ && \
-    sudo systemctl daemon-reload"
+# Copy private key files if they exist locally
+for keyfile in "$SCRIPT_DIR"/private_key*.pem; do
+    if [ -f "$keyfile" ]; then
+        keyname=$(basename "$keyfile")
+        REMOTE_KEY_EXISTS=$($SSH_CMD "[ -f $REMOTE_DIR/kalshi/$keyname ] && echo 'yes' || echo 'no'")
+        if [ "$REMOTE_KEY_EXISTS" == "no" ]; then
+            log "Copying $keyname..."
+            $SCP_CMD "$keyfile" "${REMOTE_USER}@${EC2_IP}:$REMOTE_DIR/kalshi/$keyname"
+            $SSH_CMD "chmod 600 $REMOTE_DIR/kalshi/$keyname"
+        else
+            warn "$keyname already exists on remote, skipping"
+        fi
+    fi
+done
 
-# Restart service
+# ============================================
+# INSTALL DEPENDENCIES & SETUP SERVICE
+# ============================================
+log "Installing dependencies and configuring service..."
+
+$SSH_CMD << REMOTE_SCRIPT
+set -e
+
+cd $REMOTE_DIR
+
+# Create/update virtual environment
+echo "[REMOTE] Setting up Python virtual environment..."
+python3 -m venv venv 2>/dev/null || python3.11 -m venv venv
+
+source venv/bin/activate
+
+echo "[REMOTE] Installing Python dependencies..."
+pip install --upgrade pip -q
+pip install -r kalshi/dora_bot/requirements.txt -q
+pip install -r kalshi/kalshi-starter-code-python-main/requirements.txt -q
+
+# Install systemd service
+echo "[REMOTE] Configuring systemd service..."
+sudo cp $REMOTE_DIR/kalshi/ec2/dora-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable dora-bot
+
+echo "[REMOTE] Setup complete"
+REMOTE_SCRIPT
+
+# ============================================
+# RESTART SERVICE
+# ============================================
 log "Restarting dora-bot service..."
-$SSH_CMD $EC2_HOST "sudo systemctl restart dora-bot"
+$SSH_CMD "sudo systemctl restart dora-bot" || warn "Service restart failed - may need secrets configured"
 
-# Check status
-log "Checking service status..."
-$SSH_CMD $EC2_HOST "sudo systemctl status dora-bot --no-pager" || true
+# Brief pause then check status
+sleep 2
+log "Service status:"
+$SSH_CMD "sudo systemctl status dora-bot --no-pager -l" || true
 
+echo ""
 log "Deployment complete!"
 echo ""
 echo "Useful commands:"
-echo "  View logs:     $SSH_CMD $EC2_HOST 'journalctl -u dora-bot -f'"
-echo "  Stop bot:      $SSH_CMD $EC2_HOST 'sudo systemctl stop dora-bot'"
-echo "  Start bot:     $SSH_CMD $EC2_HOST 'sudo systemctl start dora-bot'"
-echo "  Check status:  $SSH_CMD $EC2_HOST 'sudo systemctl status dora-bot'"
+echo "  View logs:     $SSH_CMD 'journalctl -u dora-bot -f'"
+echo "  Stop bot:      $SSH_CMD 'sudo systemctl stop dora-bot'"
+echo "  Start bot:     $SSH_CMD 'sudo systemctl start dora-bot'"
+echo "  SSH in:        $SSH_CMD"

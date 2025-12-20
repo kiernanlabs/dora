@@ -186,10 +186,10 @@ class MarketMaker:
         # Ensure we maintain minimum spread
         current_target_spread = target_ask - target_bid
         if current_target_spread < min_spread:
-            # Fall back to placing at half min_spread from fair value
+            # Fall back to placing at least half min_spread from fair value
             half_spread = min_spread / 2.0
-            target_bid = fair_value - half_spread - skew
-            target_ask = fair_value + half_spread - skew
+            target_bid = min(fair_value - half_spread - skew, target_bid)
+            target_ask = max(fair_value + half_spread - skew, target_ask)
 
         # Safety: ensure bid doesn't exceed ask
         if target_bid >= target_ask:
