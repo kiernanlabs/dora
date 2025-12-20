@@ -4,3 +4,4 @@ private_key.pem
 private_key_demo.pem
 kalshi/dora_bot/dora_bot.log
 ec2/DoraBot-RSA.pem
+*.pem
