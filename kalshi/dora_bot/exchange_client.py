@@ -3,7 +3,6 @@
 import sys
 import os
 import time
-import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError, RequestException
@@ -13,8 +12,9 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'kalshi-starter-co
 from clients import KalshiHttpClient, Environment
 
 from models import OrderBook, Order, Fill, Balance
+from structured_logger import get_logger, EventType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def parse_kalshi_timestamp(timestamp_str: str) -> datetime:
@@ -50,17 +50,25 @@ def parse_kalshi_timestamp(timestamp_str: str) -> datetime:
 class KalshiExchangeClient:
     """Wrapper around Kalshi API for market making operations."""
 
-    def __init__(self, client: KalshiHttpClient, max_retries: int = 3, retry_delay: float = 1.0):
+    def __init__(
+        self,
+        client: KalshiHttpClient,
+        max_retries: int = 3,
+        retry_delay: float = 1.0,
+        bot_run_id: Optional[str] = None
+    ):
         """Initialize the exchange client.
 
         Args:
             client: Authenticated KalshiHttpClient instance
             max_retries: Maximum number of retries for failed requests
             retry_delay: Base delay between retries in seconds
+            bot_run_id: Bot run ID for log correlation
         """
         self.client = client
         self.max_retries = max_retries
         self.retry_delay = retry_delay
+        self.bot_run_id = bot_run_id
 
     def _retry_request(self, func, *args, **kwargs) -> Any:
         """Execute a request with retries on failure.
@@ -83,30 +91,41 @@ class KalshiExchangeClient:
             except (HTTPError, RequestException) as e:
                 last_error = e
 
-                # Try to extract API error details
-                error_details = ""
+                # Extract API error details
+                error_code = None
+                error_message = str(e)
+                status_code = None
                 if hasattr(e, 'response') and e.response is not None:
+                    status_code = e.response.status_code
                     try:
                         error_data = e.response.json()
-                        error_details = f" [API Error: {error_data.get('code', 'N/A')} - {error_data.get('message', 'N/A')}"
-                        if 'details' in error_data:
-                            error_details += f", Details: {error_data['details']}"
-                        if 'service' in error_data:
-                            error_details += f", Service: {error_data['service']}"
-                        error_details += "]"
+                        error_code = error_data.get('code')
+                        error_message = error_data.get('message', str(e))
                     except:
-                        # If JSON parsing fails, include raw response text
-                        try:
-                            error_details = f" [Response: {e.response.text[:200]}]"
-                        except:
-                            pass
+                        pass
 
                 if attempt < self.max_retries - 1:
                     delay = self.retry_delay * (2 ** attempt)  # Exponential backoff
-                    logger.warning(f"Request failed (attempt {attempt + 1}/{self.max_retries}): {e}{error_details}. Retrying in {delay}s...")
+                    logger.warning("API request failed, retrying", extra={
+                        "event_type": EventType.LOG,
+                        "attempt": attempt + 1,
+                        "max_retries": self.max_retries,
+                        "retry_delay": delay,
+                        "error_type": type(e).__name__,
+                        "error_code": error_code,
+                        "error_msg": error_message,
+                        "status_code": status_code,
+                    })
                     time.sleep(delay)
                 else:
-                    logger.error(f"Request failed after {self.max_retries} attempts: {e}{error_details}")
+                    logger.error("API request failed after all retries", extra={
+                        "event_type": EventType.ERROR,
+                        "attempts": self.max_retries,
+                        "error_type": type(e).__name__,
+                        "error_code": error_code,
+                        "error_msg": error_message,
+                        "status_code": status_code,
+                    })
 
         raise last_error
 
@@ -143,9 +162,11 @@ class KalshiExchangeClient:
                                 own_orders_by_price[order.side][price_cents] = 0
                             own_orders_by_price[order.side][price_cents] += order.size
                 except Exception as e:
-                    logger.warning(f"Failed to fetch own orders for filtering, using full order book: {e}")
-
-                logger.debug(f"logging current orders: {own_orders}")
+                    logger.warning("Failed to fetch own orders for filtering", extra={
+                        "event_type": EventType.LOG,
+                        "market": market_id,
+                        "error_msg": str(e),
+                    })
 
             # Filter out bot's own YES bids
             yes_bids_filtered = []
@@ -172,8 +193,13 @@ class KalshiExchangeClient:
             # Example: NO bid at 58¢ = YES ask at 42¢
             yes_asks_converted = [(100 - level[0], level[1]) for level in no_bids_raw]
 
-            # Log converted order book data for debugging
-            logger.info(f"{market_id} Orderbook: yes_bids={yes_bids_raw}, yes_asks={yes_asks_converted} (converted from no_bids={no_bids_raw})")
+            # Log order book for debugging (at debug level to reduce noise)
+            logger.debug("Orderbook fetched", extra={
+                "event_type": EventType.LOG,
+                "market": market_id,
+                "yes_bids": yes_bids_raw,
+                "yes_asks": yes_asks_converted,
+            })
 
             # Process bid levels (YES bids, up to 3 levels)
             # Sort YES bids by price descending (highest first = best bid)
@@ -193,7 +219,6 @@ class KalshiExchangeClient:
                         bid_size = size
             else:
                 # No bids means nobody wants to buy YES at any price -> bid is effectively $0.01
-                logger.info(f"{market_id} No YES bids in order book, using $0.00 as best bid")
                 best_bid = 0.00
                 bid_size = 0
 
@@ -216,7 +241,6 @@ class KalshiExchangeClient:
                         ask_size = size
             else:
                 # No NO bids means nobody wants to buy NO at any price -> ask is effectively $0.99
-                logger.info(f"{market_id} No NO bids in order book (no YES asks), using $1.00 as best ask")
                 best_ask = 1.0
                 ask_size = 0
 
@@ -330,7 +354,11 @@ class KalshiExchangeClient:
         try:
             return self._retry_request(_fetch)
         except Exception as e:
-            logger.warning(f"Failed to fetch balance, continuing without it: {e}")
+            logger.warning("Failed to fetch balance", extra={
+                "event_type": EventType.LOG,
+                "error_type": type(e).__name__,
+                "error_msg": str(e),
+            })
             return None
 
     def place_order(
@@ -339,7 +367,8 @@ class KalshiExchangeClient:
         side: str,
         price: float,
         size: int,
-        tif: str = "gtc"
+        tif: str = "gtc",
+        decision_id: Optional[str] = None
     ) -> Optional[Order]:
         """Place a new order.
 
@@ -349,11 +378,14 @@ class KalshiExchangeClient:
             price: Price in decimal (0.01 to 0.99), always in YES terms
             size: Number of contracts
             tif: Time in force ('gtc', 'ioc', 'fok')
+            decision_id: Decision ID for correlation
 
         Returns:
             Order object if successful, None otherwise
         """
         def _place():
+            start_time = time.time()
+
             # Convert bid/ask to Kalshi's yes/no format
             # IMPORTANT: yes_price in Kalshi API is ALWAYS the YES price, even for NO orders!
             # bid (buy YES at X) -> side="yes", yes_price=X
@@ -376,21 +408,40 @@ class KalshiExchangeClient:
                 "tif": tif
             }
 
-            # Log in YES price terms
-            order_type = "BID" if side == "bid" else "ASK"
-            logger.debug(f"Placing order: {market_id} {order_type} {size}@{price:.2f} (yes_price={yes_price}, kalshi_side={kalshi_side})")
+            # Log order placement attempt
+            order_type = "bid" if side == "bid" else "ask"
+            logger.info("Placing order", extra={
+                "event_type": EventType.ORDER_PLACE,
+                "market": market_id,
+                "decision_id": decision_id,
+                "side": order_type,
+                "price": price,
+                "size": size,
+            })
 
             try:
                 response = self.client.post("/trade-api/v2/portfolio/orders", payload)
                 order_data = response.get('order', {})
+                latency_ms = int((time.time() - start_time) * 1000)
 
-                logger.info(f"Placed order: {market_id} {order_type} {size}@{price:.2f} - ID: {order_data.get('order_id')}")
+                order_id = order_data.get('order_id')
+                logger.info("Order placed", extra={
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "order_id": order_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "ACCEPTED",
+                    "latency_ms": latency_ms,
+                })
 
                 # Return Order with Kalshi's format:
                 # - side is "yes" or "no" (Kalshi's format)
                 # - price is always YES price (what Kalshi stores in yes_price field)
                 return Order(
-                    order_id=order_data.get('order_id'),
+                    order_id=order_id,
                     market_id=market_id,
                     side=kalshi_side,  # "yes" or "no" (Kalshi format)
                     price=price,  # Always YES price (matches the input price parameter)
@@ -401,57 +452,136 @@ class KalshiExchangeClient:
                     tif=tif
                 )
             except HTTPError as e:
-                logger.error(f"HTTP error placing order {market_id} {order_type} {size}@{price:.2f}: {e}")
+                latency_ms = int((time.time() - start_time) * 1000)
+                error_code = None
+                error_msg = str(e)
                 if hasattr(e, 'response') and e.response is not None:
                     try:
-                        error_detail = e.response.json()
-                        logger.error(f"API error details: {error_detail}")
+                        error_data = e.response.json()
+                        error_code = error_data.get('code')
+                        error_msg = error_data.get('message', str(e))
                     except:
-                        logger.error(f"Response text: {e.response.text}")
+                        pass
+
+                logger.error("Order placement failed", extra={
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "REJECTED",
+                    "latency_ms": latency_ms,
+                    "error_type": "HTTPError",
+                    "error_code": error_code,
+                    "error_msg": error_msg,
+                })
                 return None
             except Exception as e:
-                logger.error(f"Failed to place order {market_id} {order_type} {size}@{price:.2f}: {e}", exc_info=True)
+                latency_ms = int((time.time() - start_time) * 1000)
+                logger.error("Order placement failed", extra={
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "ERROR",
+                    "latency_ms": latency_ms,
+                    "error_type": type(e).__name__,
+                    "error_msg": str(e),
+                }, exc_info=True)
                 return None
 
         return self._retry_request(_place)
 
-    def cancel_order(self, order_id: str) -> bool:
+    def cancel_order(self, order_id: str, decision_id: Optional[str] = None) -> bool:
         """Cancel an order.
 
         Args:
             order_id: Order ID to cancel
+            decision_id: Decision ID for correlation
 
         Returns:
             True if successful, False otherwise
         """
+        start_time = time.time()
+        logger.info("Cancelling order", extra={
+            "event_type": EventType.ORDER_CANCEL,
+            "order_id": order_id,
+            "decision_id": decision_id,
+        })
+
         try:
             self.client.delete(f"/trade-api/v2/portfolio/orders/{order_id}")
-            logger.info(f"Cancelled order: {order_id}")
+            latency_ms = int((time.time() - start_time) * 1000)
+            logger.info("Order cancelled", extra={
+                "event_type": EventType.ORDER_RESULT,
+                "order_id": order_id,
+                "decision_id": decision_id,
+                "status": "CANCELLED",
+                "latency_ms": latency_ms,
+            })
             return True
         except HTTPError as e:
+            latency_ms = int((time.time() - start_time) * 1000)
             # Handle 404 - order doesn't exist, verify by checking open orders
             if e.response is not None and e.response.status_code == 404:
-                logger.info(f"Order {order_id} returned 404, verifying it doesn't exist...")
-
                 # Fetch all open orders to confirm the order is truly gone
                 try:
                     open_orders = self.get_open_orders()
                     order_exists = any(order.order_id == order_id for order in open_orders)
 
                     if not order_exists:
-                        logger.info(f"Confirmed order {order_id} does not exist (already filled/cancelled), treating as successful cancel")
+                        logger.info("Order already cancelled/filled", extra={
+                            "event_type": EventType.ORDER_RESULT,
+                            "order_id": order_id,
+                            "decision_id": decision_id,
+                            "status": "ALREADY_GONE",
+                            "latency_ms": latency_ms,
+                        })
                         return True
                     else:
-                        logger.error(f"Order {order_id} returned 404 but still appears in open orders list - unexpected state")
+                        logger.error("Order 404 but still in open orders", extra={
+                            "event_type": EventType.ORDER_RESULT,
+                            "order_id": order_id,
+                            "decision_id": decision_id,
+                            "status": "ERROR",
+                            "error_msg": "Order returned 404 but still appears in open orders",
+                            "latency_ms": latency_ms,
+                        })
                         return False
                 except Exception as verify_error:
-                    logger.error(f"Failed to verify if order {order_id} exists: {verify_error}")
+                    logger.error("Failed to verify order status", extra={
+                        "event_type": EventType.ERROR,
+                        "order_id": order_id,
+                        "decision_id": decision_id,
+                        "error_type": type(verify_error).__name__,
+                        "error_msg": str(verify_error),
+                    })
                     return False
 
-            logger.error(f"Failed to cancel order {order_id}: {e}")
+            logger.error("Order cancellation failed", extra={
+                "event_type": EventType.ORDER_RESULT,
+                "order_id": order_id,
+                "decision_id": decision_id,
+                "status": "ERROR",
+                "latency_ms": latency_ms,
+                "error_type": "HTTPError",
+                "error_msg": str(e),
+            })
             return False
         except Exception as e:
-            logger.error(f"Failed to cancel order {order_id}: {e}")
+            latency_ms = int((time.time() - start_time) * 1000)
+            logger.error("Order cancellation failed", extra={
+                "event_type": EventType.ORDER_RESULT,
+                "order_id": order_id,
+                "decision_id": decision_id,
+                "status": "ERROR",
+                "latency_ms": latency_ms,
+                "error_type": type(e).__name__,
+                "error_msg": str(e),
+            })
             return False
 
     def cancel_all_orders(self, market_id: Optional[str] = None) -> int:
@@ -471,7 +601,12 @@ class KalshiExchangeClient:
                 cancelled_count += 1
             time.sleep(0.1)  # Small delay to avoid rate limiting
 
-        logger.info(f"Cancelled {cancelled_count} orders" + (f" for {market_id}" if market_id else ""))
+        logger.info("Cancelled all orders", extra={
+            "event_type": EventType.ORDER_CANCEL,
+            "market": market_id,
+            "cancelled_count": cancelled_count,
+            "total_orders": len(open_orders),
+        })
         return cancelled_count
 
     def get_market_info(self, market_id: str) -> Dict[str, Any]:

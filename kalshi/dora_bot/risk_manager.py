@@ -1,24 +1,26 @@
 """Risk management for the trading bot."""
 
-import logging
 from typing import Optional
 
 from models import GlobalConfig, MarketConfig, TargetOrder, Position
 from state_manager import StateManager
+from structured_logger import get_logger, EventType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class RiskManager:
     """Enforces risk limits and trading rules."""
 
-    def __init__(self, global_config: GlobalConfig):
+    def __init__(self, global_config: GlobalConfig, bot_run_id: Optional[str] = None):
         """Initialize risk manager.
 
         Args:
             global_config: Global configuration with risk limits
+            bot_run_id: Bot run ID for log correlation
         """
         self.config = global_config
+        self.bot_run_id = bot_run_id
 
     def check_order(
         self,
@@ -112,7 +114,13 @@ class RiskManager:
         utilization = abs(position.net_yes_qty) / market_config.max_inventory_yes if market_config.max_inventory_yes > 0 else 0
 
         if utilization > 0.9:
-            logger.warning(f"{market_id}: Inventory at {utilization*100:.0f}% of limit (net_yes={position.net_yes_qty})")
+            logger.warning("Inventory near limit", extra={
+                "event_type": EventType.LOG,
+                "market": market_id,
+                "utilization_pct": utilization * 100,
+                "net_yes_qty": position.net_yes_qty,
+                "max_inventory": market_config.max_inventory_yes,
+            })
 
         return True, None
 
@@ -202,5 +210,9 @@ class RiskManager:
             state: State manager
             reason: Reason for emergency stop
         """
-        logger.critical(f"EMERGENCY STOP TRIGGERED: {reason}")
+        logger.critical("Emergency stop triggered", extra={
+            "event_type": EventType.RISK_HALT,
+            "reason": reason,
+            "daily_pnl": state.risk_state.daily_pnl,
+        })
         state.halt_trading(reason)

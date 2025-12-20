@@ -4,7 +4,9 @@
       "Bash(python:*)",
       "Bash(ls:*)",
       "Bash(python3:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(grep:*)",
+      "Bash(python3 -m py_compile:*)"
     ],
     "deny": [],
     "ask": []

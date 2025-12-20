@@ -1,6 +1,5 @@
 """DynamoDB helper functions for persistence."""
 
-import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from decimal import Decimal
@@ -8,8 +7,9 @@ import boto3
 from botocore.exceptions import ClientError
 
 from models import MarketConfig, GlobalConfig, RiskState, Position
+from structured_logger import get_logger, EventType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DynamoDBClient:
@@ -44,9 +44,16 @@ class DynamoDBClient:
         self.trade_log_table = self.dynamodb.Table(f"dora_trade_log{suffix}")
         self.decision_log_table = self.dynamodb.Table(f"dora_decision_log{suffix}")
 
-        logger.info(f"DynamoDB initialized for {environment} environment with tables: "
-                    f"dora_market_config{suffix}, dora_state{suffix}, "
-                    f"dora_trade_log{suffix}, dora_decision_log{suffix}")
+        logger.info("DynamoDB initialized", extra={
+            "event_type": EventType.STARTUP,
+            "environment": environment,
+            "tables": [
+                f"dora_market_config{suffix}",
+                f"dora_state{suffix}",
+                f"dora_trade_log{suffix}",
+                f"dora_decision_log{suffix}",
+            ],
+        })
 
     @staticmethod
     def _serialize_decimal(obj: Any) -> Any:
@@ -102,7 +109,12 @@ class DynamoDBClient:
                 updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
             )
         except ClientError as e:
-            logger.error(f"Error fetching market config for {market_id}: {e}")
+            logger.error("Error fetching market config", extra={
+                "event_type": EventType.ERROR,
+                "market": market_id,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return None
 
     def get_all_market_configs(self, enabled_only: bool = True) -> Dict[str, MarketConfig]:
@@ -139,7 +151,11 @@ class DynamoDBClient:
 
             return configs
         except ClientError as e:
-            logger.error(f"Error fetching market configs: {e}")
+            logger.error("Error fetching market configs", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return {}
 
     def put_market_config(self, config: MarketConfig) -> bool:
@@ -172,7 +188,12 @@ class DynamoDBClient:
             self.market_config_table.put_item(Item=item)
             return True
         except ClientError as e:
-            logger.error(f"Error saving market config for {config.market_id}: {e}")
+            logger.error("Error saving market config", extra={
+                "event_type": EventType.ERROR,
+                "market": config.market_id,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False
 
     # State operations
@@ -202,7 +223,11 @@ class DynamoDBClient:
 
             return positions
         except ClientError as e:
-            logger.error(f"Error fetching positions: {e}")
+            logger.error("Error fetching positions", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return {}
 
     def save_positions(self, positions: Dict[str, Position]) -> bool:
@@ -228,10 +253,13 @@ class DynamoDBClient:
                 'key': 'positions',
                 'positions': positions_data
             })
-            logger.debug(f"Saved {len(positions)} positions to DynamoDB")
             return True
         except ClientError as e:
-            logger.error(f"Error saving positions: {e}")
+            logger.error("Error saving positions", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False
 
     def get_global_config(self) -> GlobalConfig:
@@ -255,7 +283,11 @@ class DynamoDBClient:
                 cancel_on_startup=item.get('cancel_on_startup', True)
             )
         except ClientError as e:
-            logger.error(f"Error fetching global config: {e}")
+            logger.error("Error fetching global config", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return GlobalConfig()
 
     def save_global_config(self, config: GlobalConfig) -> bool:
@@ -279,7 +311,11 @@ class DynamoDBClient:
             })
             return True
         except ClientError as e:
-            logger.error(f"Error saving global config: {e}")
+            logger.error("Error saving global config", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False
 
     def get_risk_state(self) -> RiskState:
@@ -304,7 +340,11 @@ class DynamoDBClient:
                 last_updated=datetime.fromisoformat(item.get('last_updated', datetime.utcnow().isoformat()))
             )
         except ClientError as e:
-            logger.error(f"Error fetching risk state: {e}")
+            logger.error("Error fetching risk state", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return RiskState()
 
     def save_risk_state(self, state: RiskState) -> bool:
@@ -332,7 +372,11 @@ class DynamoDBClient:
             self.state_table.put_item(Item=item)
             return True
         except ClientError as e:
-            logger.error(f"Error saving risk state: {e}")
+            logger.error("Error saving risk state", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False
 
     # Trade logging
@@ -368,10 +412,13 @@ class DynamoDBClient:
                     if fill_id and fill_id != 'unknown':
                         fill_ids.add(fill_id)
 
-            logger.info(f"Loaded {len(fill_ids)} fill IDs from trade log")
             return fill_ids
         except ClientError as e:
-            logger.error(f"Error fetching fill IDs: {e}")
+            logger.error("Error fetching fill IDs", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return set()
 
     def fill_exists(self, fill_id: str) -> bool:
@@ -393,7 +440,12 @@ class DynamoDBClient:
             )
             return len(response.get('Items', [])) > 0
         except ClientError as e:
-            logger.error(f"Error checking if fill exists: {e}")
+            logger.error("Error checking if fill exists", extra={
+                "event_type": EventType.ERROR,
+                "fill_id": fill_id,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False  # Assume doesn't exist to avoid missing fills
 
     def log_trade(self, trade_data: Dict[str, Any]) -> bool:
@@ -413,7 +465,6 @@ class DynamoDBClient:
 
             # Check if this fill has already been logged
             if self.fill_exists(fill_id):
-                logger.debug(f"Fill {fill_id} already logged to DynamoDB, skipping")
                 return True
 
             item = self._to_dynamo_item(trade_data)
@@ -422,10 +473,14 @@ class DynamoDBClient:
             item['fill_id'] = fill_id
 
             self.trade_log_table.put_item(Item=item)
-            logger.debug(f"Logged fill {fill_id} to trade log")
             return True
         except ClientError as e:
-            logger.error(f"Error logging trade: {e}")
+            logger.error("Error logging trade", extra={
+                "event_type": EventType.ERROR,
+                "fill_id": fill_id,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False
 
     def log_decision(self, decision_data: Dict[str, Any]) -> bool:
@@ -448,5 +503,10 @@ class DynamoDBClient:
             self.decision_log_table.put_item(Item=item)
             return True
         except ClientError as e:
-            logger.error(f"Error logging decision: {e}")
+            logger.error("Error logging decision", extra={
+                "event_type": EventType.ERROR,
+                "market": decision_data.get('market_id'),
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
             return False

@@ -1,26 +1,28 @@
 """State manager for tracking positions, orders, and risk state."""
 
-import logging
 from typing import Dict, List, Optional
 from datetime import datetime
 from collections import defaultdict
 
 from models import Position, Order, Fill, RiskState
 from dynamo import DynamoDBClient
+from structured_logger import get_logger, EventType
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class StateManager:
     """Manages in-memory state with DynamoDB persistence."""
 
-    def __init__(self, dynamo_client: DynamoDBClient):
+    def __init__(self, dynamo_client: DynamoDBClient, bot_run_id: Optional[str] = None):
         """Initialize state manager.
 
         Args:
             dynamo_client: DynamoDB client for persistence
+            bot_run_id: Bot run ID for log correlation
         """
         self.dynamo = dynamo_client
+        self.bot_run_id = bot_run_id
 
         # In-memory state
         self.positions: Dict[str, Position] = {}
@@ -40,29 +42,36 @@ class StateManager:
             True if successful
         """
         try:
-            logger.info("Loading state from DynamoDB...")
+            logger.info("Loading state from DynamoDB", extra={
+                "event_type": EventType.STATE_LOAD,
+            })
 
             # Load positions
             self.positions = self.dynamo.get_positions()
-            logger.info(f"Loaded {len(self.positions)} positions")
-            if self.positions:
-                logger.info("Positions loaded:")
-                for market_id, position in self.positions.items():
-                    logger.info(f"  {market_id}: net_yes={position.net_yes_qty}, realized_pnl={position.realized_pnl:.2f}")
 
             # Load risk state
             self.risk_state = self.dynamo.get_risk_state()
-            logger.info(f"Loaded risk state: daily_pnl={self.risk_state.daily_pnl:.2f}, halted={self.risk_state.trading_halted}")
 
             # Load logged fills to prevent duplicate processing
             self.logged_fills = self.dynamo.get_all_fill_ids()
-            logger.info(f"Loaded {len(self.logged_fills)} logged fill IDs")
+
+            logger.info("State loaded from DynamoDB", extra={
+                "event_type": EventType.STATE_LOAD,
+                "positions_count": len(self.positions),
+                "daily_pnl": self.risk_state.daily_pnl,
+                "trading_halted": self.risk_state.trading_halted,
+                "logged_fills_count": len(self.logged_fills),
+            })
 
             self.last_sync_time = datetime.utcnow()
             return True
 
         except Exception as e:
-            logger.error(f"Error loading state from DynamoDB: {e}")
+            logger.error("Error loading state from DynamoDB", extra={
+                "event_type": EventType.ERROR,
+                "error_type": type(e).__name__,
+                "error_msg": str(e),
+            })
             return False
 
     def save_to_dynamo(self) -> bool:
@@ -72,28 +81,35 @@ class StateManager:
             True if successful
         """
         try:
-            # Log what we're saving
-            if self.positions:
-                pos_summary = {mid: f"net_yes:{p.net_yes_qty}" for mid, p in self.positions.items()}
-                logger.info(f"Saving state: {len(self.positions)} positions - {pos_summary}")
-            else:
-                logger.debug("Saving state: no positions yet")
-
             # Save positions
             if not self.dynamo.save_positions(self.positions):
-                logger.error("Failed to save positions")
+                logger.error("Failed to save positions", extra={
+                    "event_type": EventType.ERROR,
+                })
                 return False
 
             # Save risk state
             if not self.dynamo.save_risk_state(self.risk_state):
-                logger.error("Failed to save risk state")
+                logger.error("Failed to save risk state", extra={
+                    "event_type": EventType.ERROR,
+                })
                 return False
+
+            logger.debug("State saved to DynamoDB", extra={
+                "event_type": EventType.STATE_SAVE,
+                "positions_count": len(self.positions),
+                "daily_pnl": self.risk_state.daily_pnl,
+            })
 
             self.last_sync_time = datetime.utcnow()
             return True
 
         except Exception as e:
-            logger.error(f"Error saving state to DynamoDB: {e}")
+            logger.error("Error saving state to DynamoDB", extra={
+                "event_type": EventType.ERROR,
+                "error_type": type(e).__name__,
+                "error_msg": str(e),
+            })
             return False
 
     def reconcile_with_exchange(self, exchange_orders: List[Order]) -> None:
@@ -102,8 +118,6 @@ class StateManager:
         Args:
             exchange_orders: List of open orders from exchange
         """
-        logger.info(f"Reconciling state with {len(exchange_orders)} exchange orders")
-
         # Clear existing open orders
         self.open_orders.clear()
 
@@ -111,13 +125,19 @@ class StateManager:
         for order in exchange_orders:
             self.open_orders[order.order_id] = order
 
-        logger.info(f"State reconciled: {len(self.open_orders)} open orders")
+        logger.info("State reconciled with exchange", extra={
+            "event_type": EventType.STATE_LOAD,
+            "open_orders_count": len(self.open_orders),
+        })
 
-    def update_from_fills(self, fills: List[Fill]) -> None:
+    def update_from_fills(self, fills: List[Fill]) -> int:
         """Update positions and PnL from new fills.
 
         Args:
             fills: List of fills to process
+
+        Returns:
+            Number of new fills processed
         """
         if not fills:
             return 0
@@ -126,13 +146,10 @@ class StateManager:
         new_fills = [f for f in fills if f.fill_id not in self.logged_fills]
 
         if not new_fills:
-            logger.debug(f"Skipping {len(fills)} already-processed fills")
             return 0
 
         # Sort fills by timestamp (oldest first)
         new_fills = sorted(new_fills, key=lambda f: f.timestamp)
-
-        logger.info(f"Processing {len(new_fills)} new fills (skipped {len(fills) - len(new_fills)} duplicates)")
 
         for fill in new_fills:
             # Update position
@@ -152,6 +169,22 @@ class StateManager:
                 self.risk_state.last_fill_timestamp = fill.timestamp
 
             order_type = 'bid' if fill.side == 'yes' else 'ask'
+
+            # Log fill event to structured logs
+            logger.info("Fill processed", extra={
+                "event_type": EventType.FILL,
+                "market": fill.market_id,
+                "fill_id": fill.fill_id,
+                "order_id": fill.order_id,
+                "side": fill.side,
+                "price": fill.price,
+                "size": fill.size,
+                "pnl_delta": pnl_delta,
+                "fees": fill.fees,
+                "daily_pnl": self.risk_state.daily_pnl,
+                "net_position": position.net_yes_qty,
+            })
+
             # Log trade to DynamoDB (only once per fill_id)
             self.dynamo.log_trade({
                 'market_id': fill.market_id,
@@ -171,8 +204,6 @@ class StateManager:
 
             # Mark this fill as logged
             self.logged_fills.add(fill.fill_id)
-
-            logger.info(f"Fill processed: {fill.market_id} {fill.side} {fill.size}@{fill.price:.2f}, PnL delta: {pnl_delta:.2f}")
 
         return len(new_fills)
 
@@ -196,7 +227,6 @@ class StateManager:
             order: Order to record
         """
         self.open_orders[order.order_id] = order
-        logger.debug(f"Recorded order: {order.order_id}")
 
     def remove_order(self, order_id: str) -> None:
         """Remove an order (cancelled or filled).
@@ -206,7 +236,6 @@ class StateManager:
         """
         if order_id in self.open_orders:
             del self.open_orders[order_id]
-            logger.debug(f"Removed order: {order_id}")
 
     def get_open_orders_for_market(self, market_id: str) -> List[Order]:
         """Get all open orders for a specific market.
@@ -229,8 +258,12 @@ class StateManager:
 
     def reset_daily_pnl(self) -> None:
         """Reset daily PnL (call at start of new trading day)."""
-        logger.info(f"Resetting daily PnL from {self.risk_state.daily_pnl:.2f} to 0")
+        old_pnl = self.risk_state.daily_pnl
         self.risk_state.daily_pnl = 0.0
+        logger.info("Daily PnL reset", extra={
+            "event_type": EventType.LOG,
+            "old_daily_pnl": old_pnl,
+        })
         self.save_to_dynamo()
 
     def halt_trading(self, reason: str) -> None:
@@ -239,7 +272,11 @@ class StateManager:
         Args:
             reason: Reason for halting
         """
-        logger.warning(f"HALTING TRADING: {reason}")
+        logger.warning("Trading halted", extra={
+            "event_type": EventType.RISK_HALT,
+            "reason": reason,
+            "daily_pnl": self.risk_state.daily_pnl,
+        })
         self.risk_state.trading_halted = True
         self.risk_state.halt_reason = reason
         self.risk_state.last_updated = datetime.utcnow()
@@ -247,7 +284,9 @@ class StateManager:
 
     def resume_trading(self) -> None:
         """Resume trading after halt."""
-        logger.info("Resuming trading")
+        logger.info("Trading resumed", extra={
+            "event_type": EventType.LOG,
+        })
         self.risk_state.trading_halted = False
         self.risk_state.halt_reason = None
         self.risk_state.last_updated = datetime.utcnow()

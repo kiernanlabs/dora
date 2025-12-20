@@ -1,0 +1,44 @@
+{
+  "agent": {
+    "metrics_collection_interval": 60,
+    "run_as_user": "cwagent"
+  },
+  "logs": {
+    "logs_collected": {
+      "journald": {
+        "collect_list": [
+          {
+            "unit": "dora-bot.service",
+            "log_group_name": "/dora-bot/{env}/app",
+            "log_stream_name": "{instance_id}/dora-bot",
+            "retention_in_days": 14
+          }
+        ]
+      }
+    },
+    "log_stream_name": "default",
+    "force_flush_interval": 5
+  },
+  "metrics": {
+    "namespace": "DoraBotMetrics",
+    "metrics_collected": {
+      "cpu": {
+        "measurement": [
+          "cpu_usage_idle",
+          "cpu_usage_user",
+          "cpu_usage_system"
+        ],
+        "metrics_collection_interval": 60
+      },
+      "mem": {
+        "measurement": [
+          "mem_used_percent"
+        ],
+        "metrics_collection_interval": 60
+      }
+    },
+    "append_dimensions": {
+      "InstanceId": "${aws:InstanceId}"
+    }
+  }
+}
