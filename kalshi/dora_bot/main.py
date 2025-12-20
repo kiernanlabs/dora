@@ -11,9 +11,7 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
-# Add parent directory to path for kalshi starter code
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'kalshi-starter-code-python-main'))
-from clients import KalshiHttpClient, Environment
+from kalshi_client import KalshiHttpClient, Environment
 
 from models import TargetOrder, Order, MarketConfig
 from exchange_client import KalshiExchangeClient

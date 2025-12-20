@@ -1,3 +1,10 @@
+"""Kalshi API client for HTTP requests and authentication.
+
+This module contains the core Kalshi API client classes extracted from the
+original kalshi-starter-code-python-main library, with only the HTTP client
+functionality needed for the dora_bot trading system.
+"""
+
 import requests
 import base64
 import time
@@ -12,11 +19,11 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.exceptions import InvalidSignature
 
-import websockets
 
 class Environment(Enum):
     DEMO = "demo"
     PROD = "prod"
+
 
 class KalshiBaseClient:
     """Base client class for interacting with the Kalshi API."""
@@ -81,6 +88,7 @@ class KalshiBaseClient:
             return base64.b64encode(signature).decode('utf-8')
         except InvalidSignature as e:
             raise ValueError("RSA sign PSS failed") from e
+
 
 class KalshiHttpClient(KalshiBaseClient):
     """Client for handling HTTP connections to the Kalshi API."""
@@ -190,64 +198,3 @@ class KalshiHttpClient(KalshiBaseClient):
         # Remove None values
         params = {k: v for k, v in params.items() if v is not None}
         return self.get(self.markets_url + '/trades', params=params)
-
-class KalshiWebSocketClient(KalshiBaseClient):
-    """Client for handling WebSocket connections to the Kalshi API."""
-    def __init__(
-        self,
-        key_id: str,
-        private_key: rsa.RSAPrivateKey,
-        environment: Environment = Environment.DEMO,
-    ):
-        super().__init__(key_id, private_key, environment)
-        self.ws = None
-        self.url_suffix = "/trade-api/ws/v2"
-        self.message_id = 1  # Add counter for message IDs
-
-    async def connect(self):
-        """Establishes a WebSocket connection using authentication."""
-        host = self.WS_BASE_URL + self.url_suffix
-        auth_headers = self.request_headers("GET", self.url_suffix)
-        async with websockets.connect(host, additional_headers=auth_headers) as websocket:
-            self.ws = websocket
-            await self.on_open()
-            await self.handler()
-
-    async def on_open(self):
-        """Callback when WebSocket connection is opened."""
-        print("WebSocket connection opened.")
-        await self.subscribe_to_tickers()
-
-    async def subscribe_to_tickers(self):
-        """Subscribe to ticker updates for all markets."""
-        subscription_message = {
-            "id": self.message_id,
-            "cmd": "subscribe",
-            "params": {
-                "channels": ["ticker"]
-            }
-        }
-        await self.ws.send(json.dumps(subscription_message))
-        self.message_id += 1
-
-    async def handler(self):
-        """Handle incoming messages."""
-        try:
-            async for message in self.ws:
-                await self.on_message(message)
-        except websockets.ConnectionClosed as e:
-            await self.on_close(e.code, e.reason)
-        except Exception as e:
-            await self.on_error(e)
-
-    async def on_message(self, message):
-        """Callback for handling incoming messages."""
-        print("Received message:", message)
-
-    async def on_error(self, error):
-        """Callback for handling errors."""
-        print("WebSocket error:", error)
-
-    async def on_close(self, close_status_code, close_msg):
-        """Callback when WebSocket connection is closed."""
-        print("WebSocket connection closed with code:", close_status_code, "and message:", close_msg)

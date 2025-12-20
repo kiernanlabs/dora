@@ -1,15 +1,11 @@
 """Exchange client for interacting with Kalshi API."""
 
-import sys
-import os
 import time
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError, RequestException
 
-# Add parent directory to path to import kalshi starter code
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'kalshi-starter-code-python-main'))
-from clients import KalshiHttpClient, Environment
+from kalshi_client import KalshiHttpClient, Environment
 
 from models import OrderBook, Order, Fill, Balance
 from structured_logger import get_logger, EventType
