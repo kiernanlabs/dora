@@ -5,10 +5,10 @@
   },
   "logs": {
     "logs_collected": {
-      "journald": {
+      "files": {
         "collect_list": [
           {
-            "unit": "dora-bot.service",
+            "file_path": "/home/ec2-user/dora/kalshi/logs/dora-bot.log",
             "log_group_name": "/dora-bot/{env}/app",
             "log_stream_name": "{instance_id}/dora-bot",
             "retention_in_days": 14

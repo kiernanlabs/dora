@@ -11,15 +11,14 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
-from kalshi_client import KalshiHttpClient, Environment
-
-from models import TargetOrder, Order, MarketConfig
-from exchange_client import KalshiExchangeClient
-from dynamo import DynamoDBClient
-from state_manager import StateManager
-from risk_manager import RiskManager
-from strategy import MarketMaker
-from structured_logger import (
+from dora_bot.kalshi_client import KalshiHttpClient, Environment
+from dora_bot.models import TargetOrder, Order, MarketConfig
+from dora_bot.exchange_client import KalshiExchangeClient
+from dora_bot.dynamo import DynamoDBClient
+from dora_bot.state_manager import StateManager
+from dora_bot.risk_manager import RiskManager
+from dora_bot.strategy import MarketMaker
+from dora_bot.structured_logger import (
     setup_structured_logging,
     get_logger,
     set_context,

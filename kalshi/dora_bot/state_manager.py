@@ -4,9 +4,9 @@ from typing import Dict, List, Optional
 from datetime import datetime
 from collections import defaultdict
 
-from models import Position, Order, Fill, RiskState
-from dynamo import DynamoDBClient
-from structured_logger import get_logger, EventType
+from dora_bot.models import Position, Order, Fill, RiskState
+from dora_bot.dynamo import DynamoDBClient
+from dora_bot.structured_logger import get_logger, EventType
 
 logger = get_logger(__name__)
 

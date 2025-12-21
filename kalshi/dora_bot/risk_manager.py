@@ -2,9 +2,9 @@
 
 from typing import Optional
 
-from models import GlobalConfig, MarketConfig, TargetOrder, Position
-from state_manager import StateManager
-from structured_logger import get_logger, EventType
+from dora_bot.models import GlobalConfig, MarketConfig, TargetOrder, Position
+from dora_bot.state_manager import StateManager
+from dora_bot.structured_logger import get_logger, EventType
 
 logger = get_logger(__name__)
 

@@ -20,6 +20,7 @@ Environment="AWS_REGION=us-east-1"
 # Environment="KALSHI_KEY_ID=your-key-id"
 # Environment="KALSHI_PRIVATE_KEY=base64-encoded-private-key"
 
+ExecStartPre=/usr/bin/mkdir -p /home/ec2-user/dora/kalshi/logs
 ExecStart=/home/ec2-user/dora/venv/bin/python -m dora_bot.main
 Restart=always
 RestartSec=10
@@ -29,9 +30,9 @@ StartLimitBurst=5
 # Environment
 Environment=PYTHONUNBUFFERED=1
 
-# Logging - systemd will capture stdout/stderr to journald
-StandardOutput=journal
-StandardError=journal
+# Logging - write to file for CloudWatch Agent ingestion
+StandardOutput=append:/home/ec2-user/dora/kalshi/logs/dora-bot.log
+StandardError=append:/home/ec2-user/dora/kalshi/logs/dora-bot.log
 SyslogIdentifier=dora-bot
 
 # Graceful shutdown - send SIGTERM, wait 30s before SIGKILL

@@ -5,3 +5,5 @@ private_key_demo.pem
 dora_bot/dora_bot.log
 ec2/DoraBot-RSA.pem
 *.pem
+*.pem*
+*.b64

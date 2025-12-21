@@ -5,10 +5,9 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from requests.exceptions import HTTPError, RequestException
 
-from kalshi_client import KalshiHttpClient, Environment
-
-from models import OrderBook, Order, Fill, Balance
-from structured_logger import get_logger, EventType
+from dora_bot.kalshi_client import KalshiHttpClient, Environment
+from dora_bot.models import OrderBook, Order, Fill, Balance
+from dora_bot.structured_logger import get_logger, EventType
 
 logger = get_logger(__name__)
 

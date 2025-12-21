@@ -6,8 +6,8 @@ from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
 
-from models import MarketConfig, GlobalConfig, RiskState, Position
-from structured_logger import get_logger, EventType
+from dora_bot.models import MarketConfig, GlobalConfig, RiskState, Position
+from dora_bot.structured_logger import get_logger, EventType
 
 logger = get_logger(__name__)
 

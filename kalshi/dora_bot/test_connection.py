@@ -5,9 +5,8 @@ import os
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
-from kalshi_client import KalshiHttpClient, Environment
-
-from exchange_client import KalshiExchangeClient
+from dora_bot.kalshi_client import KalshiHttpClient, Environment
+from dora_bot.exchange_client import KalshiExchangeClient
 
 
 def test_connection(use_demo: bool = True):

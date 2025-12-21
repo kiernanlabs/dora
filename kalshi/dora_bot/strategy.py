@@ -4,7 +4,7 @@ import logging
 from typing import List
 import math
 
-from models import OrderBook, Position, MarketConfig, TargetOrder
+from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
 
 logger = logging.getLogger(__name__)
 
@@ -35,31 +35,32 @@ class MarketMaker:
 
         # Check if order book has valid data
         if order_book.best_bid is None or order_book.best_ask is None:
-            logger.warning(f"{config.market_id}: Invalid order book (missing bid/ask)")
+            logger.warning("Invalid order book", extra={
+                "market": config.market_id,
+                "reason": "missing_bid_ask"
+            })
             return []
 
         # Check if spread is wide enough
         if order_book.spread < config.min_spread:
-            logger.info(f"{config.market_id}: Spread too narrow ({order_book.spread:.3f} < {config.min_spread:.3f}) - NO QUOTE")
+            logger.info("Spread too narrow - no quote", extra={
+                "market": config.market_id,
+                "spread": order_book.spread,
+                "min_spread": config.min_spread
+            })
             return []
 
         # Calculate fair value - use config override if set, otherwise mid price
         if config.fair_value is not None:
             fair_value = config.fair_value
-            logger.info(f"{config.market_id} Using config fair_value={fair_value:.3f} (mid={order_book.mid_price:.3f})")
+            using_config_fv = True
         else:
             fair_value = order_book.mid_price
+            using_config_fv = False
 
         # Calculate inventory skew
-        # Positive net position = long YES, should encourage selling (widen bid, tighten ask)
-        # Negative net position = short YES, should encourage buying (tighten bid, widen ask)
         net_position = position.net_position
         skew = self._calculate_skew(net_position, config)
-
-        # Log order book state
-        logger.info(f"{config.market_id} Order Book: bid={order_book.best_bid:.3f} ask={order_book.best_ask:.3f} mid={order_book.mid_price:.3f} spread={order_book.spread:.3f}")
-        logger.info(f"{config.market_id} Position: net_yes={position.net_yes_qty}")
-        logger.info(f"{config.market_id} Skew calculation: net_pos={net_position} → skew={skew:.4f}")
 
         # Determine target bid/ask prices
         target_bid, target_ask = self._calculate_target_prices(
@@ -69,8 +70,6 @@ class MarketMaker:
             best_bid=order_book.best_bid,
             best_ask=order_book.best_ask
         )
-
-        logger.info(f"{config.market_id} Target prices (before rounding): bid={target_bid:.3f} ask={target_ask:.3f}")
 
         # Determine sizes based on inventory
         bid_size = self._calculate_size(
@@ -87,7 +86,27 @@ class MarketMaker:
             side="ask"
         )
 
-        logger.info(f"{config.market_id} Sizes: bid={bid_size} ask={ask_size}")
+        # Log consolidated quote calculation
+        logger.info("Quote calculation", extra={
+            "market": config.market_id,
+            "order_book": {
+                "best_bid": order_book.best_bid,
+                "best_ask": order_book.best_ask,
+                "mid": order_book.mid_price,
+                "spread": order_book.spread
+            },
+            "position": {
+                "net_yes_qty": position.net_yes_qty,
+                "net_position": net_position
+            },
+            "fair_value": fair_value,
+            "using_config_fv": using_config_fv,
+            "skew": skew,
+            "target_bid": target_bid,
+            "target_ask": target_ask,
+            "bid_size": bid_size,
+            "ask_size": ask_size
+        })
 
         # Build target orders
         # NOTE: We store everything as YES prices internally
@@ -102,7 +121,6 @@ class MarketMaker:
                 price=rounded_bid,
                 size=bid_size
             ))
-            logger.info(f"{config.market_id} → BID: {bid_size}@{rounded_bid:.2f}")
 
         if ask_size > 0 and target_ask <= 0.99:  # Max price is 0.99
             rounded_ask = self._round_price(target_ask)
@@ -112,7 +130,19 @@ class MarketMaker:
                 price=rounded_ask,
                 size=ask_size
             ))
-            logger.info(f"{config.market_id} → ASK: {ask_size}@{rounded_ask:.2f}")
+
+        # Log final quotes
+        if targets:
+            quotes = [{"side": t.side, "price": t.price, "size": t.size} for t in targets]
+            logger.info("Quotes generated", extra={
+                "market": config.market_id,
+                "quotes": quotes
+            })
+        else:
+            logger.info("No quotes generated", extra={
+                "market": config.market_id,
+                "reason": "size_or_price_constraints"
+            })
 
         return targets
 
