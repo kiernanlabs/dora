@@ -282,10 +282,6 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
             price = trade.get('price', 0.0)
             size = trade.get('size', 0)
 
-            # Save realized P&L from 24h ago
-            if timestamp <= cutoff:
-                realized_pnl_24h_ago = realized_pnl
-
             # Update position using same logic as Position.update_from_fill()
             if side in ['buy', 'yes']:
                 # Bid fill - buying YES contracts
@@ -319,6 +315,11 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
 
                     if net_yes_qty < 0:
                         avg_sell_price = price
+            
+            # Save realized P&L from 24h ago
+            if timestamp <= cutoff:
+                realized_pnl_24h_ago = realized_pnl
+
 
         # Return the change in realized P&L over the last 24 hours
         return realized_pnl - realized_pnl_24h_ago

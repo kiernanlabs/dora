@@ -9,7 +9,8 @@
       "Bash(python3 -m py_compile:*)",
       "Bash(find:*)",
       "Bash(aws dynamodb query:*)",
-      "Bash(aws dynamodb scan:*)"
+      "Bash(aws dynamodb scan:*)",
+      "Bash(aws dynamodb get-item:*)"
     ],
     "deny": [],
     "ask": []
