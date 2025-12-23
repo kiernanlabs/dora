@@ -228,19 +228,23 @@ def render_recent_logs(db_client: ReadOnlyDynamoDBClient):
             st.info("No recent execution logs")
 
 
-def calculate_24h_change(trades: List[Dict], market_id: str, metric: str) -> float:
-    """Calculate 24-hour change for position or P&L."""
+def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, current_position: Dict = None) -> float:
+    """Calculate 24-hour change for position or P&L.
+
+    For P&L calculation, we need ALL trades (not just last 24h) to properly track cost basis,
+    then calculate the realized P&L change in the last 24 hours.
+    """
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
 
-    recent_trades = [
-        t for t in trades
-        if t.get('market_id') == market_id
-        and (t.get('fill_timestamp') or t.get('timestamp'))
-        and datetime.fromisoformat((t.get('fill_timestamp') or t.get('timestamp', '')).replace('Z', '+00:00')) > cutoff
-    ]
-
+    # For position change, only look at recent trades
     if metric == 'position':
-        # Calculate net position change
+        recent_trades = [
+            t for t in trades
+            if t.get('market_id') == market_id
+            and (t.get('fill_timestamp') or t.get('timestamp'))
+            and datetime.fromisoformat((t.get('fill_timestamp') or t.get('timestamp', '')).replace('Z', '+00:00')) > cutoff
+        ]
+
         change = 0
         for trade in recent_trades:
             side = trade.get('side', '')
@@ -250,18 +254,75 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str) -> flo
             else:
                 change -= size
         return change
+
     elif metric == 'pnl':
-        # Calculate P&L change (simplified)
-        pnl_change = 0.0
-        for trade in recent_trades:
+        # Get ALL trades for this market to properly calculate realized P&L
+        all_market_trades = [
+            t for t in trades
+            if t.get('market_id') == market_id
+        ]
+
+        # Sort trades chronologically
+        all_market_trades.sort(key=lambda t: t.get('fill_timestamp') or t.get('timestamp', ''))
+
+        # Track position state
+        net_yes_qty = 0
+        avg_buy_price = 0.0
+        avg_sell_price = 0.0
+        realized_pnl = 0.0
+        realized_pnl_24h_ago = 0.0
+
+        for trade in all_market_trades:
+            timestamp_str = trade.get('fill_timestamp') or trade.get('timestamp', '')
+            if not timestamp_str:
+                continue
+
+            timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
             side = trade.get('side', '')
             price = trade.get('price', 0.0)
             size = trade.get('size', 0)
-            if side in ['sell', 'no']:
-                pnl_change += price * size
+
+            # Save realized P&L from 24h ago
+            if timestamp <= cutoff:
+                realized_pnl_24h_ago = realized_pnl
+
+            # Update position using same logic as Position.update_from_fill()
+            if side in ['buy', 'yes']:
+                # Bid fill - buying YES contracts
+                if net_yes_qty >= 0:
+                    # Adding to long position
+                    total_cost = avg_buy_price * net_yes_qty + price * size
+                    net_yes_qty += size
+                    avg_buy_price = total_cost / net_yes_qty if net_yes_qty > 0 else 0
+                else:
+                    # Closing short position - realize P&L
+                    close_qty = min(abs(net_yes_qty), size)
+                    realized = (avg_sell_price - price) * close_qty
+                    realized_pnl += realized
+                    net_yes_qty += size
+
+                    if net_yes_qty > 0:
+                        avg_buy_price = price
             else:
-                pnl_change -= price * size
-        return pnl_change
+                # Ask fill - selling YES contracts
+                if net_yes_qty <= 0:
+                    # Adding to short position
+                    total_cost = avg_sell_price * abs(net_yes_qty) + price * size
+                    net_yes_qty -= size
+                    avg_sell_price = total_cost / abs(net_yes_qty) if net_yes_qty != 0 else 0
+                else:
+                    # Closing long position - realize P&L
+                    close_qty = min(net_yes_qty, size)
+                    realized = (price - avg_buy_price) * close_qty
+                    realized_pnl += realized
+                    net_yes_qty -= size
+
+                    if net_yes_qty < 0:
+                        avg_sell_price = price
+
+        # Return the change in realized P&L over the last 24 hours
+        return realized_pnl - realized_pnl_24h_ago
+
     return 0.0
 
 
@@ -412,7 +473,8 @@ def render(environment: str, region: str):
         positions = db_client.get_positions()
         market_configs = db_client.get_all_market_configs(enabled_only=True)
         pnl_data = db_client.get_pnl_over_time(days=30)
-        trades = db_client.get_recent_trades(days=1)
+        # Load all trades (at least 30 days) to properly calculate realized P&L with cost basis
+        trades = db_client.get_recent_trades(days=30)
 
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])

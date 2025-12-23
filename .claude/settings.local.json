@@ -6,7 +6,8 @@
       "Bash(python3:*)",
       "Bash(chmod:*)",
       "Bash(grep:*)",
-      "Bash(python3 -m py_compile:*)"
+      "Bash(python3 -m py_compile:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

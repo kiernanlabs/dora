@@ -568,15 +568,21 @@ def render(environment: str, region: str):
         with st.expander("⚙️ Market Configuration", expanded=False):
             config = db_client.get_market_config(selected_market)
             if config:
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
                     st.metric("Enabled", "✅ Yes" if config.get('enabled') else "❌ No")
                     st.metric("Quote Size", config.get('quote_size'))
                 with col2:
+                    fair_value = config.get('fair_value')
+                    if fair_value is not None:
+                        st.metric("Fair Value", f"${fair_value:.3f}")
+                    else:
+                        st.metric("Fair Value", "N/A")
                     st.metric("Min Spread", f"${config.get('min_spread', 0.0):.3f}")
-                    st.metric("Inventory Skew Factor", f"{config.get('inventory_skew_factor', 0.0):.2f}")
                 with col3:
+                    st.metric("Inventory Skew Factor", f"{config.get('inventory_skew_factor', 0.0):.2f}")
                     st.metric("Max Inventory (YES)", config.get('max_inventory_yes'))
+                with col4:
                     st.metric("Max Inventory (NO)", config.get('max_inventory_no'))
             else:
                 st.warning("Market configuration not found")
