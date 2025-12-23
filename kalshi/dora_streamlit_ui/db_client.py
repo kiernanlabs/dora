@@ -8,6 +8,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Any
 import logging
 
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    STREAMLIT_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +39,19 @@ class ReadOnlyDynamoDBClient:
         self.suffix = f"_{environment}"
 
         # Initialize boto3 DynamoDB resource
-        self.dynamodb = boto3.resource('dynamodb', region_name=region)
+        # Check for Streamlit secrets first (for Streamlit Cloud deployment)
+        if STREAMLIT_AVAILABLE and hasattr(st, 'secrets') and 'AWS_ACCESS_KEY_ID' in st.secrets:
+            logger.info("Using AWS credentials from Streamlit secrets")
+            self.dynamodb = boto3.resource(
+                'dynamodb',
+                region_name=region,
+                aws_access_key_id=st.secrets['AWS_ACCESS_KEY_ID'],
+                aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
+            )
+        else:
+            # Fall back to default credential chain (AWS CLI, environment variables, IAM role)
+            logger.info("Using AWS credentials from default credential chain")
+            self.dynamodb = boto3.resource('dynamodb', region_name=region)
 
         # Initialize table references
         self.market_config_table = self.dynamodb.Table(f"dora_market_config{self.suffix}")

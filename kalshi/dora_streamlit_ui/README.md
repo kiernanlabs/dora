@@ -75,6 +75,43 @@ The dashboard will open in your browser (typically at http://localhost:8501).
    - Choose a lookback period (1-30 days)
    - Browse decision logs, execution logs, and analytics in separate tabs
 
+## Deployment to Streamlit Cloud
+
+To deploy this dashboard to Streamlit Cloud:
+
+1. **Push to GitHub**: Ensure your code is pushed to a GitHub repository
+
+2. **Connect to Streamlit Cloud**:
+   - Go to [share.streamlit.io](https://share.streamlit.io)
+   - Sign in with GitHub
+   - Click "New app"
+   - Select your repository, branch, and set the main file path to `kalshi/dora_streamlit_ui/app.py`
+
+3. **Configure Secrets**:
+   - In your Streamlit Cloud app settings, go to "Secrets"
+   - Add your AWS credentials in TOML format:
+
+```toml
+AWS_ACCESS_KEY_ID = "your_access_key_id"
+AWS_SECRET_ACCESS_KEY = "your_secret_access_key"
+```
+
+4. **Deploy**: Click "Deploy" and your app will be live!
+
+### Local Testing with Secrets
+
+To test locally with the same secrets format, create a `.streamlit/secrets.toml` file:
+
+```bash
+mkdir -p .streamlit
+cat > .streamlit/secrets.toml << EOF
+AWS_ACCESS_KEY_ID = "your_access_key_id"
+AWS_SECRET_ACCESS_KEY = "your_secret_access_key"
+EOF
+```
+
+**Note**: The `.streamlit/` directory is already in `.gitignore` to prevent accidentally committing secrets.
+
 ## AWS Permissions
 
 The application requires **read-only** access to the following DynamoDB tables:
@@ -115,21 +152,24 @@ The application requires **read-only** access to the following DynamoDB tables:
 dora_streamlit_ui/
 ├── app.py                  # Main application entry point
 ├── db_client.py           # Read-only DynamoDB client
-├── pages/
+├── views/
 │   ├── __init__.py
 │   ├── home.py            # Home page dashboard
 │   └── market_deep_dive.py # Market detail page
 ├── requirements.txt       # Python dependencies
+├── run.sh                 # Convenience script to run locally
+├── .gitignore            # Git ignore file (includes .streamlit/)
 └── README.md             # This file
 ```
 
 ## Data Flow
 
-1. **DynamoDB Tables** → Read-only queries via boto3
-2. **db_client.py** → Provides clean API for data access
-3. **Pages** → Render data using Streamlit components
-4. **Plotly** → Interactive charts and visualizations
-5. **Pandas** → Data manipulation and table display
+1. **AWS Credentials** → Either from Streamlit secrets (Cloud) or default credential chain (local)
+2. **DynamoDB Tables** → Read-only queries via boto3
+3. **db_client.py** → Provides clean API for data access with automatic credential detection
+4. **Views** → Render data using Streamlit components
+5. **Plotly** → Interactive charts and visualizations
+6. **Pandas** → Data manipulation and table display
 
 ## Performance Considerations
 

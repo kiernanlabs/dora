@@ -1,7 +1,7 @@
 """Market making strategy logic."""
 
 import logging
-from typing import List
+from typing import List, Optional
 import math
 
 from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
@@ -132,7 +132,7 @@ class MarketMaker:
         # The exchange_client will handle converting to Kalshi API format
         targets = []
 
-        if bid_size > 0 and target_bid >= 0.01:  # Min price is 0.01
+        if bid_size > 0 and target_bid is not None and target_bid >= 0.01:  # Min price is 0.01
             rounded_bid = self._round_price(target_bid)
             targets.append(TargetOrder(
                 market_id=config.market_id,
@@ -141,7 +141,7 @@ class MarketMaker:
                 size=bid_size
             ))
 
-        if ask_size > 0 and target_ask <= 0.99:  # Max price is 0.99
+        if ask_size > 0 and target_ask is not None and target_ask <= 0.99:  # Max price is 0.99
             rounded_ask = self._round_price(target_ask)
             targets.append(TargetOrder(
                 market_id=config.market_id,
@@ -192,7 +192,7 @@ class MarketMaker:
         skew: float,
         best_bid: float,
         best_ask: float
-    ) -> tuple[float, float]:
+    ) -> tuple[Optional[float], Optional[float]]:
         """Calculate target bid and ask prices.
 
         Strategy: Place just inside the current spread, then apply skew.
@@ -207,7 +207,7 @@ class MarketMaker:
             best_ask: Current best ask
 
         Returns:
-            Tuple of (target_bid, target_ask)
+            Tuple of (target_bid, target_ask); either side may be None to skip quoting.
         """
         # Start by placing one tick inside the current spread
         inside_bid = best_bid + self.TICK_SIZE
@@ -219,28 +219,40 @@ class MarketMaker:
         market_bid = inside_bid - skew
         market_ask = inside_ask - skew
 
-        fair_value_bid = fair_value - skew
-        fair_value_ask = fair_value - skew
+        # More aggressive fair value levels to allow us to flex up/down to market
+        fair_value_bid = (fair_value - skew)*1.2
+        fair_value_ask = (fair_value - skew)*0.8
 
         # If the market is telling us better prices than fair value levels, use those
         target_bid = min(market_bid, fair_value_bid)
-        target_ask = max(market_ask, fair_value_ask)    
+        target_ask = max(market_ask, fair_value_ask)
 
         # Ensure we maintain minimum spread
         current_target_spread = target_ask - target_bid
         if current_target_spread < min_spread:
-            # Fall back to placing at least half min_spread from fair value
-            half_spread = min_spread / 2.0
-            target_bid = min(fair_value - half_spread - skew, target_bid)
-            target_ask = max(fair_value + half_spread - skew, target_ask)
+            # Fall back to single-sided quoting based on inventory skew.
+            if skew > 0:
+                target_bid = inside_bid
+                target_ask = None
+            elif skew < 0:
+                target_bid = None
+                target_ask = inside_ask
+            else:
+                target_bid = None
+                target_ask = None
 
         # Safety: ensure bid doesn't exceed ask
-        if target_bid >= target_ask:
+        if target_bid is not None and target_ask is not None and target_bid >= target_ask:
             half_spread = min_spread / 2.0
             target_bid = fair_value - half_spread - skew
             target_ask = fair_value + half_spread - skew
 
-        return max(target_bid,0.01), min(target_ask,0.99)
+        if target_bid is not None:
+            target_bid = max(target_bid, 0.01)
+        if target_ask is not None:
+            target_ask = min(target_ask, 0.99)
+
+        return target_bid, target_ask
 
     def _calculate_size(
         self,
