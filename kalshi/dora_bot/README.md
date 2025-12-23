@@ -42,6 +42,12 @@ This creates:
 - `dora_state` - Bot state (positions, risk, global config)
 - `dora_trade_log` - Trade audit log
 - `dora_decision_log` - Decision log (optional)
+- `dora_execution_log` - Execution log (Phase 3)
+
+To create for a single environment:
+```bash
+python setup_dynamodb.py us-east-1 --env demo
+```
 
 ### 4. Configure Kalshi API Credentials
 

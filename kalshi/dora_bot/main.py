@@ -26,6 +26,7 @@ from dora_bot.structured_logger import (
     generate_decision_id,
     get_run_id,
     get_version,
+    log_decision_record,
     EventType,
 )
 
@@ -44,6 +45,7 @@ class DoraBot:
             aws_region: AWS region for DynamoDB
         """
         self.environment = "demo" if use_demo else "prod"
+        self.aws_region = aws_region
         self.bot_run_id = get_run_id()
         self.bot_version = get_version()
 
@@ -110,7 +112,12 @@ class DoraBot:
         )
 
         # Initialize components
-        self.exchange = KalshiExchangeClient(kalshi_client, bot_run_id=self.bot_run_id)
+        self.exchange = KalshiExchangeClient(
+            kalshi_client,
+            bot_run_id=self.bot_run_id,
+            environment=self.environment,
+            aws_region=aws_region,
+        )
         self.dynamo = DynamoDBClient(region=aws_region, environment=self.environment)
         self.state = StateManager(self.dynamo, bot_run_id=self.bot_run_id)
         self.strategy = MarketMaker()
@@ -170,14 +177,28 @@ class DoraBot:
 
         # 5. Cancel all orders on startup if configured
         if self.global_config.cancel_on_startup:
+            startup_decision_id = f"{self.bot_run_id}:startup_cancel:{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+            log_decision_record({
+                "market_id": "ALL",
+                "decision_id": startup_decision_id,
+                "bot_run_id": self.bot_run_id,
+                "bot_version": self.bot_version,
+                "reason": "startup_cancel",
+                "open_orders_count": len(exchange_orders),
+                "target_quotes": [],
+                "num_targets": 0,
+            }, region=self.aws_region, environment=self.environment)
             logger.info("Cancelling all orders on startup", extra={
                 "event_type": EventType.STARTUP,
                 "cancel_on_startup": True,
+                "decision_id": startup_decision_id,
+                "open_orders_count": len(exchange_orders),
             })
-            cancelled = self.exchange.cancel_all_orders()
+            cancelled = self.exchange.cancel_all_orders(decision_id=startup_decision_id)
             logger.info("Cancelled orders on startup", extra={
                 "event_type": EventType.ORDER_CANCEL,
                 "cancelled_count": cancelled,
+                "decision_id": startup_decision_id,
             })
             self.state.open_orders.clear()
 
@@ -255,13 +276,28 @@ class DoraBot:
                 # Check if we should halt trading
                 should_halt, halt_reason = self.risk.should_halt_trading(self.state)
                 if should_halt:
+                    halt_decision_id = (
+                        f"{self.bot_run_id}:halt_cancel:{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+                    )
+                    log_decision_record({
+                        "market_id": "ALL",
+                        "decision_id": halt_decision_id,
+                        "bot_run_id": self.bot_run_id,
+                        "bot_version": self.bot_version,
+                        "reason": "risk_halt_cancel",
+                        "halt_reason": halt_reason,
+                        "daily_pnl": self.state.risk_state.daily_pnl,
+                        "target_quotes": [],
+                        "num_targets": 0,
+                    }, region=self.aws_region, environment=self.environment)
                     logger.critical("Trading halted", extra={
                         "event_type": EventType.RISK_HALT,
                         "reason": halt_reason,
                         "daily_pnl": self.state.risk_state.daily_pnl,
+                        "decision_id": halt_decision_id,
                     })
                     # Cancel all orders and exit
-                    self.exchange.cancel_all_orders()
+                    self.exchange.cancel_all_orders(decision_id=halt_decision_id)
                     self.state.save_to_dynamo()
                     break
 
@@ -404,7 +440,7 @@ class DoraBot:
             })
 
             # Log decision to DynamoDB (for historical record)
-            self.dynamo.log_decision({
+            log_decision_record({
                 'market_id': market_id,
                 'decision_id': decision_id,
                 'bot_run_id': self.bot_run_id,
@@ -420,7 +456,7 @@ class DoraBot:
                 },
                 'target_quotes': target_quotes,
                 'num_targets': len(target_orders) if target_orders else 0
-            })
+            }, region=self.aws_region, environment=self.environment)
 
             if not target_orders:
                 # No quotes desired, cancel any existing orders
@@ -454,7 +490,12 @@ class DoraBot:
 
             # 5. Cancel orders
             for order in to_cancel:
-                if self.exchange.cancel_order(order.order_id, decision_id=decision_id):
+                if self.exchange.cancel_order(
+                    order.order_id,
+                    decision_id=decision_id,
+                    market_id=order.market_id,
+                    client_order_id=order.client_order_id,
+                ):
                     self.state.remove_order(order.order_id)
 
             # 6. Place new orders (with risk checks)
@@ -572,10 +613,14 @@ async def main():
 
     env = "demo" if use_demo else "prod"
 
+    # Get AWS region from environment or default
+    aws_region = os.getenv('AWS_REGION', 'us-east-1')
+
     # Initialize structured logging BEFORE creating bot
     bot_run_id = setup_structured_logging(
         service='dora-bot',
         env=env,
+        aws_region=aws_region,
     )
 
     logger.info("Dora Bot starting", extra={
@@ -586,9 +631,6 @@ async def main():
 
     # Register signal handlers
     shutdown_handler.register_signals()
-
-    # Get AWS region from environment or default
-    aws_region = os.getenv('AWS_REGION', 'us-east-1')
 
     # Create and run bot
     bot = DoraBot(use_demo=use_demo, aws_region=aws_region)
@@ -609,7 +651,19 @@ async def main():
                 logger.info("Attempting graceful cleanup after fatal error", extra={
                     "event_type": EventType.SHUTDOWN,
                 })
-                bot.exchange.cancel_all_orders()
+                cleanup_decision_id = (
+                    f"{bot.bot_run_id}:fatal_cleanup_cancel:{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+                )
+                log_decision_record({
+                    "market_id": "ALL",
+                    "decision_id": cleanup_decision_id,
+                    "bot_run_id": bot.bot_run_id,
+                    "bot_version": bot.bot_version,
+                    "reason": "fatal_error_cleanup_cancel",
+                    "target_quotes": [],
+                    "num_targets": 0,
+                }, region=bot.aws_region, environment=bot.environment)
+                bot.exchange.cancel_all_orders(decision_id=cleanup_decision_id)
                 bot.state.save_to_dynamo()
             except Exception as cleanup_error:
                 logger.error("Cleanup failed", extra={

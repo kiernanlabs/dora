@@ -21,11 +21,21 @@ class KalshiService:
         Args:
             use_demo: If True, use demo environment. Otherwise use production.
         """
-        load_dotenv()
+        load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
         self.env = Environment.DEMO if use_demo else Environment.PROD
         keyid = os.getenv('DEMO_KEYID') if use_demo else os.getenv('PROD_KEYID')
         keyfile = os.getenv('DEMO_KEYFILE') if use_demo else os.getenv('PROD_KEYFILE')
+        if keyfile:
+            keyfile = os.path.expanduser(keyfile)
+            if not os.path.isabs(keyfile):
+                cwd_candidate = os.path.abspath(keyfile)
+                if os.path.exists(cwd_candidate):
+                    keyfile = cwd_candidate
+                else:
+                    module_candidate = os.path.join(os.path.dirname(__file__), keyfile)
+                    if os.path.exists(module_candidate):
+                        keyfile = module_candidate
 
         if not keyid or not keyfile:
             raise ValueError(f"Missing API credentials. Please set {'DEMO' if use_demo else 'PROD'}_KEYID and {'DEMO' if use_demo else 'PROD'}_KEYFILE in .env file")

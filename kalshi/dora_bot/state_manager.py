@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from dora_bot.models import Position, Order, Fill, RiskState
 from dora_bot.dynamo import DynamoDBClient
-from dora_bot.structured_logger import get_logger, EventType
+from dora_bot.structured_logger import get_logger, EventType, log_execution_event
 
 logger = get_logger(__name__)
 
@@ -169,6 +169,9 @@ class StateManager:
                 self.risk_state.last_fill_timestamp = fill.timestamp
 
             order_type = 'bid' if fill.side == 'yes' else 'ask'
+            order_meta = self.open_orders.get(fill.order_id)
+            decision_id = order_meta.decision_id if order_meta else None
+            client_order_id = order_meta.client_order_id if order_meta else None
 
             # Log fill event to structured logs
             logger.info("Fill processed", extra={
@@ -176,6 +179,7 @@ class StateManager:
                 "market": fill.market_id,
                 "fill_id": fill.fill_id,
                 "order_id": fill.order_id,
+                "decision_id": decision_id,
                 "side": fill.side,
                 "price": fill.price,
                 "size": fill.size,
@@ -183,7 +187,30 @@ class StateManager:
                 "fees": fill.fees,
                 "daily_pnl": self.risk_state.daily_pnl,
                 "net_position": position.net_yes_qty,
+                "client_order_id": client_order_id,
             })
+            if decision_id:
+                log_execution_event({
+                    "event_type": EventType.FILL,
+                    "market": fill.market_id,
+                    "fill_id": fill.fill_id,
+                    "order_id": fill.order_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "side": fill.side,
+                    "price": fill.price,
+                    "size": fill.size,
+                    "pnl_delta": pnl_delta,
+                    "fees": fill.fees,
+                    "client_order_id": client_order_id,
+                }, region=self.dynamo.region, environment=self.dynamo.environment)
+            else:
+                logger.warning("Skipping execution log for fill; missing decision_id", extra={
+                    "event_type": EventType.LOG,
+                    "market": fill.market_id,
+                    "fill_id": fill.fill_id,
+                    "order_id": fill.order_id,
+                })
 
             # Log trade to DynamoDB (only once per fill_id)
             self.dynamo.log_trade({

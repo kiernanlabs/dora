@@ -1,11 +1,12 @@
 #!/bin/bash
 # Deploy Dora Bot to EC2 instance
-# Usage: ./deploy-to-ec2.sh <ec2-ip> <ssh-key-path> [--setup] [--with-legacy-secrets]
+# Usage: ./deploy-to-ec2.sh <ec2-ip> <ssh-key-path> [--setup] [--with-legacy-secrets] [--prod|--demo]
 #
 # Examples:
 #   First time setup:  ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem --setup
 #   Update code only:  ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem
 #   Include .env/.pem: ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem --with-legacy-secrets
+#   Deploy prod env:   ./deploy-to-ec2.sh 3.84.220.98 ./DoraBot-RSA.pem --prod
 
 set -e
 
@@ -13,6 +14,8 @@ EC2_IP="${1}"
 SSH_KEY="${2}"
 SETUP_MODE=""
 COPY_LEGACY_SECRETS="false"
+ENV_NAME="demo"
+ENV_FLAG_SET="false"
 
 for arg in "${@:3}"; do
     case "$arg" in
@@ -22,6 +25,14 @@ for arg in "${@:3}"; do
         --with-legacy-secrets)
             COPY_LEGACY_SECRETS="true"
             ;;
+        --prod)
+            ENV_NAME="prod"
+            ENV_FLAG_SET="true"
+            ;;
+        --demo)
+            ENV_NAME="demo"
+            ENV_FLAG_SET="true"
+            ;;
     esac
 done
 
@@ -29,12 +40,13 @@ REMOTE_USER="ec2-user"
 REMOTE_DIR="/home/${REMOTE_USER}/dora"
 
 if [ -z "$EC2_IP" ] || [ -z "$SSH_KEY" ]; then
-    echo "Usage: $0 <ec2-ip> <ssh-key-path> [--setup] [--with-legacy-secrets]"
+    echo "Usage: $0 <ec2-ip> <ssh-key-path> [--setup] [--with-legacy-secrets] [--prod|--demo]"
     echo ""
     echo "Examples:"
     echo "  First time:  $0 3.84.220.98 ./DoraBot-RSA.pem --setup"
     echo "  Update:      $0 3.84.220.98 ./DoraBot-RSA.pem"
     echo "  Legacy:      $0 3.84.220.98 ./DoraBot-RSA.pem --with-legacy-secrets"
+    echo "  Prod:        $0 3.84.220.98 ./DoraBot-RSA.pem --prod"
     exit 1
 fi
 
@@ -60,6 +72,15 @@ warn() {
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 log "Deploying from $SCRIPT_DIR to ${REMOTE_USER}@${EC2_IP}..."
+
+REMOTE_ENV_FILE=""
+if [ "$ENV_FLAG_SET" == "true" ]; then
+    if [ "$ENV_NAME" == "prod" ]; then
+        REMOTE_ENV_FILE="/etc/dora-bot.env"
+    else
+        REMOTE_ENV_FILE="/etc/dora-bot-demo.env"
+    fi
+fi
 
 # ============================================
 # FIRST TIME SETUP (if --setup flag is passed)
@@ -150,7 +171,7 @@ fi
 # ============================================
 log "Installing dependencies and configuring service..."
 
-$SSH_CMD << 'REMOTE_SCRIPT'
+$SSH_CMD "ENV_NAME=$ENV_NAME REMOTE_ENV_FILE=$REMOTE_ENV_FILE bash -s" << 'REMOTE_SCRIPT'
 set -e
 
 cd /home/ec2-user/dora
@@ -197,8 +218,21 @@ fi
 
 # Copy and configure CloudWatch agent config
 sudo cp /home/ec2-user/dora/kalshi/ec2/cloudwatch-agent-config.json /opt/aws/amazon-cloudwatch-agent/etc/
-# Replace {env} with demo (change to 'prod' for production)
-sudo sed -i 's/{env}/demo/g' /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent-config.json
+# Replace {env} with target environment
+sudo sed -i "s/{env}/${ENV_NAME}/g" /opt/aws/amazon-cloudwatch-agent/etc/cloudwatch-agent-config.json
+
+if [ -n "$REMOTE_ENV_FILE" ]; then
+    if [ -f "$REMOTE_ENV_FILE" ]; then
+        echo "[REMOTE] Updating systemd env file to $REMOTE_ENV_FILE..."
+        sudo mkdir -p /etc/systemd/system/dora-bot.service.d
+        sudo tee /etc/systemd/system/dora-bot.service.d/env.conf >/dev/null <<EOF
+[Service]
+EnvironmentFile=$REMOTE_ENV_FILE
+EOF
+    else
+        echo "[REMOTE] Warning: $REMOTE_ENV_FILE not found, keeping existing env.conf"
+    fi
+fi
 
 # CRITICAL: Set permissions so cwagent user can read log files
 # The CloudWatch agent runs as 'cwagent' user and needs read access to the entire path

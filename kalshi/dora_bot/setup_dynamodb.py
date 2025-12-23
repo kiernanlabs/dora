@@ -1,165 +1,177 @@
-"""Script to create DynamoDB tables for Dora Bot."""
+"""Setup DynamoDB tables for Dora Bot."""
+
+from __future__ import annotations
+
+import argparse
+from typing import Dict, List, Optional
 
 import boto3
-import logging
 from botocore.exceptions import ClientError
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+
+TABLE_SUFFIXES = {
+    "demo": "_demo",
+    "prod": "_prod",
+}
 
 
-def create_tables(region: str = "us-east-1"):
-    """Create all required DynamoDB tables.
+def _table_name(base_name: str, environment: str) -> str:
+    if environment not in TABLE_SUFFIXES:
+        raise ValueError(f"Invalid environment: {environment}")
+    return f"{base_name}{TABLE_SUFFIXES[environment]}"
 
-    Args:
-        region: AWS region
-    """
-    dynamodb = boto3.client('dynamodb', region_name=region)
 
-    tables = [
-        {
-            'TableName': 'dora_market_config',
-            'KeySchema': [
-                {'AttributeName': 'market_id', 'KeyType': 'HASH'}
-            ],
-            'AttributeDefinitions': [
-                {'AttributeName': 'market_id', 'AttributeType': 'S'}
-            ],
-            'BillingMode': 'PAY_PER_REQUEST'
-        },
-        {
-            'TableName': 'dora_state',
-            'KeySchema': [
-                {'AttributeName': 'key', 'KeyType': 'HASH'}
-            ],
-            'AttributeDefinitions': [
-                {'AttributeName': 'key', 'AttributeType': 'S'}
-            ],
-            'BillingMode': 'PAY_PER_REQUEST'
-        },
-        {
-            'TableName': 'dora_trade_log',
-            'KeySchema': [
-                {'AttributeName': 'date', 'KeyType': 'HASH'},
-                {'AttributeName': 'timestamp#order_id', 'KeyType': 'RANGE'}
-            ],
-            'AttributeDefinitions': [
-                {'AttributeName': 'date', 'AttributeType': 'S'},
-                {'AttributeName': 'timestamp#order_id', 'AttributeType': 'S'}
-            ],
-            'BillingMode': 'PAY_PER_REQUEST'
-        },
-        {
-            'TableName': 'dora_decision_log',
-            'KeySchema': [
-                {'AttributeName': 'date', 'KeyType': 'HASH'},
-                {'AttributeName': 'timestamp', 'KeyType': 'RANGE'}
-            ],
-            'AttributeDefinitions': [
-                {'AttributeName': 'date', 'AttributeType': 'S'},
-                {'AttributeName': 'timestamp', 'AttributeType': 'S'}
-            ],
-            'BillingMode': 'PAY_PER_REQUEST'
+def _ensure_table(
+    client,
+    table_name: str,
+    key_schema: List[Dict[str, str]],
+    attribute_definitions: List[Dict[str, str]],
+    gsi: Optional[List[Dict[str, object]]] = None,
+) -> None:
+    try:
+        client.describe_table(TableName=table_name)
+        return
+    except client.exceptions.ResourceNotFoundException:
+        pass
+
+    params: Dict[str, object] = {
+        "TableName": table_name,
+        "KeySchema": key_schema,
+        "AttributeDefinitions": attribute_definitions,
+        "BillingMode": "PAY_PER_REQUEST",
+    }
+    if gsi:
+        params["GlobalSecondaryIndexes"] = gsi
+
+    client.create_table(**params)
+    client.get_waiter("table_exists").wait(TableName=table_name)
+
+
+def _enable_ttl(client, table_name: str, attribute_name: str) -> None:
+    try:
+        client.update_time_to_live(
+            TableName=table_name,
+            TimeToLiveSpecification={
+                "Enabled": True,
+                "AttributeName": attribute_name,
+            },
+        )
+    except ClientError:
+        # TTL can fail if the table is still creating or already enabled.
+        pass
+
+
+def create_tables(region: str, environment: str) -> None:
+    client = boto3.client("dynamodb", region_name=region)
+
+    _ensure_table(
+        client,
+        _table_name("dora_market_config", environment),
+        key_schema=[{"AttributeName": "market_id", "KeyType": "HASH"}],
+        attribute_definitions=[{"AttributeName": "market_id", "AttributeType": "S"}],
+    )
+
+    _ensure_table(
+        client,
+        _table_name("dora_state", environment),
+        key_schema=[{"AttributeName": "key", "KeyType": "HASH"}],
+        attribute_definitions=[{"AttributeName": "key", "AttributeType": "S"}],
+    )
+
+    _ensure_table(
+        client,
+        _table_name("dora_trade_log", environment),
+        key_schema=[
+            {"AttributeName": "date", "KeyType": "HASH"},
+            {"AttributeName": "timestamp#order_id", "KeyType": "RANGE"},
+        ],
+        attribute_definitions=[
+            {"AttributeName": "date", "AttributeType": "S"},
+            {"AttributeName": "timestamp#order_id", "AttributeType": "S"},
+        ],
+    )
+
+    _ensure_table(
+        client,
+        _table_name("dora_decision_log", environment),
+        key_schema=[
+            {"AttributeName": "date", "KeyType": "HASH"},
+            {"AttributeName": "timestamp", "KeyType": "RANGE"},
+        ],
+        attribute_definitions=[
+            {"AttributeName": "date", "AttributeType": "S"},
+            {"AttributeName": "timestamp", "AttributeType": "S"},
+        ],
+    )
+
+    execution_table_name = _table_name("dora_execution_log", environment)
+    _ensure_table(
+        client,
+        execution_table_name,
+        key_schema=[
+            {"AttributeName": "bot_run_id", "KeyType": "HASH"},
+            {"AttributeName": "decision_id#event_ts", "KeyType": "RANGE"},
+        ],
+        attribute_definitions=[
+            {"AttributeName": "bot_run_id", "AttributeType": "S"},
+            {"AttributeName": "decision_id#event_ts", "AttributeType": "S"},
+            {"AttributeName": "decision_id", "AttributeType": "S"},
+            {"AttributeName": "event_ts", "AttributeType": "S"},
+        ],
+        gsi=[
+            {
+                "IndexName": "decision_id_event_ts",
+                "KeySchema": [
+                    {"AttributeName": "decision_id", "KeyType": "HASH"},
+                    {"AttributeName": "event_ts", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
+        ],
+    )
+    _enable_ttl(client, execution_table_name, "expires_at")
+
+
+def create_sample_market_config(
+    market_id: str,
+    region: str = "us-east-1",
+    environment: str = "demo",
+) -> None:
+    """Insert a minimal market config entry."""
+    if environment not in TABLE_SUFFIXES:
+        raise ValueError(f"Invalid environment: {environment}")
+    dynamodb = boto3.resource("dynamodb", region_name=region)
+    table = dynamodb.Table(_table_name("dora_market_config", environment))
+    table.put_item(
+        Item={
+            "market_id": market_id,
+            "enabled": False,
+            "max_inventory_yes": 100,
+            "max_inventory_no": 100,
+            "min_spread": 0.06,
+            "quote_size": 10,
+            "inventory_skew_factor": 0.5,
         }
-    ]
-
-    for table_config in tables:
-        table_name = table_config['TableName']
-        try:
-            logger.info(f"Creating table: {table_name}")
-            dynamodb.create_table(**table_config)
-            logger.info(f"Table {table_name} created successfully")
-        except ClientError as e:
-            if e.response['Error']['Code'] == 'ResourceInUseException':
-                logger.info(f"Table {table_name} already exists")
-            else:
-                logger.error(f"Error creating table {table_name}: {e}")
-                raise
-
-    # Wait for tables to be created
-    logger.info("Waiting for tables to become active...")
-    for table_config in tables:
-        table_name = table_config['TableName']
-        waiter = dynamodb.get_waiter('table_exists')
-        waiter.wait(TableName=table_name)
-        logger.info(f"Table {table_name} is active")
-
-    logger.info("All tables created successfully!")
+    )
 
 
-def initialize_global_config(region: str = "us-east-1"):
-    """Initialize global config with defaults.
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Create DynamoDB tables for Dora Bot.")
+    parser.add_argument("region", help="AWS region, e.g. us-east-1")
+    parser.add_argument(
+        "--env",
+        choices=sorted(TABLE_SUFFIXES.keys()) + ["both"],
+        default="both",
+        help="Environment to create tables for.",
+    )
+    args = parser.parse_args()
 
-    Args:
-        region: AWS region
-    """
-    from decimal import Decimal
-
-    dynamodb = boto3.resource('dynamodb', region_name=region)
-    table = dynamodb.Table('dora_state')
-
-    try:
-        table.put_item(Item={
-            'key': 'global_config',
-            'max_total_exposure': 500,
-            'max_daily_loss': Decimal('100.0'),
-            'loop_interval_ms': 5000,  # 5 seconds for testing
-            'trading_enabled': False,  # Start disabled for safety
-            'risk_aversion_k': Decimal('0.5'),
-            'cancel_on_startup': True
-        })
-        logger.info("Global config initialized")
-    except ClientError as e:
-        logger.error(f"Error initializing global config: {e}")
-
-
-def create_sample_market_config(market_id: str, region: str = "us-east-1"):
-    """Create a sample market configuration.
-
-    Args:
-        market_id: Market ticker
-        region: AWS region
-    """
-    from decimal import Decimal
-
-    dynamodb = boto3.resource('dynamodb', region_name=region)
-    table = dynamodb.Table('dora_market_config')
-
-    from datetime import datetime
-
-    try:
-        table.put_item(Item={
-            'market_id': market_id,
-            'enabled': False,  # Start disabled
-            'max_inventory_yes': 50,
-            'max_inventory_no': 50,
-            'min_spread': Decimal('0.06'),
-            'quote_size': 10,
-            'inventory_skew_factor': Decimal('0.5'),
-            'updated_at': datetime.utcnow().isoformat()
-        })
-        logger.info(f"Sample market config created for {market_id}")
-    except ClientError as e:
-        logger.error(f"Error creating sample config: {e}")
+    if args.env == "both":
+        for env in sorted(TABLE_SUFFIXES.keys()):
+            create_tables(args.region, env)
+    else:
+        create_tables(args.region, args.env)
 
 
 if __name__ == "__main__":
-    import sys
-
-    region = "us-east-1"
-    if len(sys.argv) > 1:
-        region = sys.argv[1]
-
-    logger.info(f"Setting up DynamoDB tables in region: {region}")
-
-    # Create tables
-    create_tables(region)
-
-    # Initialize global config
-    initialize_global_config(region)
-
-    logger.info("\nSetup complete!")
-    logger.info("\nNext steps:")
-    logger.info("1. Create market configs using create_sample_market_config()")
-    logger.info("2. Enable markets by setting 'enabled': True in dora_market_config table")
-    logger.info("3. Set 'trading_enabled': True in global_config when ready to trade")
+    main()

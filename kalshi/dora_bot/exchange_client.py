@@ -1,5 +1,6 @@
 """Exchange client for interacting with Kalshi API."""
 
+import secrets
 import time
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
@@ -7,7 +8,7 @@ from requests.exceptions import HTTPError, RequestException
 
 from dora_bot.kalshi_client import KalshiHttpClient, Environment
 from dora_bot.models import OrderBook, Order, Fill, Balance
-from dora_bot.structured_logger import get_logger, EventType
+from dora_bot.structured_logger import get_logger, EventType, log_execution_event
 
 logger = get_logger(__name__)
 
@@ -50,7 +51,9 @@ class KalshiExchangeClient:
         client: KalshiHttpClient,
         max_retries: int = 3,
         retry_delay: float = 1.0,
-        bot_run_id: Optional[str] = None
+        bot_run_id: Optional[str] = None,
+        environment: str = "demo",
+        aws_region: str = "us-east-1",
     ):
         """Initialize the exchange client.
 
@@ -64,6 +67,8 @@ class KalshiExchangeClient:
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.bot_run_id = bot_run_id
+        self.environment = environment
+        self.aws_region = aws_region
 
     def _retry_request(self, func, *args, **kwargs) -> Any:
         """Execute a request with retries on failure.
@@ -363,7 +368,8 @@ class KalshiExchangeClient:
         price: float,
         size: int,
         tif: str = "gtc",
-        decision_id: Optional[str] = None
+        decision_id: Optional[str] = None,
+        client_order_id: Optional[str] = None,
     ) -> Optional[Order]:
         """Place a new order.
 
@@ -378,6 +384,9 @@ class KalshiExchangeClient:
         Returns:
             Order object if successful, None otherwise
         """
+        if client_order_id is None:
+            client_order_id = secrets.token_hex(8)
+
         def _place():
             start_time = time.time()
 
@@ -412,7 +421,18 @@ class KalshiExchangeClient:
                 "side": order_type,
                 "price": price,
                 "size": size,
+                "client_order_id": client_order_id,
             })
+            log_execution_event({
+                "event_type": EventType.ORDER_PLACE,
+                "market": market_id,
+                "decision_id": decision_id,
+                "bot_run_id": self.bot_run_id,
+                "side": order_type,
+                "price": price,
+                "size": size,
+                "client_order_id": client_order_id,
+            }, region=self.aws_region, environment=self.environment)
 
             try:
                 response = self.client.post("/trade-api/v2/portfolio/orders", payload)
@@ -430,7 +450,21 @@ class KalshiExchangeClient:
                     "size": size,
                     "status": "ACCEPTED",
                     "latency_ms": latency_ms,
+                    "client_order_id": client_order_id,
                 })
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "order_id": order_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "ACCEPTED",
+                    "latency_ms": latency_ms,
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
 
                 # Return Order with Kalshi's format:
                 # - side is "yes" or "no" (Kalshi's format)
@@ -441,6 +475,8 @@ class KalshiExchangeClient:
                     side=kalshi_side,  # "yes" or "no" (Kalshi format)
                     price=price,  # Always YES price (matches the input price parameter)
                     size=size,
+                    decision_id=decision_id,
+                    client_order_id=client_order_id,
                     filled_size=0,
                     status='pending',
                     created_at=datetime.utcnow(),
@@ -470,7 +506,23 @@ class KalshiExchangeClient:
                     "error_type": "HTTPError",
                     "error_code": error_code,
                     "error_msg": error_msg,
+                    "client_order_id": client_order_id,
                 })
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "REJECTED",
+                    "latency_ms": latency_ms,
+                    "error_type": "HTTPError",
+                    "error_code": error_code,
+                    "error_msg": error_msg,
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
                 return None
             except Exception as e:
                 latency_ms = int((time.time() - start_time) * 1000)
@@ -485,12 +537,33 @@ class KalshiExchangeClient:
                     "latency_ms": latency_ms,
                     "error_type": type(e).__name__,
                     "error_msg": str(e),
+                    "client_order_id": client_order_id,
                 }, exc_info=True)
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "side": order_type,
+                    "price": price,
+                    "size": size,
+                    "status": "ERROR",
+                    "latency_ms": latency_ms,
+                    "error_type": type(e).__name__,
+                    "error_msg": str(e),
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
                 return None
 
         return self._retry_request(_place)
 
-    def cancel_order(self, order_id: str, decision_id: Optional[str] = None) -> bool:
+    def cancel_order(
+        self,
+        order_id: str,
+        decision_id: Optional[str] = None,
+        market_id: Optional[str] = None,
+        client_order_id: Optional[str] = None,
+    ) -> bool:
         """Cancel an order.
 
         Args:
@@ -501,11 +574,31 @@ class KalshiExchangeClient:
             True if successful, False otherwise
         """
         start_time = time.time()
+        should_log_execution = decision_id is not None
+        if not should_log_execution:
+            logger.warning("Skipping execution log for cancel; missing decision_id", extra={
+                "event_type": EventType.LOG,
+                "order_id": order_id,
+                "market": market_id,
+                "client_order_id": client_order_id,
+            })
+
         logger.info("Cancelling order", extra={
             "event_type": EventType.ORDER_CANCEL,
             "order_id": order_id,
             "decision_id": decision_id,
+            "market": market_id,
+            "client_order_id": client_order_id,
         })
+        if should_log_execution:
+            log_execution_event({
+                "event_type": EventType.ORDER_CANCEL,
+                "order_id": order_id,
+                "decision_id": decision_id,
+                "bot_run_id": self.bot_run_id,
+                "market": market_id,
+                "client_order_id": client_order_id,
+            }, region=self.aws_region, environment=self.environment)
 
         try:
             self.client.delete(f"/trade-api/v2/portfolio/orders/{order_id}")
@@ -516,7 +609,20 @@ class KalshiExchangeClient:
                 "decision_id": decision_id,
                 "status": "CANCELLED",
                 "latency_ms": latency_ms,
+                "market": market_id,
+                "client_order_id": client_order_id,
             })
+            if should_log_execution:
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "order_id": order_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "status": "CANCELLED",
+                    "latency_ms": latency_ms,
+                    "market": market_id,
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
             return True
         except HTTPError as e:
             latency_ms = int((time.time() - start_time) * 1000)
@@ -534,7 +640,20 @@ class KalshiExchangeClient:
                             "decision_id": decision_id,
                             "status": "ALREADY_GONE",
                             "latency_ms": latency_ms,
+                            "market": market_id,
+                            "client_order_id": client_order_id,
                         })
+                        if should_log_execution:
+                            log_execution_event({
+                                "event_type": EventType.ORDER_RESULT,
+                                "order_id": order_id,
+                                "decision_id": decision_id,
+                                "bot_run_id": self.bot_run_id,
+                                "status": "ALREADY_GONE",
+                                "latency_ms": latency_ms,
+                                "market": market_id,
+                                "client_order_id": client_order_id,
+                            }, region=self.aws_region, environment=self.environment)
                         return True
                     else:
                         logger.error("Order 404 but still in open orders", extra={
@@ -544,7 +663,21 @@ class KalshiExchangeClient:
                             "status": "ERROR",
                             "error_msg": "Order returned 404 but still appears in open orders",
                             "latency_ms": latency_ms,
+                            "market": market_id,
+                            "client_order_id": client_order_id,
                         })
+                        if should_log_execution:
+                            log_execution_event({
+                                "event_type": EventType.ORDER_RESULT,
+                                "order_id": order_id,
+                                "decision_id": decision_id,
+                                "bot_run_id": self.bot_run_id,
+                                "status": "ERROR",
+                                "error_msg": "Order returned 404 but still appears in open orders",
+                                "latency_ms": latency_ms,
+                                "market": market_id,
+                                "client_order_id": client_order_id,
+                            }, region=self.aws_region, environment=self.environment)
                         return False
                 except Exception as verify_error:
                     logger.error("Failed to verify order status", extra={
@@ -553,7 +686,21 @@ class KalshiExchangeClient:
                         "decision_id": decision_id,
                         "error_type": type(verify_error).__name__,
                         "error_msg": str(verify_error),
+                        "market": market_id,
+                        "client_order_id": client_order_id,
                     })
+                    if should_log_execution:
+                        log_execution_event({
+                            "event_type": EventType.ORDER_RESULT,
+                            "order_id": order_id,
+                            "decision_id": decision_id,
+                            "bot_run_id": self.bot_run_id,
+                            "status": "ERROR",
+                            "error_type": type(verify_error).__name__,
+                            "error_msg": str(verify_error),
+                            "market": market_id,
+                            "client_order_id": client_order_id,
+                        }, region=self.aws_region, environment=self.environment)
                     return False
 
             logger.error("Order cancellation failed", extra={
@@ -564,7 +711,22 @@ class KalshiExchangeClient:
                 "latency_ms": latency_ms,
                 "error_type": "HTTPError",
                 "error_msg": str(e),
+                "market": market_id,
+                "client_order_id": client_order_id,
             })
+            if should_log_execution:
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "order_id": order_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "status": "ERROR",
+                    "latency_ms": latency_ms,
+                    "error_type": "HTTPError",
+                    "error_msg": str(e),
+                    "market": market_id,
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
             return False
         except Exception as e:
             latency_ms = int((time.time() - start_time) * 1000)
@@ -576,10 +738,29 @@ class KalshiExchangeClient:
                 "latency_ms": latency_ms,
                 "error_type": type(e).__name__,
                 "error_msg": str(e),
+                "market": market_id,
+                "client_order_id": client_order_id,
             })
+            if should_log_execution:
+                log_execution_event({
+                    "event_type": EventType.ORDER_RESULT,
+                    "order_id": order_id,
+                    "decision_id": decision_id,
+                    "bot_run_id": self.bot_run_id,
+                    "status": "ERROR",
+                    "latency_ms": latency_ms,
+                    "error_type": type(e).__name__,
+                    "error_msg": str(e),
+                    "market": market_id,
+                    "client_order_id": client_order_id,
+                }, region=self.aws_region, environment=self.environment)
             return False
 
-    def cancel_all_orders(self, market_id: Optional[str] = None) -> int:
+    def cancel_all_orders(
+        self,
+        market_id: Optional[str] = None,
+        decision_id: Optional[str] = None,
+    ) -> int:
         """Cancel all open orders, optionally filtered by market.
 
         Args:
@@ -592,7 +773,12 @@ class KalshiExchangeClient:
         cancelled_count = 0
 
         for order in open_orders:
-            if self.cancel_order(order.order_id):
+            if self.cancel_order(
+                order.order_id,
+                decision_id=decision_id,
+                market_id=order.market_id,
+                client_order_id=order.client_order_id,
+            ):
                 cancelled_count += 1
             time.sleep(0.1)  # Small delay to avoid rate limiting
 

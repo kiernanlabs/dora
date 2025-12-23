@@ -63,6 +63,8 @@ class Order:
     side: Literal["yes", "no"]  # Kalshi format: yes = buying YES, no = buying NO (selling YES)
     price: float  # Always YES price (0.01 to 0.99) regardless of side
     size: int
+    decision_id: Optional[str] = None
+    client_order_id: Optional[str] = None
     filled_size: int = 0
     status: Literal["pending", "resting", "filled", "cancelled"] = "pending"
     created_at: datetime = field(default_factory=datetime.utcnow)

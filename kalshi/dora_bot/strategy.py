@@ -87,7 +87,26 @@ class MarketMaker:
         )
 
         # Log consolidated quote calculation with flattened fields for CloudWatch
-        logger.info("Quote calculation", extra={
+        fv_source = "config" if using_config_fv else "mid"
+        logic_msg = (
+            "Quote calculation: fv_source={fv_source} fv={fv} min_spread={min_spread} "
+            "skew={skew} net_yes={net_yes} max_yes={max_yes} max_no={max_no} "
+            "target_bid={target_bid} target_ask={target_ask} "
+            "bid_size={bid_size} ask_size={ask_size}"
+        ).format(
+            fv_source=fv_source,
+            fv=fair_value,
+            min_spread=config.min_spread,
+            skew=skew,
+            net_yes=position.net_yes_qty,
+            max_yes=config.max_inventory_yes,
+            max_no=config.max_inventory_no,
+            target_bid=target_bid,
+            target_ask=target_ask,
+            bid_size=bid_size,
+            ask_size=ask_size,
+        )
+        logger.info(logic_msg, extra={
             "market": config.market_id,
             "best_bid": order_book.best_bid,
             "best_ask": order_book.best_ask,
@@ -97,7 +116,11 @@ class MarketMaker:
             "net_position": net_position,
             "fair_value": fair_value,
             "using_config_fv": using_config_fv,
+            "fv_source": fv_source,
+            "min_spread": config.min_spread,
             "skew": skew,
+            "max_inventory_yes": config.max_inventory_yes,
+            "max_inventory_no": config.max_inventory_no,
             "target_bid": target_bid,
             "target_ask": target_ask,
             "bid_size": bid_size,

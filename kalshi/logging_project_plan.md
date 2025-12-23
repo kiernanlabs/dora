@@ -62,6 +62,9 @@ Create a JSON logging formatter that emits one JSON object per line with require
 - Custom `logging.Formatter` that outputs JSON
 - Context manager or thread-local for correlation IDs
 - `StructuredLogger` wrapper class for typed event emission
+- Add DynamoDB write helpers here to keep all logging outputs in one module:
+  - `log_decision_record(...)` for `decision_log`
+  - `log_execution_event(...)` for `execution_log`
 
 **Files to create:**
 - `kalshi/dora_bot/structured_logger.py`
@@ -199,9 +202,11 @@ Defer to after structured logging is working. Objective: write an immutable exec
 - `state_manager.py`: FILL
 
 **Implementation approach:**
-- Add `execution_logger.py` (thin wrapper over DynamoDB client) with `log_event(payload)` and basic retries.
+- Extend `structured_logger.py` with DynamoDB-backed helpers (keep all logging execution helpers in one file).
+- Provide `log_execution_event(payload)` and `log_decision_record(payload)` that can be called from runtime code.
 - Require `bot_run_id` + `decision_id` on every call; reject otherwise to prevent orphaned events.
 - Include a local `client_order_id` for idempotency and later reconciliation.
+- Implement basic retries and best-effort error logging (never block the trading loop on logging).
 
 ### 3.3 Decision log linkage
 
@@ -228,6 +233,37 @@ When ready to migrate:
 - Dual-write DynamoDB + S3 for 1-2 releases.
 - Validate parity with daily reconciliation job.
 - Flip reads to S3-backed queries; retain DynamoDB as short-retention hot cache.
+
+### 3.6 Operational guardrails
+
+**Performance and reliability:**
+- Use non-blocking, best-effort writes with bounded retries (do not slow the trading loop).
+- Batch writes when possible (e.g., flush at loop boundary) but ensure ORDER_RESULT/FILL events are not dropped.
+- Emit a structured ERROR log on DynamoDB write failures with `event_type=ERROR` and `target=execution_log`.
+
+**Retention and cost:**
+- Use TTL via `expires_at` to keep execution logs short-lived (30-90 days).
+- Keep payloads small and JSON-serializable to simplify eventual S3 storage.
+
+### 3.7 Implementation checklist (Phase 3)
+
+**Schema and infra:**
+- [x] Create `dora_execution_log` table with GSI and TTL
+- [x] Confirm table names with environment suffixes (`_demo`, `_prod`)
+- [ ] Verify IAM permissions for DynamoDB writes on execution/decision logs
+
+**Code changes:**
+- [x] `structured_logger.py`: add `log_decision_record(...)` and `log_execution_event(...)`
+- [ ] `dynamo.py`: add `execution_log_table` wiring (if needed for direct calls)
+- [x] `exchange_client.py`: emit execution events to DynamoDB helper
+- [x] `state_manager.py`: emit FILL events to DynamoDB helper
+- [x] `main.py` or `strategy.py`: ensure `decision_id` is generated and attached to decision logs
+- [x] Add `client_order_id` to all order placement/cancel flows
+
+**Testing and validation:**
+- [ ] Local dry-run mode that stubs DynamoDB writes
+- [ ] Smoke test: place/cancel order in demo, confirm records in `dora_execution_log_demo`
+- [ ] Verify decision_id joins (decision_log + execution_log) for a single loop
 
 ---
 

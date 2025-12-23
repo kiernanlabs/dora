@@ -7,13 +7,17 @@ emitting structured log events that can be queried in CloudWatch Insights.
 import json
 import logging
 import os
+import secrets
 import subprocess
 import traceback
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from decimal import Decimal
 from enum import Enum
 from typing import Any, Dict, Optional
-import secrets
+
+import boto3
+from botocore.exceptions import ClientError
 
 
 class EventType(str, Enum):
@@ -42,6 +46,16 @@ _decision_id: ContextVar[str] = ContextVar('decision_id', default='')
 _market: ContextVar[str] = ContextVar('market', default='')
 _env: ContextVar[str] = ContextVar('env', default='')
 _service: ContextVar[str] = ContextVar('service', default='dora-bot')
+_aws_region: ContextVar[str] = ContextVar('aws_region', default='')
+
+
+TABLE_SUFFIXES = {
+    'demo': '_demo',
+    'prod': '_prod',
+}
+
+_dynamo_resource_cache: Dict[str, Any] = {}
+_dynamo_table_cache: Dict[str, Any] = {}
 
 
 def get_bot_version() -> str:
@@ -152,6 +166,7 @@ def setup_structured_logging(
     env: str = 'demo',
     bot_version: Optional[str] = None,
     bot_run_id: Optional[str] = None,
+    aws_region: Optional[str] = None,
     level: int = logging.INFO
 ) -> str:
     """Configure structured JSON logging for the application.
@@ -161,6 +176,7 @@ def setup_structured_logging(
         env: Environment (demo/prod)
         bot_version: Bot version string (auto-detected if not provided)
         bot_run_id: Run ID (generated if not provided)
+        aws_region: AWS region for DynamoDB logging
         level: Logging level
 
     Returns:
@@ -169,6 +185,9 @@ def setup_structured_logging(
     # Set context variables
     _service.set(service)
     _env.set(env)
+    if aws_region is None:
+        aws_region = os.getenv('AWS_REGION', 'us-east-1')
+    _aws_region.set(aws_region)
 
     if bot_version is None:
         bot_version = get_bot_version()
@@ -206,6 +225,9 @@ def get_logger(name: str) -> StructuredLogAdapter:
     return StructuredLogAdapter(logging.getLogger(name), {})
 
 
+logger = get_logger(__name__)
+
+
 def set_context(
     decision_id: Optional[str] = None,
     market: Optional[str] = None
@@ -236,3 +258,157 @@ def get_run_id() -> str:
 def get_version() -> str:
     """Get the current bot version."""
     return _bot_version.get()
+
+
+def _get_aws_region() -> str:
+    region = _aws_region.get()
+    if region:
+        return region
+    return os.getenv('AWS_REGION', 'us-east-1')
+
+
+def _table_name(base_name: str, environment: str) -> str:
+    suffix = TABLE_SUFFIXES.get(environment)
+    if suffix is None:
+        raise ValueError(f"Invalid environment: {environment}")
+    return f"{base_name}{suffix}"
+
+
+def _get_dynamo_table(table_name: str, region: str):
+    cache_key = f"{region}:{table_name}"
+    if cache_key in _dynamo_table_cache:
+        return _dynamo_table_cache[cache_key]
+
+    if region not in _dynamo_resource_cache:
+        _dynamo_resource_cache[region] = boto3.resource('dynamodb', region_name=region)
+
+    table = _dynamo_resource_cache[region].Table(table_name)
+    _dynamo_table_cache[cache_key] = table
+    return table
+
+
+def _to_dynamo_item(obj: Any) -> Any:
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _to_dynamo_item(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_to_dynamo_item(item) for item in obj]
+    return obj
+
+
+def _normalize_event_type(event_type: Any) -> str:
+    if isinstance(event_type, Enum):
+        return event_type.value
+    return str(event_type)
+
+
+def _get_ttl_days() -> int:
+    try:
+        return int(os.getenv('EXECUTION_LOG_TTL_DAYS', '30'))
+    except ValueError:
+        return 30
+
+
+def log_decision_record(
+    decision_data: Dict[str, Any],
+    region: Optional[str] = None,
+    environment: Optional[str] = None,
+) -> bool:
+    """Persist a decision record to DynamoDB (best-effort)."""
+    try:
+        region = region or _get_aws_region()
+        environment = environment or _env.get()
+        if not environment:
+            environment = 'demo'
+
+        item = dict(decision_data)
+        item.setdefault('bot_run_id', get_run_id())
+        item.setdefault('bot_version', get_version())
+        item.setdefault('date', datetime.utcnow().strftime('%Y-%m-%d'))
+        item.setdefault('timestamp', datetime.utcnow().isoformat())
+
+        table_name = _table_name('dora_decision_log', environment)
+        table = _get_dynamo_table(table_name, region)
+        table.put_item(Item=_to_dynamo_item(item))
+        return True
+    except ClientError as e:
+        logger.error("Failed to write decision log record", extra={
+            "event_type": EventType.ERROR,
+            "error_type": "ClientError",
+            "error_msg": str(e),
+            "target": "decision_log",
+        })
+        return False
+    except Exception as e:
+        logger.error("Failed to write decision log record", extra={
+            "event_type": EventType.ERROR,
+            "error_type": type(e).__name__,
+            "error_msg": str(e),
+            "target": "decision_log",
+        })
+        return False
+
+
+def log_execution_event(
+    payload: Dict[str, Any],
+    region: Optional[str] = None,
+    environment: Optional[str] = None,
+) -> bool:
+    """Persist an execution event to DynamoDB (best-effort)."""
+    try:
+        region = region or _get_aws_region()
+        environment = environment or _env.get()
+        if not environment:
+            environment = 'demo'
+
+        decision_id = payload.get('decision_id') or _decision_id.get()
+        bot_run_id = payload.get('bot_run_id') or get_run_id()
+        if not decision_id or not bot_run_id:
+            logger.error("Missing decision_id or bot_run_id for execution log", extra={
+                "event_type": EventType.ERROR,
+                "decision_id": decision_id,
+                "bot_run_id": bot_run_id,
+                "target": "execution_log",
+            })
+            return False
+
+        event_ts = payload.get('event_ts') or datetime.now(timezone.utc).isoformat()
+        event_type = payload.get('event_type', EventType.LOG)
+
+        item = dict(payload)
+        item['bot_run_id'] = bot_run_id
+        item['decision_id'] = decision_id
+        item['event_ts'] = event_ts
+        item['decision_id#event_ts'] = f"{decision_id}#{event_ts}"
+        item['event_type'] = _normalize_event_type(event_type)
+        item.setdefault('bot_version', get_version())
+        item.setdefault('env', environment)
+
+        if 'expires_at' not in item:
+            ttl_days = _get_ttl_days()
+            expires_at = datetime.now(timezone.utc) + timedelta(days=ttl_days)
+            item['expires_at'] = int(expires_at.timestamp())
+
+        table_name = _table_name('dora_execution_log', environment)
+        table = _get_dynamo_table(table_name, region)
+        table.put_item(Item=_to_dynamo_item(item))
+        return True
+    except ClientError as e:
+        logger.error("Failed to write execution log event", extra={
+            "event_type": EventType.ERROR,
+            "error_type": "ClientError",
+            "error_msg": str(e),
+            "target": "execution_log",
+        })
+        return False
+    except Exception as e:
+        logger.error("Failed to write execution log event", extra={
+            "event_type": EventType.ERROR,
+            "error_type": type(e).__name__,
+            "error_msg": str(e),
+            "target": "execution_log",
+        })
+        return False

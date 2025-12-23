@@ -36,6 +36,7 @@ class DynamoDBClient:
             raise ValueError(f"Invalid environment: {environment}. Must be one of: {list(self.TABLE_SUFFIXES.keys())}")
 
         self.environment = environment
+        self.region = region
         suffix = self.TABLE_SUFFIXES[environment]
 
         self.dynamodb = boto3.resource('dynamodb', region_name=region)
