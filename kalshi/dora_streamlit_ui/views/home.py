@@ -300,9 +300,13 @@ def render_active_markets_table(
                 our_bid_price = our_best_bid.get('price', 0)
                 market_best_bid = order_book.get('best_bid', 0)
 
-                # Check if our bid is the best bid (within small epsilon for float comparison)
-                is_best = abs(our_bid_price - market_best_bid) < 0.0001 if market_best_bid else False
-                indicator = "✓" if is_best else "✗"
+                # For bids: higher is better (we're at or above market best bid)
+                # Green check if our bid >= market best bid, red X otherwise
+                if market_best_bid:
+                    is_best_or_better = our_bid_price >= (market_best_bid - 0.0001)
+                    indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+                else:
+                    indicator = "🟢 ✓"  # No competition
                 our_bid = f"{indicator} ${our_bid_price:.3f} ({our_best_bid.get('size', 0)})"
 
             if active_quotes['asks']:
@@ -310,9 +314,13 @@ def render_active_markets_table(
                 our_ask_price = our_best_ask.get('price', 0)
                 market_best_ask = order_book.get('best_ask', 0)
 
-                # Check if our ask is the best ask
-                is_best = abs(our_ask_price - market_best_ask) < 0.0001 if market_best_ask else False
-                indicator = "✓" if is_best else "✗"
+                # For asks: lower is better (we're at or below market best ask)
+                # Green check if our ask <= market best ask, red X otherwise
+                if market_best_ask:
+                    is_best_or_better = our_ask_price <= (market_best_ask + 0.0001)
+                    indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+                else:
+                    indicator = "🟢 ✓"  # No competition
                 our_ask = f"{indicator} ${our_ask_price:.3f} ({our_best_ask.get('size', 0)})"
 
         # Calculate 24h changes

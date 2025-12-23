@@ -130,6 +130,56 @@ class StateManager:
             "open_orders_count": len(self.open_orders),
         })
 
+    def reconcile_positions_from_fills(self, fills: List[Fill]) -> int:
+        """Reconcile positions from fills, processing even already-logged fills.
+
+        This method is used during startup to ensure positions are correct even if
+        fills were logged but positions weren't saved (e.g., due to a crash).
+
+        Note: This rebuilds positions from scratch but does NOT recalculate daily_pnl.
+        The daily_pnl is preserved from DynamoDB as it should only track today's PnL.
+
+        Args:
+            fills: List of fills to process
+
+        Returns:
+            Number of fills processed
+        """
+        if not fills:
+            return 0
+
+        # Sort fills by timestamp (oldest first)
+        sorted_fills = sorted(fills, key=lambda f: f.timestamp)
+
+        # Reset positions to ensure clean reconciliation
+        self.positions.clear()
+
+        processed_count = 0
+        for fill in sorted_fills:
+            # Update position
+            if fill.market_id not in self.positions:
+                self.positions[fill.market_id] = Position(market_id=fill.market_id)
+
+            position = self.positions[fill.market_id]
+            position.update_from_fill(fill)
+
+            # Update last fill timestamp
+            if self.risk_state.last_fill_timestamp is None or fill.timestamp > self.risk_state.last_fill_timestamp:
+                self.risk_state.last_fill_timestamp = fill.timestamp
+
+            # Ensure fill is in logged_fills
+            self.logged_fills.add(fill.fill_id)
+            processed_count += 1
+
+        logger.info("Positions reconciled from fills", extra={
+            "event_type": EventType.STATE_LOAD,
+            "fills_processed": processed_count,
+            "positions_count": len(self.positions),
+            "daily_pnl": self.risk_state.daily_pnl,
+        })
+
+        return processed_count
+
     def update_from_fills(self, fills: List[Fill]) -> int:
         """Update positions and PnL from new fills.
 

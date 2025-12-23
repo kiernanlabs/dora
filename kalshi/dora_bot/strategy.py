@@ -1,7 +1,7 @@
 """Market making strategy logic."""
 
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 import math
 
 from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
@@ -19,7 +19,7 @@ class MarketMaker:
         order_book: OrderBook,
         position: Position,
         config: MarketConfig
-    ) -> List[TargetOrder]:
+    ) -> tuple[List[TargetOrder], Optional[Dict[str, Any]]]:
         """Compute target quotes for a market.
 
         Args:
@@ -28,10 +28,10 @@ class MarketMaker:
             config: Market configuration
 
         Returns:
-            List of target orders to place
+            List of target orders to place and pricing metadata (if calculated).
         """
         if not config.enabled:
-            return []
+            return [], None
 
         # Check if order book has valid data
         if order_book.best_bid is None or order_book.best_ask is None:
@@ -39,7 +39,7 @@ class MarketMaker:
                 "market": config.market_id,
                 "reason": "missing_bid_ask"
             })
-            return []
+            return [], None
 
         # Check if spread is wide enough
         if order_book.spread < config.min_spread:
@@ -48,7 +48,7 @@ class MarketMaker:
                 "spread": order_book.spread,
                 "min_spread": config.min_spread
             })
-            return []
+            return [], None
 
         # Calculate fair value - use config override if set, otherwise mid price
         if config.fair_value is not None:
@@ -63,7 +63,7 @@ class MarketMaker:
         skew = self._calculate_skew(net_position, config)
 
         # Determine target bid/ask prices
-        target_bid, target_ask = self._calculate_target_prices(
+        target_bid, target_ask, price_calc = self._calculate_target_prices(
             fair_value=fair_value,
             min_spread=config.min_spread,
             skew=skew,
@@ -92,7 +92,8 @@ class MarketMaker:
             "Quote calculation: fv_source={fv_source} fv={fv} min_spread={min_spread} "
             "skew={skew} net_yes={net_yes} max_yes={max_yes} max_no={max_no} "
             "target_bid={target_bid} target_ask={target_ask} "
-            "bid_size={bid_size} ask_size={ask_size}"
+            "bid_size={bid_size} ask_size={ask_size} "
+            "price_calc={price_calc}"
         ).format(
             fv_source=fv_source,
             fv=fair_value,
@@ -105,6 +106,7 @@ class MarketMaker:
             target_ask=target_ask,
             bid_size=bid_size,
             ask_size=ask_size,
+            price_calc=price_calc
         )
         logger.info(logic_msg, extra={
             "market": config.market_id,
@@ -157,7 +159,7 @@ class MarketMaker:
                 "reason": "size_or_price_constraints"
             })
 
-        return targets
+        return targets, price_calc
 
     def _calculate_skew(self, net_position: int, config: MarketConfig) -> float:
         """Calculate inventory skew adjustment.
@@ -192,7 +194,7 @@ class MarketMaker:
         skew: float,
         best_bid: float,
         best_ask: float
-    ) -> tuple[Optional[float], Optional[float]]:
+    ) -> tuple[Optional[float], Optional[float], Dict[str, Any]]:
         """Calculate target bid and ask prices.
 
         Strategy: Place just inside the current spread, then apply skew.
@@ -207,7 +209,7 @@ class MarketMaker:
             best_ask: Current best ask
 
         Returns:
-            Tuple of (target_bid, target_ask); either side may be None to skip quoting.
+            Tuple of (target_bid, target_ask, price_calc); either side may be None to skip quoting.
         """
         # Start by placing one tick inside the current spread
         inside_bid = best_bid + self.TICK_SIZE
@@ -227,14 +229,30 @@ class MarketMaker:
         target_bid = min(market_bid, fair_value_bid)
         target_ask = max(market_ask, fair_value_ask)
 
+        if market_bid <= fair_value_bid:
+            bid_logic = "market"
+        else:
+            bid_logic = "fair value"
+
+        if market_ask >= fair_value_ask:
+            ask_logic = "market"
+        else:
+            ask_logic = "fair value"
+
+        if bid_logic == "fair value" and ask_logic == "fair value":
+            logic = "fair value"
+        else:
+            logic = "market"
+
         # Ensure we maintain minimum spread
         current_target_spread = target_ask - target_bid
         if current_target_spread < min_spread:
             # Fall back to single-sided quoting based on inventory skew.
-            if skew > 0:
+            logic = "minimum spread fallback"
+            if skew < 0:
                 target_bid = inside_bid
                 target_ask = None
-            elif skew < 0:
+            elif skew > 0:
                 target_bid = None
                 target_ask = inside_ask
             else:
@@ -246,13 +264,25 @@ class MarketMaker:
             half_spread = min_spread / 2.0
             target_bid = fair_value - half_spread - skew
             target_ask = fair_value + half_spread - skew
+            logic = "minimum spread fallback"
 
         if target_bid is not None:
             target_bid = max(target_bid, 0.01)
         if target_ask is not None:
             target_ask = min(target_ask, 0.99)
 
-        return target_bid, target_ask
+        price_calc = {
+            "skew": skew,
+            "best_bid": best_bid,
+            "market_bid": market_bid,
+            "fair_value_bid": fair_value_bid,
+            "best_ask": best_ask,
+            "market_ask": market_ask,
+            "fair_value_ask": fair_value_ask,
+            "logic": logic,
+        }
+
+        return target_bid, target_ask, price_calc
 
     def _calculate_size(
         self,

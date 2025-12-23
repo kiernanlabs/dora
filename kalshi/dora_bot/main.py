@@ -158,12 +158,16 @@ class DoraBot:
             }, exc_info=True)
             raise
 
-        # 2. Load state from DynamoDB
-        if not self.state.load_from_dynamo():
-            logger.warning("Failed to load state from DynamoDB, starting fresh", extra={
-                "event_type": EventType.STATE_LOAD,
-                "success": False,
-            })
+        # 2. Load risk state and logged fills from DynamoDB
+        # We'll rebuild positions from fills, but keep the risk state (daily PnL, etc.)
+        self.state.risk_state = self.dynamo.get_risk_state()
+        self.state.logged_fills = self.dynamo.get_all_fill_ids()
+        logger.info("Loaded risk state and logged fills from DynamoDB", extra={
+            "event_type": EventType.STATE_LOAD,
+            "logged_fills_count": len(self.state.logged_fills),
+            "daily_pnl": self.state.risk_state.daily_pnl,
+            "trading_halted": self.state.risk_state.trading_halted,
+        })
 
         # 3. Fetch current open orders from exchange
         exchange_orders = self.exchange.get_open_orders()
@@ -172,7 +176,7 @@ class DoraBot:
             "open_orders_count": len(exchange_orders),
         })
 
-        # 4. Reconcile state
+        # 4. Reconcile open orders state
         self.state.reconcile_with_exchange(exchange_orders)
 
         # 5. Cancel all orders on startup if configured
@@ -202,37 +206,27 @@ class DoraBot:
             })
             self.state.open_orders.clear()
 
-        # 6. Fetch any fills we may have missed during downtime
-        # Fetch fills from 24 hours before the last fill to now to catch any missed fills
-        if self.state.risk_state.last_fill_timestamp:
-            from datetime import timedelta, timezone
+        # 6. Fetch ALL fills and rebuild positions from scratch
+        # This ensures positions are correct even if previous saves failed
+        logger.info("Fetching all fills to reconcile positions", extra={
+            "event_type": EventType.STARTUP,
+        })
+        fills = self.exchange.get_fills()
+        logger.info("Fetched fills from exchange", extra={
+            "event_type": EventType.STARTUP,
+            "fills_count": len(fills),
+        })
 
-            # Fetch from 24 hours before the last fill to ensure we catch everything
-            fetch_from = self.state.risk_state.last_fill_timestamp - timedelta(hours=24)
-            logger.info("Fetching fills since last recorded", extra={
-                "event_type": EventType.STARTUP,
-                "fetch_from": fetch_from.isoformat(),
-            })
-            fills = self.exchange.get_fills(since=fetch_from)
+        # Reconcile positions by processing all fills from scratch
+        # This ignores logged_fills for position calculation but won't duplicate logs
+        processed_count = self.state.reconcile_positions_from_fills(fills)
+        logger.info("Reconciled positions from fills", extra={
+            "event_type": EventType.STARTUP,
+            "fills_processed": processed_count,
+            "positions_count": len(self.state.positions),
+        })
 
-            # The logged_fills set will prevent duplicate logging
-            self.state.update_from_fills(fills)
-            logger.info("Processed historical fills", extra={
-                "event_type": EventType.STARTUP,
-                "fills_count": len(fills),
-            })
-        else:
-            logger.info("No previous fills, fetching all", extra={
-                "event_type": EventType.STARTUP,
-            })
-            fills = self.exchange.get_fills()
-            self.state.update_from_fills(fills)
-            logger.info("Processed historical fills", extra={
-                "event_type": EventType.STARTUP,
-                "fills_count": len(fills),
-            })
-
-        # 7. Save positions to DynamoDB after reconciliation
+        # 7. Save reconciled positions to DynamoDB
         self.state.save_to_dynamo()
 
         # 8. Log current state
@@ -242,7 +236,7 @@ class DoraBot:
             "state_summary": summary,
         })
 
-        # 9. Check balance (optional, doesn't block startup if it fails)
+        # 9. Check balance
         balance = self.exchange.get_balance()
         if balance:
             logger.info("Account balance fetched", extra={
@@ -409,7 +403,7 @@ class DoraBot:
             position = self.state.get_inventory(market_id)
 
             # 3. Compute target quotes
-            target_orders = self.strategy.compute_quotes(order_book, position, config)
+            target_orders, price_calc = self.strategy.compute_quotes(order_book, position, config)
 
             # Handle None or empty target_orders
             if target_orders is None:
@@ -419,6 +413,8 @@ class DoraBot:
                     "decision_id": decision_id,
                 })
                 target_orders = []
+            if price_calc is None:
+                price_calc = {}
 
             # Log decision event
             target_quotes = [
@@ -454,6 +450,7 @@ class DoraBot:
                 'inventory': {
                     'net_yes_qty': position.net_yes_qty
                 },
+                'price_calc': price_calc,
                 'target_quotes': target_quotes,
                 'num_targets': len(target_orders) if target_orders else 0
             }, region=self.aws_region, environment=self.environment)
@@ -515,7 +512,7 @@ class DoraBot:
                         self.state.record_order(placed_order)
                 else:
                     logger.warning("Order blocked by risk manager", extra={
-                        "event_type": EventType.RISK_CHECK,
+                        "event_type": EventType.RISK_HALT,
                         "market": market_id,
                         "decision_id": decision_id,
                         "side": target.side,
