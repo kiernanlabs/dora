@@ -86,19 +86,15 @@ class MarketMaker:
             side="ask"
         )
 
-        # Log consolidated quote calculation
+        # Log consolidated quote calculation with flattened fields for CloudWatch
         logger.info("Quote calculation", extra={
             "market": config.market_id,
-            "order_book": {
-                "best_bid": order_book.best_bid,
-                "best_ask": order_book.best_ask,
-                "mid": order_book.mid_price,
-                "spread": order_book.spread
-            },
-            "position": {
-                "net_yes_qty": position.net_yes_qty,
-                "net_position": net_position
-            },
+            "best_bid": order_book.best_bid,
+            "best_ask": order_book.best_ask,
+            "mid": order_book.mid_price,
+            "spread": order_book.spread,
+            "net_yes_qty": position.net_yes_qty,
+            "net_position": net_position,
             "fair_value": fair_value,
             "using_config_fv": using_config_fv,
             "skew": skew,
@@ -131,15 +127,9 @@ class MarketMaker:
                 size=ask_size
             ))
 
-        # Log final quotes
-        if targets:
-            quotes = [{"side": t.side, "price": t.price, "size": t.size} for t in targets]
-            logger.info("Quotes generated", extra={
-                "market": config.market_id,
-                "quotes": quotes
-            })
-        else:
-            logger.info("No quotes generated", extra={
+        # Log final quotes with detail (removed - redundant with "Decision made" log in main.py)
+        if not targets:
+            logger.info("No quotes generated - size or price constraints", extra={
                 "market": config.market_id,
                 "reason": "size_or_price_constraints"
             })

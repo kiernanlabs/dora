@@ -167,11 +167,67 @@ RISK halts: { $.event_type = "RISK_HALT" }
 
 ## Phase 3: Execution Logging (Future)
 
-Defer to after structured logging is working:
-- Add `execution_events` DynamoDB table
-- Log every order attempt/result to DynamoDB
-- Add decision_id to decision_log entries
-- Add expected_orders_hash for diffing
+Defer to after structured logging is working. Objective: write an immutable execution ledger per decision cycle that can be correlated with decision logs now, and migrated to S3 later.
+
+### 3.1 Data model and table design (DynamoDB)
+
+**New table:** `execution_log`
+- **PK:** `bot_run_id` (string)
+- **SK:** `decision_id#event_ts` (string, sortable)
+- **TTL:** `expires_at` (epoch seconds) for retention control (e.g., 30-90 days)
+- **GSI1 (decision lookup):** `decision_id` (PK) + `event_ts` (SK)
+
+**Base attributes:**
+- `event_ts` (ISO-8601)
+- `env`, `bot_version`
+- `market`, `order_id`, `side`, `price`, `size`, `status`
+- `event_type` (ORDER_PLACE|ORDER_RESULT|ORDER_CANCEL|FILL)
+- `latency_ms`, `error_type`, `error_msg`
+
+**Optional attributes (future-friendly):**
+- `client_order_id` (local idempotency key)
+- `request_id` (Kalshi API request id)
+- `expected_orders_hash` (links decision to expected orders)
+- `decision_snapshot_s3_key` (reserved for S3 move)
+
+### 3.2 Write path integration
+
+**What to log:** every execution-relevant event emitted to structured logs should also be persisted to `execution_log`.
+
+**Where to instrument:**
+- `exchange_client.py`: ORDER_PLACE, ORDER_RESULT, ORDER_CANCEL
+- `state_manager.py`: FILL
+
+**Implementation approach:**
+- Add `execution_logger.py` (thin wrapper over DynamoDB client) with `log_event(payload)` and basic retries.
+- Require `bot_run_id` + `decision_id` on every call; reject otherwise to prevent orphaned events.
+- Include a local `client_order_id` for idempotency and later reconciliation.
+
+### 3.3 Decision log linkage
+
+Update decision log records to include:
+- `decision_id` (already planned)
+- `expected_orders_hash` computed from sorted target orders
+- `execution_log_partition` (bot_run_id) to simplify cross-store queries
+
+### 3.4 Read/analysis workflow (short-term)
+
+**Goal:** answer "decision X -> what did we attempt, what happened?"
+- Query `decision_log` by market + decision_id to fetch expected orders
+- Query `execution_log` by decision_id (GSI1) to fetch actual events
+- Compare by `client_order_id` or order attributes; log diff to CloudWatch
+
+### 3.5 Migration-friendly storage strategy
+
+Design the DynamoDB schema so it can be **replaced** by S3 later:
+- Use a normalized, append-only event schema (JSON) that can be stored as newline-delimited records in S3.
+- Keep `decision_id` as the primary join key between `decision_log` and `execution_log`.
+- Avoid nested, DynamoDB-only types; keep payloads JSON-serializable.
+
+When ready to migrate:
+- Dual-write DynamoDB + S3 for 1-2 releases.
+- Validate parity with daily reconciliation job.
+- Flip reads to S3-backed queries; retain DynamoDB as short-retention hot cache.
 
 ---
 

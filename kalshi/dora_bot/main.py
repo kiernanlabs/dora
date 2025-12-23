@@ -434,6 +434,24 @@ class DoraBot:
             existing_orders = self.state.get_open_orders_for_market(market_id)
             to_cancel, to_place = self.diff_orders(existing_orders, target_orders)
 
+            # Log order diff results
+            if not to_cancel and not to_place:
+                logger.info("No order changes needed - existing orders match targets", extra={
+                    "event_type": EventType.LOG,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "existing_orders_count": len(existing_orders),
+                    "target_orders_count": len(target_orders),
+                })
+            else:
+                logger.info("Order diff complete", extra={
+                    "event_type": EventType.LOG,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "to_cancel_count": len(to_cancel),
+                    "to_place_count": len(to_place),
+                })
+
             # 5. Cancel orders
             for order in to_cancel:
                 if self.exchange.cancel_order(order.order_id, decision_id=decision_id):
@@ -455,14 +473,14 @@ class DoraBot:
                     if placed_order:
                         self.state.record_order(placed_order)
                 else:
-                    logger.debug("Order blocked by risk", extra={
-                        "event_type": EventType.LOG,
+                    logger.warning("Order blocked by risk manager", extra={
+                        "event_type": EventType.RISK_CHECK,
                         "market": market_id,
                         "decision_id": decision_id,
                         "side": target.side,
                         "price": target.price,
                         "size": target.size,
-                        "reason": reason,
+                        "blocked_reason": reason,
                     })
 
         except Exception as e:
