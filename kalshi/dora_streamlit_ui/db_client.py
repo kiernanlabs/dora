@@ -367,32 +367,84 @@ class ReadOnlyDynamoDBClient:
 
     def get_pnl_over_time(self, days: int = 7) -> List[Dict]:
         """
-        Calculate P&L over time from trade history.
+        Calculate P&L over time from trade history using proper cost basis tracking.
 
         Returns list of {date, cumulative_pnl, daily_pnl}
         """
         try:
             trades = self.get_recent_trades(days=days)
 
-            # Group by date and calculate cumulative P&L
-            pnl_by_date = {}
-            for trade in trades:
-                date_str = trade.get('date', '')
-                if date_str not in pnl_by_date:
-                    pnl_by_date[date_str] = 0.0
+            # Sort trades chronologically
+            trades.sort(key=lambda t: t.get('fill_timestamp') or t.get('timestamp', ''))
 
-                # Calculate trade P&L (simplified - actual calculation would need more context)
-                # For now, just track the realized P&L from the trade
+            # Track position state per market (same logic as Position.update_from_fill)
+            positions = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price, realized_pnl}
+            pnl_by_date = {}
+
+            for trade in trades:
+                market_id = trade.get('market_id')
+                if not market_id:
+                    continue
+
+                # Initialize position for this market if needed
+                if market_id not in positions:
+                    positions[market_id] = {
+                        'net_yes_qty': 0,
+                        'avg_buy_price': 0.0,
+                        'avg_sell_price': 0.0,
+                        'realized_pnl': 0.0
+                    }
+
+                pos = positions[market_id]
                 side = trade.get('side', '')
                 price = trade.get('price', 0.0)
                 size = trade.get('size', 0)
+                date_str = trade.get('date', '')
 
-                # This is a simplified P&L calculation
-                # Real P&L would need to track cost basis
+                # Initialize date bucket
+                if date_str not in pnl_by_date:
+                    pnl_by_date[date_str] = 0.0
+
+                # Track P&L before update
+                pnl_before = pos['realized_pnl']
+
+                # Update position using same logic as Position.update_from_fill()
                 if side in ['buy', 'yes']:
-                    pnl_by_date[date_str] -= price * size
+                    # Bid fill - buying YES contracts
+                    if pos['net_yes_qty'] >= 0:
+                        # Adding to long position
+                        total_cost = pos['avg_buy_price'] * pos['net_yes_qty'] + price * size
+                        pos['net_yes_qty'] += size
+                        pos['avg_buy_price'] = total_cost / pos['net_yes_qty'] if pos['net_yes_qty'] > 0 else 0
+                    else:
+                        # Closing short position - realize P&L
+                        close_qty = min(abs(pos['net_yes_qty']), size)
+                        realized = (pos['avg_sell_price'] - price) * close_qty
+                        pos['realized_pnl'] += realized
+                        pos['net_yes_qty'] += size
+
+                        if pos['net_yes_qty'] > 0:
+                            pos['avg_buy_price'] = price
                 else:
-                    pnl_by_date[date_str] += price * size
+                    # Ask fill - selling YES contracts
+                    if pos['net_yes_qty'] <= 0:
+                        # Adding to short position
+                        total_cost = pos['avg_sell_price'] * abs(pos['net_yes_qty']) + price * size
+                        pos['net_yes_qty'] -= size
+                        pos['avg_sell_price'] = total_cost / abs(pos['net_yes_qty']) if pos['net_yes_qty'] != 0 else 0
+                    else:
+                        # Closing long position - realize P&L
+                        close_qty = min(pos['net_yes_qty'], size)
+                        realized = (price - pos['avg_buy_price']) * close_qty
+                        pos['realized_pnl'] += realized
+                        pos['net_yes_qty'] -= size
+
+                        if pos['net_yes_qty'] < 0:
+                            pos['avg_sell_price'] = price
+
+                # Add the realized P&L change to this date
+                pnl_change = pos['realized_pnl'] - pnl_before
+                pnl_by_date[date_str] += pnl_change
 
             # Sort and create time series
             sorted_dates = sorted(pnl_by_date.keys())
