@@ -44,6 +44,18 @@ def parse_iso_timestamp(timestamp_str: str) -> Optional[datetime]:
         return None
 
 
+def format_fill_side(side: Optional[str]) -> str:
+    """Map fill side to bid/ask framing."""
+    if not side:
+        return 'N/A'
+    normalized = side.lower()
+    if normalized in ('yes', 'buy', 'bid'):
+        return 'bid'
+    if normalized in ('no', 'sell', 'ask'):
+        return 'ask'
+    return side
+
+
 def get_kalshi_market_url(market_id: str) -> str:
     """Generate Kalshi market URL from market ID."""
     return f"https://kalshi.com/markets/{market_id}"
@@ -624,7 +636,7 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
             'Timestamp': to_local_time(timestamp) if timestamp else 'N/A',
             'Fill ID': trade.get('fill_id', '')[:20] + '...' if trade.get('fill_id') else 'N/A',
             'Order ID': trade.get('order_id', '')[:20] + '...' if trade.get('order_id') else 'N/A',
-            'Side': trade.get('side', ''),
+            'Side': format_fill_side(trade.get('side')),
             'Price': f"${trade.get('price', 0.0):.3f}" if trade.get('price') else 'N/A',
             'Size': trade.get('size', 0),
             'Fees': f"${trade.get('fees', 0.0):.2f}" if trade.get('fees') is not None else 'N/A',
@@ -647,8 +659,8 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
         st.markdown("#### Summary Statistics")
 
         total_volume = sum(t.get('size', 0) for t in trades_sorted)
-        buy_volume = sum(t.get('size', 0) for t in trades_sorted if t.get('side') in ['buy', 'yes'])
-        sell_volume = sum(t.get('size', 0) for t in trades_sorted if t.get('side') in ['sell', 'no'])
+        bid_volume = sum(t.get('size', 0) for t in trades_sorted if format_fill_side(t.get('side')) == 'bid')
+        ask_volume = sum(t.get('size', 0) for t in trades_sorted if format_fill_side(t.get('side')) == 'ask')
         total_fees = sum(t.get('fees', 0) or 0 for t in trades_sorted)
 
         col1, col2, col3, col4 = st.columns(4)
@@ -657,7 +669,7 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
         with col2:
             st.metric("Total Volume", f"{total_volume} contracts")
         with col3:
-            st.metric("Buy/Sell Split", f"{buy_volume}/{sell_volume}")
+            st.metric("Bid/Ask Split", f"{bid_volume}/{ask_volume}")
         with col4:
             st.metric("Total Fees", f"${total_fees:.2f}")
 
@@ -668,7 +680,7 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
     selected_idx = st.selectbox(
         "Select a fill to view details:",
         options=range(len(trades_sorted)),
-        format_func=lambda i: f"{trades_sorted[i].get('fill_timestamp') or trades_sorted[i].get('timestamp', 'N/A')} - {trades_sorted[i].get('side')} {trades_sorted[i].get('size')} @ ${trades_sorted[i].get('price', 0):.3f}",
+        format_func=lambda i: f"{trades_sorted[i].get('fill_timestamp') or trades_sorted[i].get('timestamp', 'N/A')} - {format_fill_side(trades_sorted[i].get('side'))} {trades_sorted[i].get('size')} @ ${trades_sorted[i].get('price', 0):.3f}",
         key=f'fill_selector_{market_id}'
     )
 
@@ -690,7 +702,7 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
             st.markdown("**Trade Details**")
             st.json({
                 'market_id': selected_fill.get('market_id'),
-                'side': selected_fill.get('side'),
+                'side': format_fill_side(selected_fill.get('side')),
                 'price': selected_fill.get('price'),
                 'size': selected_fill.get('size'),
                 'fees': selected_fill.get('fees'),
