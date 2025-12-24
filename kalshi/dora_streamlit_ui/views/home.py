@@ -642,6 +642,83 @@ def render_active_markets_table(
             for mismatch in markets_with_mismatch:
                 st.markdown(f"**{mismatch['market_id']}**: {', '.join(mismatch['details'])}")
 
+    # Calculate totals for the summary row
+    total_net_position = sum(row['Net Position'] for row in table_data)
+
+    # Sum unrealized P&L (parse from formatted string)
+    total_unrealized_pnl = 0.0
+    for row in table_data:
+        if row['Unrealized P&L'] != 'N/A':
+            # Parse "$+1.23" or "$-1.23" format
+            val_str = row['Unrealized P&L'].replace('$', '').replace('+', '')
+            try:
+                total_unrealized_pnl += float(val_str)
+            except ValueError:
+                pass
+
+    # Sum position changes (parse from formatted string)
+    total_pos_change = 0.0
+    for row in table_data:
+        val_str = row['Position 24h Δ'].replace('+', '')
+        try:
+            total_pos_change += float(val_str)
+        except ValueError:
+            pass
+
+    # Sum filled contracts (extract number from "X (time ago)" format)
+    total_filled = 0
+    for row in table_data:
+        filled_str = row['Filled 24h'].split('(')[0].strip()
+        try:
+            total_filled += int(filled_str)
+        except ValueError:
+            pass
+
+    # Sum order executions (extract number from "X (time ago)" format)
+    total_executions = 0
+    for row in table_data:
+        exec_str = row['Order Executions 24h'].split('(')[0].strip()
+        try:
+            total_executions += int(exec_str)
+        except ValueError:
+            pass
+
+    # Sum realized P&L (parse from formatted string)
+    total_realized_pnl = 0.0
+    for row in table_data:
+        val_str = row['Realized P&L'].replace('$', '')
+        try:
+            total_realized_pnl += float(val_str)
+        except ValueError:
+            pass
+
+    # Sum P&L changes (parse from formatted string)
+    total_pnl_change = 0.0
+    for row in table_data:
+        val_str = row['P&L 24h Δ'].replace('$', '').replace('+', '')
+        try:
+            total_pnl_change += float(val_str)
+        except ValueError:
+            pass
+
+    # Add total row
+    table_data.append({
+        'Market': '**TOTAL**',
+        'Best Bid': '',
+        'Best Ask': '',
+        'Our Bid': '',
+        'Our Ask': '',
+        'Spread': '',
+        'Net Position': total_net_position,
+        'Avg Cost': '',
+        'Unrealized P&L': f"${total_unrealized_pnl:+.2f}" if total_unrealized_pnl != 0 else '$0.00',
+        'Position 24h Δ': f"{total_pos_change:+.0f}",
+        'Filled 24h': f"{total_filled}",
+        'Order Executions 24h': f"{total_executions}",
+        'Realized P&L': f"${total_realized_pnl:.2f}",
+        'P&L 24h Δ': f"${total_pnl_change:+.2f}",
+    })
+
     # Create DataFrame and display
     df = pd.DataFrame(table_data)
 
@@ -673,7 +750,7 @@ def render_active_markets_table(
     st.markdown("#### View Market Details")
     selected_market = st.selectbox(
         "Select a market to view detailed logs:",
-        options=[row['Market'] for row in table_data],
+        options=[row['Market'] for row in table_data if row['Market'] != '**TOTAL**'],
         key='market_selector'
     )
 
