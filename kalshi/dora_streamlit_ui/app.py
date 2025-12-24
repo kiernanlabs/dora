@@ -14,7 +14,7 @@ st.set_page_config(
 
 # Initialize session state
 if 'environment' not in st.session_state:
-    st.session_state.environment = 'demo'
+    st.session_state.environment = 'prod'
 if 'current_page' not in st.session_state:
     st.session_state['current_page'] = 'Home'
 
