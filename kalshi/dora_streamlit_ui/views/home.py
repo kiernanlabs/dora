@@ -331,61 +331,71 @@ def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
     """
     Determine which orders are currently live based on execution logs.
 
+    Only the MOST RECENT accepted order per side (bid/ask) can be live.
     An order is live if:
-    - It has an ORDER_RESULT event with status=ACCEPTED
-    - It does NOT have a subsequent ORDER_RESULT event with status=CANCELLED
+    - It is the most recent ORDER_RESULT event with status=ACCEPTED for its side
+    - It does NOT have ANY ORDER_RESULT event with status=CANCELLED
 
     Returns dict of order_id -> order details (side, price, size)
     """
-    # Sort executions chronologically (oldest first) so we process events in order
-    # This ensures ACCEPTED comes before CANCELLED for the same order
-    sorted_executions = sorted(
-        executions,
-        key=lambda e: e.get('event_ts', '') or ''
-    )
-
-    # Track order states: order_id -> {side, price, size, status, event_ts}
-    orders: Dict[str, Dict] = {}
-
-    for e in sorted_executions:
+    # First pass: collect all ACCEPTED orders with their timestamps
+    accepted_orders: Dict[str, Dict] = {}
+    for e in executions:
         event_type = e.get('event_type', '')
         order_id = e.get('order_id')
         status = e.get('status')
-        event_ts = e.get('event_ts', '')
 
         if not order_id:
             continue
 
-        # ORDER_RESULT with ACCEPTED means order was placed successfully
         if event_type == 'ORDER_RESULT' and status == 'ACCEPTED':
-            orders[order_id] = {
+            accepted_orders[order_id] = {
                 'side': e.get('side'),
                 'price': e.get('price'),
                 'size': e.get('size'),
-                'status': 'ACCEPTED',
-                'event_ts': event_ts,
+                'event_ts': e.get('event_ts', ''),
             }
-        # ORDER_RESULT with CANCELLED means order was cancelled
-        elif event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
-            if order_id in orders:
-                orders[order_id]['status'] = 'CANCELLED'
-            else:
-                # Order was cancelled but we didn't see the ACCEPTED event
-                # (possibly outside our time window) - mark as cancelled anyway
-                orders[order_id] = {
-                    'side': e.get('side'),
-                    'price': e.get('price'),
-                    'size': e.get('size'),
-                    'status': 'CANCELLED',
-                    'event_ts': event_ts,
-                }
-        # FILL events reduce remaining size (order may be partially or fully filled)
-        elif event_type == 'FILL':
-            if order_id in orders:
-                orders[order_id]['status'] = 'FILLED'
 
-    # Return only orders that are still ACCEPTED (live)
-    return {oid: o for oid, o in orders.items() if o.get('status') == 'ACCEPTED'}
+    # Second pass: find all order_ids that have been CANCELLED or FILLED
+    terminated_order_ids: set = set()
+    for e in executions:
+        event_type = e.get('event_type', '')
+        order_id = e.get('order_id')
+        status = e.get('status')
+
+        if not order_id:
+            continue
+
+        if event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
+            terminated_order_ids.add(order_id)
+        elif event_type == 'FILL':
+            terminated_order_ids.add(order_id)
+
+    # Third pass: find the most recent ACCEPTED order per side (bid/ask)
+    # Only the most recent order per side can be live
+    most_recent_by_side: Dict[str, tuple] = {}  # side -> (order_id, event_ts)
+
+    for order_id, details in accepted_orders.items():
+        side = details.get('side')
+        event_ts = details.get('event_ts', '')
+
+        if not side:
+            continue
+
+        if side not in most_recent_by_side:
+            most_recent_by_side[side] = (order_id, event_ts)
+        else:
+            _, current_ts = most_recent_by_side[side]
+            if event_ts > current_ts:
+                most_recent_by_side[side] = (order_id, event_ts)
+
+    # Return only the most recent order per side, if it hasn't been terminated
+    live_orders: Dict[str, Dict] = {}
+    for side, (order_id, _) in most_recent_by_side.items():
+        if order_id not in terminated_order_ids:
+            live_orders[order_id] = accepted_orders[order_id]
+
+    return live_orders
 
 
 def render_active_markets_table(
