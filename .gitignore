@@ -7,4 +7,6 @@ ec2/DoraBot-RSA.pem
 *.pem
 *.pem*
 *.b64
-*.csv
+market_summaries.csv
+markets analysis.xlsx
+markets.csv

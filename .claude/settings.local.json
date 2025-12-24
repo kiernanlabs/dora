@@ -11,7 +11,8 @@
       "Bash(aws dynamodb query:*)",
       "Bash(aws dynamodb scan:*)",
       "Bash(aws dynamodb get-item:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []
