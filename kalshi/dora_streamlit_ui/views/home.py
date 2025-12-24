@@ -337,10 +337,17 @@ def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
 
     Returns dict of order_id -> order details (side, price, size)
     """
+    # Sort executions chronologically (oldest first) so we process events in order
+    # This ensures ACCEPTED comes before CANCELLED for the same order
+    sorted_executions = sorted(
+        executions,
+        key=lambda e: e.get('event_ts', '') or ''
+    )
+
     # Track order states: order_id -> {side, price, size, status, event_ts}
     orders: Dict[str, Dict] = {}
 
-    for e in executions:
+    for e in sorted_executions:
         event_type = e.get('event_type', '')
         order_id = e.get('order_id')
         status = e.get('status')
@@ -362,6 +369,16 @@ def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
         elif event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
             if order_id in orders:
                 orders[order_id]['status'] = 'CANCELLED'
+            else:
+                # Order was cancelled but we didn't see the ACCEPTED event
+                # (possibly outside our time window) - mark as cancelled anyway
+                orders[order_id] = {
+                    'side': e.get('side'),
+                    'price': e.get('price'),
+                    'size': e.get('size'),
+                    'status': 'CANCELLED',
+                    'event_ts': event_ts,
+                }
         # FILL events reduce remaining size (order may be partially or fully filled)
         elif event_type == 'FILL':
             if order_id in orders:
