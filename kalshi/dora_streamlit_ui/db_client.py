@@ -233,8 +233,15 @@ class ReadOnlyDynamoDBClient:
                 executions = response.get('Items', [])
             else:
                 # Otherwise, scan with filters (less efficient but comprehensive)
-                response = self.execution_log_table.scan()
-                executions = response.get('Items', [])
+                executions = []
+                scan_kwargs: Dict[str, Any] = {}
+                while True:
+                    response = self.execution_log_table.scan(**scan_kwargs)
+                    executions.extend(response.get('Items', []))
+                    last_evaluated_key = response.get('LastEvaluatedKey')
+                    if not last_evaluated_key:
+                        break
+                    scan_kwargs['ExclusiveStartKey'] = last_evaluated_key
 
                 # Filter by timestamp
                 cutoff = datetime.now(timezone.utc) - timedelta(days=days)

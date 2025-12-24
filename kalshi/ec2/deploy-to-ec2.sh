@@ -171,7 +171,7 @@ fi
 # ============================================
 log "Installing dependencies and configuring service..."
 
-$SSH_CMD "ENV_NAME=$ENV_NAME REMOTE_ENV_FILE=$REMOTE_ENV_FILE bash -s" << 'REMOTE_SCRIPT'
+$SSH_CMD "ENV_NAME=$ENV_NAME ENV_FLAG_SET=$ENV_FLAG_SET REMOTE_ENV_FILE=$REMOTE_ENV_FILE bash -s" << 'REMOTE_SCRIPT'
 set -e
 
 cd /home/ec2-user/dora
@@ -213,6 +213,38 @@ if ! command -v amazon-cloudwatch-agent-ctl &> /dev/null; then
         wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb
         sudo dpkg -i amazon-cloudwatch-agent.deb
         rm -f amazon-cloudwatch-agent.deb
+    fi
+fi
+
+# If no env flag was provided, try to infer env from systemd config
+if [ "$ENV_FLAG_SET" != "true" ]; then
+    DETECTED_ENV=""
+
+    if [ -f /etc/systemd/system/dora-bot.service.d/env.conf ]; then
+        ENV_FILE=$(awk -F= '/^EnvironmentFile=/{print $2}' /etc/systemd/system/dora-bot.service.d/env.conf | tail -n1)
+        if [ -n "$ENV_FILE" ] && [ -f "$ENV_FILE" ]; then
+            USE_DEMO_VALUE=$(grep -E '^USE_DEMO=' "$ENV_FILE" | tail -n1 | cut -d= -f2 | tr -d '"')
+            if [ "$USE_DEMO_VALUE" = "true" ]; then
+                DETECTED_ENV="demo"
+            elif [ "$USE_DEMO_VALUE" = "false" ]; then
+                DETECTED_ENV="prod"
+            fi
+        fi
+    fi
+
+    if [ -z "$DETECTED_ENV" ] && [ -f /etc/systemd/system/dora-bot.service ]; then
+        if grep -q 'Environment="USE_DEMO=true"' /etc/systemd/system/dora-bot.service; then
+            DETECTED_ENV="demo"
+        elif grep -q 'Environment="USE_DEMO=false"' /etc/systemd/system/dora-bot.service; then
+            DETECTED_ENV="prod"
+        fi
+    fi
+
+    if [ -n "$DETECTED_ENV" ]; then
+        ENV_NAME="$DETECTED_ENV"
+        echo "[REMOTE] Detected environment: $ENV_NAME"
+    else
+        echo "[REMOTE] Could not detect environment; using ENV_NAME=$ENV_NAME"
     fi
 fi
 

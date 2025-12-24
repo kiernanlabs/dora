@@ -30,6 +30,20 @@ def to_local_time(timestamp_str: str) -> str:
         return timestamp_str
 
 
+def parse_iso_timestamp(timestamp_str: str) -> Optional[datetime]:
+    """Parse an ISO timestamp into a timezone-aware datetime."""
+    if not timestamp_str:
+        return None
+    try:
+        if 'Z' in timestamp_str:
+            return datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        if '+' in timestamp_str or ('-' in timestamp_str.split('T')[1] if 'T' in timestamp_str else False):
+            return datetime.fromisoformat(timestamp_str)
+        return datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
 def get_kalshi_market_url(market_id: str) -> str:
     """Generate Kalshi market URL from market ID."""
     return f"https://kalshi.com/markets/{market_id}"
@@ -591,9 +605,18 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
 
     st.markdown(f"**Found {len(trades)} fills**")
 
+    # Sort fills by timestamp (most recent first)
+    fallback_ts = datetime.min.replace(tzinfo=timezone.utc)
+
+    def _fill_ts(trade: Dict) -> datetime:
+        ts_str = trade.get('fill_timestamp') or trade.get('timestamp', '')
+        return parse_iso_timestamp(ts_str) or fallback_ts
+
+    trades_sorted = sorted(trades, key=_fill_ts, reverse=True)
+
     # Create summary table
     table_data = []
-    for trade in trades:
+    for trade in trades_sorted:
         # Use fill_timestamp if available, otherwise fall back to timestamp
         timestamp = trade.get('fill_timestamp') or trade.get('timestamp', '')
 
@@ -619,14 +642,14 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
     )
 
     # Summary statistics
-    if trades:
+    if trades_sorted:
         st.markdown("---")
         st.markdown("#### Summary Statistics")
 
-        total_volume = sum(t.get('size', 0) for t in trades)
-        buy_volume = sum(t.get('size', 0) for t in trades if t.get('side') in ['buy', 'yes'])
-        sell_volume = sum(t.get('size', 0) for t in trades if t.get('side') in ['sell', 'no'])
-        total_fees = sum(t.get('fees', 0) or 0 for t in trades)
+        total_volume = sum(t.get('size', 0) for t in trades_sorted)
+        buy_volume = sum(t.get('size', 0) for t in trades_sorted if t.get('side') in ['buy', 'yes'])
+        sell_volume = sum(t.get('size', 0) for t in trades_sorted if t.get('side') in ['sell', 'no'])
+        total_fees = sum(t.get('fees', 0) or 0 for t in trades_sorted)
 
         col1, col2, col3, col4 = st.columns(4)
         with col1:
@@ -644,13 +667,13 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
 
     selected_idx = st.selectbox(
         "Select a fill to view details:",
-        options=range(len(trades)),
-        format_func=lambda i: f"{trades[i].get('fill_timestamp') or trades[i].get('timestamp', 'N/A')} - {trades[i].get('side')} {trades[i].get('size')} @ ${trades[i].get('price', 0):.3f}",
+        options=range(len(trades_sorted)),
+        format_func=lambda i: f"{trades_sorted[i].get('fill_timestamp') or trades_sorted[i].get('timestamp', 'N/A')} - {trades_sorted[i].get('side')} {trades_sorted[i].get('size')} @ ${trades_sorted[i].get('price', 0):.3f}",
         key=f'fill_selector_{market_id}'
     )
 
     if selected_idx is not None:
-        selected_fill = trades[selected_idx]
+        selected_fill = trades_sorted[selected_idx]
 
         col1, col2 = st.columns(2)
 
