@@ -459,7 +459,12 @@ class DoraBot:
                 # No quotes desired, cancel any existing orders
                 existing_orders = self.state.get_open_orders_for_market(market_id)
                 for order in existing_orders:
-                    self.exchange.cancel_order(order.order_id, decision_id=decision_id)
+                    self.exchange.cancel_order(
+                        order.order_id,
+                        decision_id=decision_id,
+                        market_id=order.market_id,
+                        client_order_id=order.client_order_id,
+                    )
                     self.state.remove_order(order.order_id)
                 return
 

@@ -327,7 +327,10 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
     return 0.0
 
 
-def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
+def get_live_orders_from_executions(
+    executions: List[Dict],
+    extra_terminated_order_ids: Optional[set] = None,
+) -> Dict[str, Dict]:
     """
     Determine which orders are currently live based on execution logs.
 
@@ -388,6 +391,9 @@ def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
             _, current_ts = most_recent_by_side[side]
             if event_ts > current_ts:
                 most_recent_by_side[side] = (order_id, event_ts)
+
+    if extra_terminated_order_ids:
+        terminated_order_ids.update(extra_terminated_order_ids)
 
     # Return only the most recent order per side, if it hasn't been terminated
     live_orders: Dict[str, Dict] = {}
@@ -453,6 +459,17 @@ def render_active_markets_table(
     # Pre-calculate 24h cutoff
     cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
 
+    # Track terminations across all markets to handle legacy events missing market_id
+    global_terminated_order_ids: set = set()
+    for e in executions:
+        order_id = e.get('order_id')
+        if not order_id:
+            continue
+        if e.get('event_type') == 'ORDER_RESULT' and e.get('status') in ('CANCELLED', 'ALREADY_GONE'):
+            global_terminated_order_ids.add(order_id)
+        elif e.get('event_type') == 'FILL':
+            global_terminated_order_ids.add(order_id)
+
     # Build table data
     table_data = []
     markets_with_mismatch = []  # Track markets where decision targets don't match live orders
@@ -475,7 +492,10 @@ def render_active_markets_table(
 
         # Get ACTUAL live orders from execution logs
         market_executions = executions_by_market.get(market_id, [])
-        live_orders = get_live_orders_from_executions(market_executions)
+        live_orders = get_live_orders_from_executions(
+            market_executions,
+            extra_terminated_order_ids=global_terminated_order_ids,
+        )
 
         # Separate live orders into bids and asks
         live_bids = [o for o in live_orders.values() if o.get('side') == 'bid']
