@@ -327,6 +327,50 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
     return 0.0
 
 
+def get_live_orders_from_executions(executions: List[Dict]) -> Dict[str, Dict]:
+    """
+    Determine which orders are currently live based on execution logs.
+
+    An order is live if:
+    - It has an ORDER_RESULT event with status=ACCEPTED
+    - It does NOT have a subsequent ORDER_RESULT event with status=CANCELLED
+
+    Returns dict of order_id -> order details (side, price, size)
+    """
+    # Track order states: order_id -> {side, price, size, status, event_ts}
+    orders: Dict[str, Dict] = {}
+
+    for e in executions:
+        event_type = e.get('event_type', '')
+        order_id = e.get('order_id')
+        status = e.get('status')
+        event_ts = e.get('event_ts', '')
+
+        if not order_id:
+            continue
+
+        # ORDER_RESULT with ACCEPTED means order was placed successfully
+        if event_type == 'ORDER_RESULT' and status == 'ACCEPTED':
+            orders[order_id] = {
+                'side': e.get('side'),
+                'price': e.get('price'),
+                'size': e.get('size'),
+                'status': 'ACCEPTED',
+                'event_ts': event_ts,
+            }
+        # ORDER_RESULT with CANCELLED means order was cancelled
+        elif event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
+            if order_id in orders:
+                orders[order_id]['status'] = 'CANCELLED'
+        # FILL events reduce remaining size (order may be partially or fully filled)
+        elif event_type == 'FILL':
+            if order_id in orders:
+                orders[order_id]['status'] = 'FILLED'
+
+    # Return only orders that are still ACCEPTED (live)
+    return {oid: o for oid, o in orders.items() if o.get('status') == 'ACCEPTED'}
+
+
 def render_active_markets_table(
     db_client: ReadOnlyDynamoDBClient,
     positions: Dict,
@@ -384,6 +428,8 @@ def render_active_markets_table(
 
     # Build table data
     table_data = []
+    markets_with_mismatch = []  # Track markets where decision targets don't match live orders
+
     for config in market_configs:
         market_id = config.get('market_id')
         position = positions.get(market_id, {})
@@ -393,47 +439,72 @@ def render_active_markets_table(
         decision = market_decisions[0] if market_decisions else None
         order_book = decision.get('order_book_snapshot', {}) if decision else {}
 
-        # Get active quotes from decision (no extra DB call)
-        active_quotes = None
-        if decision:
-            target_quotes = decision.get('target_quotes', [])
-            bids = [q for q in target_quotes if q.get('side') == 'bid']
-            asks = [q for q in target_quotes if q.get('side') == 'ask']
-            bids.sort(key=lambda x: x.get('price', 0), reverse=True)
-            asks.sort(key=lambda x: x.get('price', 0))
-            active_quotes = {'bids': bids, 'asks': asks}
+        # Get target quotes from decision (what bot intended to quote)
+        target_quotes = decision.get('target_quotes', []) if decision else []
+        target_bids = [q for q in target_quotes if q.get('side') == 'bid']
+        target_asks = [q for q in target_quotes if q.get('side') == 'ask']
+        target_bids.sort(key=lambda x: x.get('price', 0), reverse=True)
+        target_asks.sort(key=lambda x: x.get('price', 0))
 
-        # Format our bids/asks with indicators for best bid/ask
+        # Get ACTUAL live orders from execution logs
+        market_executions = executions_by_market.get(market_id, [])
+        live_orders = get_live_orders_from_executions(market_executions)
+
+        # Separate live orders into bids and asks
+        live_bids = [o for o in live_orders.values() if o.get('side') == 'bid']
+        live_asks = [o for o in live_orders.values() if o.get('side') == 'ask']
+        live_bids.sort(key=lambda x: x.get('price', 0) or 0, reverse=True)
+        live_asks.sort(key=lambda x: x.get('price', 0) or 0)
+
+        # Check for mismatch between decision targets and actual live orders
+        has_mismatch = False
+        mismatch_details = []
+        # Compare target vs live - if decision has targets but no live orders, that's a mismatch
+        if target_bids and not live_bids:
+            has_mismatch = True
+            mismatch_details.append(f"Target bid: ${target_bids[0].get('price', 0):.3f} but no live bid")
+        if target_asks and not live_asks:
+            has_mismatch = True
+            mismatch_details.append(f"Target ask: ${target_asks[0].get('price', 0):.3f} but no live ask")
+
+        if has_mismatch:
+            markets_with_mismatch.append({
+                'market_id': market_id,
+                'details': mismatch_details,
+                'decision_id': decision.get('decision_id') if decision else None,
+            })
+
+        # Format our bids/asks based on LIVE orders (from execution logs)
         our_bid = 'N/A'
         our_ask = 'N/A'
-        if active_quotes:
-            if active_quotes['bids']:
-                our_best_bid = active_quotes['bids'][0]
-                our_bid_price = our_best_bid.get('price', 0)
-                market_best_bid = order_book.get('best_bid', 0)
+        market_best_bid = order_book.get('best_bid', 0)
+        market_best_ask = order_book.get('best_ask', 0)
 
-                # For bids: higher is better (we're at or above market best bid)
-                # Green check if our bid >= market best bid, red X otherwise
-                if market_best_bid:
-                    is_best_or_better = our_bid_price >= (market_best_bid - 0.0001)
-                    indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
-                else:
-                    indicator = "🟢 ✓"  # No competition
-                our_bid = f"{indicator} ${our_bid_price:.3f} ({our_best_bid.get('size', 0)})"
+        if live_bids:
+            best_live_bid = live_bids[0]
+            our_bid_price = best_live_bid.get('price', 0)
+            our_bid_size = best_live_bid.get('size', 0)
 
-            if active_quotes['asks']:
-                our_best_ask = active_quotes['asks'][0]
-                our_ask_price = our_best_ask.get('price', 0)
-                market_best_ask = order_book.get('best_ask', 0)
+            # For bids: higher is better (we're at or above market best bid)
+            if market_best_bid:
+                is_best_or_better = our_bid_price >= (market_best_bid - 0.0001)
+                indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+            else:
+                indicator = "🟢 ✓"  # No competition
+            our_bid = f"{indicator} ${our_bid_price:.3f} ({our_bid_size})"
 
-                # For asks: lower is better (we're at or below market best ask)
-                # Green check if our ask <= market best ask, red X otherwise
-                if market_best_ask:
-                    is_best_or_better = our_ask_price <= (market_best_ask + 0.0001)
-                    indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
-                else:
-                    indicator = "🟢 ✓"  # No competition
-                our_ask = f"{indicator} ${our_ask_price:.3f} ({our_best_ask.get('size', 0)})"
+        if live_asks:
+            best_live_ask = live_asks[0]
+            our_ask_price = best_live_ask.get('price', 0)
+            our_ask_size = best_live_ask.get('size', 0)
+
+            # For asks: lower is better (we're at or below market best ask)
+            if market_best_ask:
+                is_best_or_better = our_ask_price <= (market_best_ask + 0.0001)
+                indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+            else:
+                indicator = "🟢 ✓"  # No competition
+            our_ask = f"{indicator} ${our_ask_price:.3f} ({our_ask_size})"
 
         # Calculate 24h changes (using pre-fetched trades)
         market_trades = trades_by_market.get(market_id, [])
@@ -516,6 +587,13 @@ def render_active_markets_table(
             'Realized P&L': f"${position.get('realized_pnl', 0.0):.2f}",
             'P&L 24h Δ': f"${pnl_change_24h:+.2f}",
         })
+
+    # Display warning if there are mismatches between decision targets and live orders
+    if markets_with_mismatch:
+        st.error(f"**Order Execution Mismatch Detected** - {len(markets_with_mismatch)} market(s) have target quotes that are not reflected in live orders. This may indicate orders were rejected or the bot is halted.")
+        with st.expander("View Mismatch Details", expanded=True):
+            for mismatch in markets_with_mismatch:
+                st.markdown(f"**{mismatch['market_id']}**: {', '.join(mismatch['details'])}")
 
     # Create DataFrame and display
     df = pd.DataFrame(table_data)

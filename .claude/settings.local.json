@@ -10,7 +10,8 @@
       "Bash(find:*)",
       "Bash(aws dynamodb query:*)",
       "Bash(aws dynamodb scan:*)",
-      "Bash(aws dynamodb get-item:*)"
+      "Bash(aws dynamodb get-item:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
