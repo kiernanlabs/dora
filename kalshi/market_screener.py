@@ -334,9 +334,16 @@ Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rat
                 input=prompt,
             )
 
-        # Parse the response
+        # Parse the response (Responses API uses output_text)
         response_text = getattr(response, "output_text", None)
-        
+        if response_text is None:
+            return {
+                "probability": None,
+                "rationale": "No output_text in response",
+                "error": "Empty API response",
+            }
+        response_text = response_text.strip()
+
         # Try to extract JSON if wrapped in markdown code blocks
         if response_text.startswith("```"):
             # Remove markdown code blocks
@@ -427,11 +434,15 @@ Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rat
                 input=prompt,
             )
 
-            # Parse the response
+        # Parse the response (Responses API uses output_text)
         response_text = getattr(response, "output_text", None)
-
-        # Parse the response
-        response_text = response.choices[0].message.content.strip()
+        if response_text is None:
+            return {
+                "probability": None,
+                "rationale": "No output_text in response",
+                "error": "Empty API response",
+            }
+        response_text = response_text.strip()
 
         # Try to extract JSON if wrapped in markdown code blocks
         if response_text.startswith("```"):

@@ -702,7 +702,7 @@ def render_active_markets_table(
             pass
 
     # Add total row
-    table_data.append({
+    total_row = {
         'Market': '**TOTAL**',
         'Best Bid': '',
         'Best Ask': '',
@@ -717,7 +717,21 @@ def render_active_markets_table(
         'Order Executions 24h': f"{total_executions}",
         'Realized P&L': f"${total_realized_pnl:.2f}",
         'P&L 24h Δ': f"${total_pnl_change:+.2f}",
-    })
+    }
+    table_data.append(total_row)
+
+    with st.expander("Debug: Active Markets Totals", expanded=False):
+        st.write("Rows before total:", len(table_data) - 1)
+        st.write("Totals computed:", {
+            "net_position": total_net_position,
+            "unrealized_pnl": total_unrealized_pnl,
+            "position_change_24h": total_pos_change,
+            "filled_24h": total_filled,
+            "executions_24h": total_executions,
+            "realized_pnl": total_realized_pnl,
+            "pnl_change_24h": total_pnl_change,
+        })
+        st.write("Total row:", total_row)
 
     # Create DataFrame and display
     df = pd.DataFrame(table_data)
@@ -744,6 +758,7 @@ def render_active_markets_table(
             'P&L 24h Δ': st.column_config.TextColumn('P&L Δ 24h', width='small'),
         }
     )
+    st.caption(f"Debug: active markets table rows = {len(df)}")
 
     # Add click functionality using selectbox
     st.markdown("---")
