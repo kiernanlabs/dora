@@ -443,13 +443,16 @@ def render_active_markets_table(
         # Calculate 24h filled contracts from pre-fetched trades
         filled_24h = 0
         most_recent_fill_ts = None
+        most_recent_fill_dt = None
         for t in market_trades:
             ts_str = t.get('fill_timestamp') or t.get('timestamp')
             if ts_str:
                 try:
                     ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
-                    if most_recent_fill_ts is None:
-                        most_recent_fill_ts = ts_str  # First one is most recent (sorted)
+                    # Track the most recent fill timestamp
+                    if most_recent_fill_dt is None or ts > most_recent_fill_dt:
+                        most_recent_fill_dt = ts
+                        most_recent_fill_ts = ts_str
                     if ts > cutoff_24h:
                         filled_24h += t.get('size', 0)
                 except Exception:
@@ -460,13 +463,16 @@ def render_active_markets_table(
         market_executions = executions_by_market.get(market_id, [])
         execution_count_24h = 0
         most_recent_exec_ts = None
+        most_recent_exec_dt = None
         for e in market_executions:
             ts_str = e.get('event_ts')
             if ts_str:
                 try:
                     ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
-                    if most_recent_exec_ts is None:
-                        most_recent_exec_ts = ts_str  # First one is most recent (sorted)
+                    # Track the most recent execution timestamp
+                    if most_recent_exec_dt is None or ts > most_recent_exec_dt:
+                        most_recent_exec_dt = ts
+                        most_recent_exec_ts = ts_str
                     if ts > cutoff_24h:
                         execution_count_24h += 1
                 except Exception:
