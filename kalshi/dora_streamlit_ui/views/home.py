@@ -487,6 +487,19 @@ def render_active_markets_table(
         elif net_qty < 0:
             avg_cost = position.get('avg_sell_price', 0)
 
+        # Calculate unrealized P&L
+        # For long positions (net_qty > 0): we'd sell at best_bid, so unrealized = (best_bid - avg_buy_price) * qty
+        # For short positions (net_qty < 0): we'd buy at best_ask, so unrealized = (avg_sell_price - best_ask) * abs(qty)
+        unrealized_pnl = None
+        if net_qty > 0 and avg_cost is not None:
+            best_bid = order_book.get('best_bid')
+            if best_bid:
+                unrealized_pnl = (best_bid - avg_cost) * net_qty
+        elif net_qty < 0 and avg_cost is not None:
+            best_ask = order_book.get('best_ask')
+            if best_ask:
+                unrealized_pnl = (avg_cost - best_ask) * abs(net_qty)
+
         table_data.append({
             'Market': market_id,
             'Best Bid': f"${order_book.get('best_bid', 0.0):.3f}" if order_book.get('best_bid') else 'N/A',
@@ -496,6 +509,7 @@ def render_active_markets_table(
             'Spread': f"${order_book.get('spread', 0.0):.3f}" if order_book.get('spread') else 'N/A',
             'Net Position': net_qty,
             'Avg Cost': f"${avg_cost:.3f}" if avg_cost is not None else 'N/A',
+            'Unrealized P&L': f"${unrealized_pnl:+.2f}" if unrealized_pnl is not None else 'N/A',
             'Position 24h Δ': f"{pos_change_24h:+.0f}",
             'Filled 24h': f"{filled_24h} ({fill_time_ago})",
             'Order Executions 24h': f"{execution_count_24h} ({exec_time_ago})",
@@ -520,6 +534,7 @@ def render_active_markets_table(
             'Spread': st.column_config.TextColumn('Spread', width='small'),
             'Net Position': st.column_config.NumberColumn('Net Position', width='small'),
             'Avg Cost': st.column_config.TextColumn('Avg Cost', width='small'),
+            'Unrealized P&L': st.column_config.TextColumn('Unreal P&L', width='small'),
             'Position 24h Δ': st.column_config.TextColumn('Pos Δ 24h', width='small'),
             'Filled 24h': st.column_config.TextColumn('Filled 24h', width='medium'),
             'Order Executions 24h': st.column_config.TextColumn('Execs 24h', width='medium'),
