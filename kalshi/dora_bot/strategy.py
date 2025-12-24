@@ -218,8 +218,8 @@ class MarketMaker:
         # Apply skew adjustment
         # Skew > 0 (long): lower bid, lower ask to encourage selling
         # Skew < 0 (short): raise bid, raise ask to encourage buying
-        market_bid = inside_bid - skew
-        market_ask = inside_ask - skew
+        market_bid = max(inside_bid - skew, best_bid)
+        market_ask = min(inside_ask - skew, best_ask)
 
         # More aggressive fair value levels to allow us to flex up/down to market
         fair_value_bid = (fair_value - skew)*1.2

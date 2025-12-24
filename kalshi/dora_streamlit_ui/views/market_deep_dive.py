@@ -35,6 +35,81 @@ def get_kalshi_market_url(market_id: str) -> str:
     return f"https://kalshi.com/markets/{market_id}"
 
 
+def build_live_order_debug(executions: List[Dict]) -> Dict[str, Dict]:
+    """Mirror live order detection logic and return intermediate debug data."""
+    accepted_orders: Dict[str, Dict] = {}
+    for e in executions:
+        event_type = e.get('event_type', '')
+        order_id = e.get('order_id')
+        status = e.get('status')
+
+        if not order_id:
+            continue
+
+        if event_type == 'ORDER_RESULT' and status == 'ACCEPTED':
+            accepted_orders[order_id] = {
+                'side': e.get('side'),
+                'price': e.get('price'),
+                'size': e.get('size'),
+                'event_ts': e.get('event_ts', ''),
+            }
+
+    termination_events: List[Dict] = []
+    for e in executions:
+        event_type = e.get('event_type', '')
+        order_id = e.get('order_id')
+        status = e.get('status')
+
+        if not order_id:
+            continue
+
+        if event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
+            termination_events.append({
+                'order_id': order_id,
+                'event_type': event_type,
+                'status': status,
+                'event_ts': e.get('event_ts', ''),
+            })
+        elif event_type == 'FILL':
+            termination_events.append({
+                'order_id': order_id,
+                'event_type': event_type,
+                'status': status,
+                'event_ts': e.get('event_ts', ''),
+            })
+
+    terminated_order_ids = {e['order_id'] for e in termination_events}
+
+    most_recent_by_side: Dict[str, Dict] = {}
+    for order_id, details in accepted_orders.items():
+        side = details.get('side')
+        event_ts = details.get('event_ts', '')
+
+        if not side:
+            continue
+
+        if side not in most_recent_by_side:
+            most_recent_by_side[side] = {'order_id': order_id, 'event_ts': event_ts}
+        else:
+            current_ts = most_recent_by_side[side]['event_ts']
+            if event_ts > current_ts:
+                most_recent_by_side[side] = {'order_id': order_id, 'event_ts': event_ts}
+
+    live_orders: Dict[str, Dict] = {}
+    for side, details in most_recent_by_side.items():
+        order_id = details['order_id']
+        if order_id not in terminated_order_ids:
+            live_orders[order_id] = accepted_orders[order_id]
+
+    return {
+        'accepted_orders': accepted_orders,
+        'termination_events': termination_events,
+        'most_recent_by_side': most_recent_by_side,
+        'terminated_order_ids': terminated_order_ids,
+        'live_orders': live_orders,
+    }
+
+
 def render_decision_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: int):
     """Render decision logs for a specific market."""
     st.subheader(f"Decision Logs for {market_id}")
@@ -195,6 +270,95 @@ def render_execution_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, day
     - 🟨 ORDER_CANCEL: Order cancellation
     - 🟥 ORDER_RESULT (REJECTED): Failed order
     """)
+
+    with st.expander("🔎 Live Order Debug", expanded=False):
+        debug_data = build_live_order_debug(executions)
+
+        accepted_orders = debug_data['accepted_orders']
+        termination_events = debug_data['termination_events']
+        most_recent_by_side = debug_data['most_recent_by_side']
+        terminated_order_ids = debug_data['terminated_order_ids']
+        live_orders = debug_data['live_orders']
+
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Accepted Orders", len(accepted_orders))
+        with col2:
+            st.metric("Terminated Orders", len(terminated_order_ids))
+        with col3:
+            st.metric("Most Recent per Side", len(most_recent_by_side))
+        with col4:
+            st.metric("Live Orders", len(live_orders))
+
+        st.markdown("**Accepted Orders (ORDER_RESULT = ACCEPTED)**")
+        if accepted_orders:
+            accepted_df = pd.DataFrame(
+                [
+                    {
+                        'Order ID': order_id,
+                        'Side': details.get('side'),
+                        'Price': details.get('price'),
+                        'Size': details.get('size'),
+                        'Event TS': to_local_time(details.get('event_ts', '')),
+                    }
+                    for order_id, details in accepted_orders.items()
+                ]
+            )
+            st.dataframe(accepted_df, width='stretch', hide_index=True)
+        else:
+            st.info("No accepted orders found.")
+
+        st.markdown("**Termination Events (CANCELLED / ALREADY_GONE / FILL)**")
+        if termination_events:
+            termination_df = pd.DataFrame(
+                [
+                    {
+                        'Order ID': e.get('order_id'),
+                        'Event Type': e.get('event_type'),
+                        'Status': e.get('status'),
+                        'Event TS': to_local_time(e.get('event_ts', '')),
+                    }
+                    for e in termination_events
+                ]
+            )
+            st.dataframe(termination_df, width='stretch', hide_index=True)
+        else:
+            st.info("No termination events found.")
+
+        st.markdown("**Most Recent Accepted Order by Side**")
+        if most_recent_by_side:
+            most_recent_df = pd.DataFrame(
+                [
+                    {
+                        'Side': side,
+                        'Order ID': details.get('order_id'),
+                        'Event TS': to_local_time(details.get('event_ts', '')),
+                        'Terminated': details.get('order_id') in terminated_order_ids,
+                    }
+                    for side, details in most_recent_by_side.items()
+                ]
+            )
+            st.dataframe(most_recent_df, width='stretch', hide_index=True)
+        else:
+            st.info("No recent orders by side found.")
+
+        st.markdown("**Final Live Orders**")
+        if live_orders:
+            live_orders_df = pd.DataFrame(
+                [
+                    {
+                        'Order ID': order_id,
+                        'Side': details.get('side'),
+                        'Price': details.get('price'),
+                        'Size': details.get('size'),
+                        'Event TS': to_local_time(details.get('event_ts', '')),
+                    }
+                    for order_id, details in live_orders.items()
+                ]
+            )
+            st.dataframe(live_orders_df, width='stretch', hide_index=True)
+        else:
+            st.info("No live orders detected.")
 
     # Allow drilling into specific execution
     st.markdown("---")
