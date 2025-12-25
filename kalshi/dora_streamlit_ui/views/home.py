@@ -180,8 +180,8 @@ def get_time_ago(timestamp_str: Optional[str]) -> str:
         return 'N/A'
 
 
-def render_recent_logs(db_client: ReadOnlyDynamoDBClient):
-    """Render most recent decision and execution logs."""
+def render_recent_logs(db_client: ReadOnlyDynamoDBClient, trades: List[Dict]):
+    """Render most recent decision and fill details."""
     st.subheader("Recent Activity")
 
     col1, col2 = st.columns(2)
@@ -208,28 +208,43 @@ def render_recent_logs(db_client: ReadOnlyDynamoDBClient):
             st.info("No recent decision logs")
 
     with col2:
-        st.markdown("#### Most Recent Execution")
-        execution = db_client.get_most_recent_execution_log()
-        if execution:
-            timestamp = execution.get('event_ts', '')
-            local_time, time_ago = format_timestamp_with_ago(timestamp)
+        st.markdown("#### Most Recent Fill")
+        most_recent_trade = None
+        most_recent_ts = None
+        for trade in trades:
+            ts_str = trade.get('fill_timestamp') or trade.get('timestamp')
+            if not ts_str:
+                continue
+            try:
+                ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+            except Exception:
+                continue
+            if most_recent_ts is None or ts > most_recent_ts:
+                most_recent_ts = ts
+                most_recent_trade = trade
 
-            st.markdown(f"**Market:** {execution.get('market')}")
-            st.markdown(f"**Event:** {execution.get('event_type')}")
+        if most_recent_trade and most_recent_ts:
+            timestamp_str = most_recent_trade.get('fill_timestamp') or most_recent_trade.get('timestamp', '')
+            local_time, time_ago = format_timestamp_with_ago(timestamp_str)
+
+            st.markdown(f"**Market:** {most_recent_trade.get('market_id')}")
+            st.markdown(f"**Side:** {most_recent_trade.get('side')}")
+            st.markdown(f"**Price:** {most_recent_trade.get('price')}")
+            st.markdown(f"**Size:** {most_recent_trade.get('size')}")
             st.markdown(f"**Time:** {local_time}")
             st.markdown(f"*{time_ago}*")
 
             with st.expander("📋 View Details", expanded=False):
                 st.json({
-                    'decision_id': execution.get('decision_id'),
-                    'order_id': execution.get('order_id'),
-                    'side': execution.get('side'),
-                    'price': execution.get('price'),
-                    'size': execution.get('size'),
-                    'status': execution.get('status'),
+                    'fill_id': most_recent_trade.get('fill_id'),
+                    'order_id': most_recent_trade.get('order_id'),
+                    'client_order_id': most_recent_trade.get('client_order_id'),
+                    'status': most_recent_trade.get('status'),
+                    'pnl_realized': most_recent_trade.get('pnl_realized'),
+                    'fees': most_recent_trade.get('fees'),
                 })
         else:
-            st.info("No recent execution logs")
+            st.info("No recent fills")
 
 
 def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, current_position: Dict = None) -> float:
@@ -764,7 +779,7 @@ def render(environment: str, region: str):
     st.markdown("---")
 
     # Middle row - Recent logs
-    render_recent_logs(db_client)
+    render_recent_logs(db_client, trades)
 
     st.markdown("---")
 

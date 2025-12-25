@@ -1034,12 +1034,16 @@ class KalshiExchangeClient:
                         "error_code": error.get("code"),
                     })
                 elif order_data:
+                    # Use remaining_count first (what's on the book),
+                    # then count (original order size),
+                    # then fall back to request size (we know what we asked for)
+                    order_size = order_data.get("remaining_count") or order_data.get("count") or (req.size if req else 0)
                     order = Order(
                         order_id=order_data.get("order_id"),
                         market_id=order_data.get("ticker"),
                         side=order_data.get("side"),
                         price=order_data.get("yes_price", 0) / 100.0,  # Convert cents to decimal
-                        size=order_data.get("count", 0),
+                        size=order_size,
                         decision_id=req.decision_id if req else decision_id,
                         client_order_id=order_data.get("client_order_id"),
                         status="resting",
