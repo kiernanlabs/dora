@@ -3,7 +3,7 @@
 import secrets
 import time
 from typing import Optional, List, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from requests.exceptions import HTTPError, RequestException
 
 from dora_bot.kalshi_client import KalshiHttpClient, Environment
@@ -261,7 +261,7 @@ class KalshiExchangeClient:
                 ask_size=ask_size,
                 bid_levels=bid_levels,
                 ask_levels=ask_levels,
-                timestamp=datetime.utcnow()
+                timestamp=datetime.now(timezone.utc)
             )
 
         return self._retry_request(_fetch)
@@ -520,7 +520,7 @@ class KalshiExchangeClient:
                     client_order_id=client_order_id,
                     filled_size=0,
                     status='pending',
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
                     tif=tif
                 )
             except HTTPError as e:

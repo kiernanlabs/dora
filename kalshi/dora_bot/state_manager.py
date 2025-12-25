@@ -1,7 +1,7 @@
 """State manager for tracking positions, orders, and risk state."""
 
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 from dora_bot.models import Position, Order, Fill, RiskState
@@ -38,6 +38,12 @@ class StateManager:
 
         # Performance tracking
         self.last_sync_time: Optional[datetime] = None
+
+    @staticmethod
+    def _ensure_utc(dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt
 
     def load_from_dynamo(self) -> bool:
         """Load state from DynamoDB on startup.
@@ -158,7 +164,7 @@ class StateManager:
         Returns:
             Dictionary with drift statistics (only populated if log_drift=True)
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         drift_stats = {
             "orders_only_local": [],
             "orders_only_exchange": [],
@@ -181,7 +187,7 @@ class StateManager:
         for order_id in only_local:
             order = self.open_orders.get(order_id)
             if order and order.created_at:
-                age_seconds = (now - order.created_at).total_seconds()
+                age_seconds = (now - self._ensure_utc(order.created_at)).total_seconds()
                 if age_seconds < recent_order_grace_period_seconds:
                     # This order was placed recently - keep it despite not being on exchange yet
                     recent_local_orders[order_id] = order
@@ -211,7 +217,7 @@ class StateManager:
             if recent_local_orders:
                 drift_stats["orders_preserved_recent"] = len(recent_local_orders)
                 for order_id, order in recent_local_orders.items():
-                    age_seconds = (now - order.created_at).total_seconds() if order.created_at else 0
+                    age_seconds = (now - self._ensure_utc(order.created_at)).total_seconds() if order.created_at else 0
                     logger.info("Preserving recently placed order not yet on exchange", extra={
                         "event_type": EventType.LOG,
                         "order_id": order_id,
@@ -277,6 +283,9 @@ class StateManager:
         Note: This rebuilds positions from scratch but does NOT recalculate daily_pnl.
         The daily_pnl is preserved from DynamoDB as it should only track today's PnL.
 
+        Fills that were not previously logged to DynamoDB (missed due to crash) will
+        be logged during this reconciliation.
+
         Args:
             fills: List of fills to process
 
@@ -293,6 +302,7 @@ class StateManager:
         self.positions.clear()
 
         processed_count = 0
+        newly_logged_count = 0
         for fill in sorted_fills:
             # Update position
             if fill.market_id not in self.positions:
@@ -305,6 +315,38 @@ class StateManager:
             if self.risk_state.last_fill_timestamp is None or fill.timestamp > self.risk_state.last_fill_timestamp:
                 self.risk_state.last_fill_timestamp = fill.timestamp
 
+            # Log fills that weren't previously logged (missed due to crash)
+            if fill.fill_id not in self.logged_fills:
+                order_type = 'bid' if fill.side == 'yes' else 'ask'
+                self.dynamo.log_trade({
+                    'market_id': fill.market_id,
+                    'side': fill.side,
+                    'type': order_type,
+                    'price': fill.price,
+                    'size': fill.size,
+                    'fill_price': fill.price,
+                    'fill_size': fill.size,
+                    'status': 'filled',
+                    'pnl_realized': 0,  # Can't calculate PnL delta during reconciliation
+                    'fees': fill.fees,
+                    'order_id': fill.order_id,
+                    'fill_id': fill.fill_id,
+                    'fill_timestamp': fill.timestamp.isoformat(),
+                    'reconciled_at_startup': True,  # Flag to indicate this was backfilled
+                })
+                logger.info("Backfilled missed fill during startup", extra={
+                    "event_type": EventType.FILL,
+                    "market": fill.market_id,
+                    "fill_id": fill.fill_id,
+                    "order_id": fill.order_id,
+                    "side": fill.side,
+                    "price": fill.price,
+                    "size": fill.size,
+                    "fees": fill.fees,
+                    "fill_timestamp": fill.timestamp.isoformat(),
+                })
+                newly_logged_count += 1
+
             # Ensure fill is in logged_fills
             self.logged_fills.add(fill.fill_id)
             processed_count += 1
@@ -312,6 +354,7 @@ class StateManager:
         logger.info("Positions reconciled from fills", extra={
             "event_type": EventType.STATE_LOAD,
             "fills_processed": processed_count,
+            "fills_newly_logged": newly_logged_count,
             "positions_count": len(self.positions),
             "daily_pnl": self.risk_state.daily_pnl,
         })

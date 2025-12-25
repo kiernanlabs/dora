@@ -1,7 +1,7 @@
 """DynamoDB helper functions for persistence."""
 
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
@@ -80,6 +80,17 @@ class DynamoDBClient:
             return [DynamoDBClient._to_dynamo_item(item) for item in obj]
         return obj
 
+    @staticmethod
+    def _parse_datetime(value: Optional[str]) -> datetime:
+        """Parse an ISO timestamp and normalize to UTC if missing tzinfo."""
+        if value:
+            parsed = datetime.fromisoformat(value)
+        else:
+            parsed = datetime.now(timezone.utc)
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed
+
     # Market Config operations
 
     def get_market_config(self, market_id: str) -> Optional[MarketConfig]:
@@ -107,7 +118,7 @@ class DynamoDBClient:
                 inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
                 fair_value=item.get('fair_value'),
                 toxicity_score=item.get('toxicity_score'),
-                updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
+                updated_at=self._parse_datetime(item.get('updated_at'))
             )
         except ClientError as e:
             logger.error("Error fetching market config", extra={
@@ -144,7 +155,7 @@ class DynamoDBClient:
                     inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
                     fair_value=item.get('fair_value'),
                     toxicity_score=item.get('toxicity_score'),
-                    updated_at=datetime.fromisoformat(item.get('updated_at', datetime.utcnow().isoformat()))
+                    updated_at=self._parse_datetime(item.get('updated_at'))
                 )
 
                 if not enabled_only or config.enabled:
@@ -177,7 +188,7 @@ class DynamoDBClient:
                 'min_spread': self._to_dynamo_item(config.min_spread),
                 'quote_size': config.quote_size,
                 'inventory_skew_factor': self._to_dynamo_item(config.inventory_skew_factor),
-                'updated_at': datetime.utcnow().isoformat()
+                'updated_at': datetime.now(timezone.utc).isoformat()
             }
 
             if config.fair_value is not None:
@@ -289,7 +300,7 @@ class DynamoDBClient:
                     client_order_id=order_data.get('client_order_id'),
                     filled_size=order_data.get('filled_size', 0),
                     status=order_data.get('status', 'pending'),
-                    created_at=datetime.fromisoformat(created_at) if created_at else datetime.utcnow(),
+                    created_at=self._parse_datetime(created_at),
                     tif=order_data.get('tif', 'gtc')
                 )
 
@@ -330,7 +341,7 @@ class DynamoDBClient:
             self.state_table.put_item(Item={
                 'key': 'open_orders',
                 'orders': orders_data,
-                'last_updated': datetime.utcnow().isoformat()
+                'last_updated': datetime.now(timezone.utc).isoformat()
             })
             return True
         except ClientError as e:
@@ -414,10 +425,10 @@ class DynamoDBClient:
 
             return RiskState(
                 daily_pnl=item.get('daily_pnl', 0.0),
-                last_fill_timestamp=datetime.fromisoformat(last_fill_ts) if last_fill_ts else None,
+                last_fill_timestamp=self._parse_datetime(last_fill_ts) if last_fill_ts else None,
                 trading_halted=item.get('trading_halted', False),
                 halt_reason=item.get('halt_reason'),
-                last_updated=datetime.fromisoformat(item.get('last_updated', datetime.utcnow().isoformat()))
+                last_updated=self._parse_datetime(item.get('last_updated'))
             )
         except ClientError as e:
             logger.error("Error fetching risk state", extra={
@@ -441,7 +452,7 @@ class DynamoDBClient:
                 'key': 'risk_state',
                 'daily_pnl': self._to_dynamo_item(state.daily_pnl),
                 'trading_halted': state.trading_halted,
-                'last_updated': datetime.utcnow().isoformat()
+                'last_updated': datetime.now(timezone.utc).isoformat()
             }
 
             if state.last_fill_timestamp:
@@ -538,8 +549,8 @@ class DynamoDBClient:
             True if successful
         """
         try:
-            date = datetime.utcnow().strftime('%Y-%m-%d')
-            timestamp = datetime.utcnow().isoformat()
+            date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            timestamp = datetime.now(timezone.utc).isoformat()
             order_id = trade_data.get('order_id', 'unknown')
             fill_id = trade_data.get('fill_id', 'unknown')
 
@@ -573,8 +584,8 @@ class DynamoDBClient:
             True if successful
         """
         try:
-            date = datetime.utcnow().strftime('%Y-%m-%d')
-            timestamp = datetime.utcnow().isoformat()
+            date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             item = self._to_dynamo_item(decision_data)
             item['date'] = date
@@ -635,7 +646,7 @@ class DynamoDBClient:
             self.state_table.put_item(Item={
                 'key': 'api_errors',
                 'errors': self._to_dynamo_item(errors),
-                'last_updated': datetime.utcnow().isoformat()
+                'last_updated': datetime.now(timezone.utc).isoformat()
             })
             return True
         except ClientError as e:

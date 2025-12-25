@@ -321,9 +321,12 @@ class MarketMaker:
                 if utilization > 0.8:
                     size_factor = (1.0 - utilization) / 0.2
                     return int(base_size * size_factor)
-        
-            # If not close to limit, return base or remaining capacity (if position is positive)
-            return int(min(base_size, max_inventory - position_qty))
+            
+                # If not close to limit, return base or remaining capacity (if position is positive)
+                return int(min(base_size, max_inventory - position_qty))        
+            
+            # otherwise return max base_size - position quantity (so if we are short 17, then set quantity to 17)
+            return int(max(base_size, -position_qty))
 
         else:
             # Asking (selling YES) - reduce if short
@@ -334,8 +337,11 @@ class MarketMaker:
                     size_factor = (1.0 - utilization) / 0.2
                     return int(base_size * size_factor)
                  
-            # If not close to limit, return base or remaining capacity (if position is negative)
-            return int(min(base_size, abs(max_inventory + position_qty)))
+                # If not close to limit, return base or remaining capacity (if position is negative)
+                return int(min(base_size, abs(max_inventory + position_qty)))
+            
+            # otherwise return max base_size, position quantity (so if we are long 17, then set quantity to 17)
+            return int(max(base_size, position_qty))            
 
     def _round_price(self, price: float) -> float:
         """Round price to tick size.

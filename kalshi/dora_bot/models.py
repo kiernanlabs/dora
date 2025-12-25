@@ -1,9 +1,13 @@
 """Data models for the Kalshi market making bot."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Literal, List, Tuple
 from decimal import Decimal
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 @dataclass
@@ -19,7 +23,7 @@ class OrderBook:
     # Each level is (price, size)
     bid_levels: List[Tuple[float, int]] = field(default_factory=list)
     ask_levels: List[Tuple[float, int]] = field(default_factory=list)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
 
     @property
     def spread(self) -> Optional[float]:
@@ -67,7 +71,7 @@ class Order:
     client_order_id: Optional[str] = None
     filled_size: int = 0
     status: Literal["pending", "resting", "filled", "cancelled"] = "pending"
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
     tif: str = "gtc"  # time in force: gtc, ioc, fok
 
     @property
@@ -182,7 +186,7 @@ class MarketConfig:
     inventory_skew_factor: float = 0.5  # How aggressively to skew quotes based on inventory
     fair_value: Optional[float] = None  # Override mid-price with custom fair value
     toxicity_score: Optional[float] = None
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -204,7 +208,7 @@ class RiskState:
     last_fill_timestamp: Optional[datetime] = None
     trading_halted: bool = False
     halt_reason: Optional[str] = None
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    last_updated: datetime = field(default_factory=utc_now)
 
 
 @dataclass
