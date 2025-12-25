@@ -743,6 +743,15 @@ def render(environment: str, region: str):
         timings_str = ", ".join(f"{label}={elapsed:.3f}s" for label, elapsed in timings)
         logger.info("Home page fetch timings: %s (total=%.3fs)", timings_str, overall_elapsed)
 
+    if timings:
+        with st.expander("Debug: Load Timings", expanded=False):
+            st.write(f"Total load: {overall_elapsed:.3f}s")
+            st.dataframe(
+                pd.DataFrame(timings, columns=["call", "seconds"]).sort_values("seconds", ascending=False),
+                hide_index=True,
+                width='stretch',
+            )
+
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])
 
