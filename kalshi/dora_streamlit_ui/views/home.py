@@ -327,90 +327,15 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
     return 0.0
 
 
-def get_live_orders_from_executions(
-    executions: List[Dict],
-    extra_terminated_order_ids: Optional[set] = None,
-) -> Dict[str, Dict]:
-    """
-    Determine which orders are currently live based on execution logs.
-
-    Only the MOST RECENT accepted order per side (bid/ask) can be live.
-    An order is live if:
-    - It is the most recent ORDER_RESULT event with status=ACCEPTED for its side
-    - It does NOT have ANY ORDER_RESULT event with status=CANCELLED
-
-    Returns dict of order_id -> order details (side, price, size)
-    """
-    # First pass: collect all ACCEPTED orders with their timestamps
-    accepted_orders: Dict[str, Dict] = {}
-    for e in executions:
-        event_type = e.get('event_type', '')
-        order_id = e.get('order_id')
-        status = e.get('status')
-
-        if not order_id:
-            continue
-
-        if event_type == 'ORDER_RESULT' and status == 'ACCEPTED':
-            accepted_orders[order_id] = {
-                'side': e.get('side'),
-                'price': e.get('price'),
-                'size': e.get('size'),
-                'event_ts': e.get('event_ts', ''),
-            }
-
-    # Second pass: find all order_ids that have been CANCELLED or FILLED
-    terminated_order_ids: set = set()
-    for e in executions:
-        event_type = e.get('event_type', '')
-        order_id = e.get('order_id')
-        status = e.get('status')
-
-        if not order_id:
-            continue
-
-        if event_type == 'ORDER_RESULT' and status in ('CANCELLED', 'ALREADY_GONE'):
-            terminated_order_ids.add(order_id)
-        elif event_type == 'FILL':
-            terminated_order_ids.add(order_id)
-
-    # Third pass: find the most recent ACCEPTED order per side (bid/ask)
-    # Only the most recent order per side can be live
-    most_recent_by_side: Dict[str, tuple] = {}  # side -> (order_id, event_ts)
-
-    for order_id, details in accepted_orders.items():
-        side = details.get('side')
-        event_ts = details.get('event_ts', '')
-
-        if not side:
-            continue
-
-        if side not in most_recent_by_side:
-            most_recent_by_side[side] = (order_id, event_ts)
-        else:
-            _, current_ts = most_recent_by_side[side]
-            if event_ts > current_ts:
-                most_recent_by_side[side] = (order_id, event_ts)
-
-    if extra_terminated_order_ids:
-        terminated_order_ids.update(extra_terminated_order_ids)
-
-    # Return only the most recent order per side, if it hasn't been terminated
-    live_orders: Dict[str, Dict] = {}
-    for side, (order_id, _) in most_recent_by_side.items():
-        if order_id not in terminated_order_ids:
-            live_orders[order_id] = accepted_orders[order_id]
-
-    return live_orders
-
-
 def render_active_markets_table(
     db_client: ReadOnlyDynamoDBClient,
     positions: Dict,
     market_configs: List[Dict],
     trades: List[Dict],
     decisions: List[Dict],
-    executions: List[Dict]
+    executions: List[Dict],
+    open_orders_by_market: Dict[str, List[Dict]],
+    open_orders_last_updated: Optional[str] = None,
 ):
     """Render active markets table with positions and metrics.
 
@@ -421,6 +346,8 @@ def render_active_markets_table(
         trades: Pre-fetched trades (last 30 days)
         decisions: Pre-fetched decision logs (last 1 day)
         executions: Pre-fetched execution logs (last 1 day)
+        open_orders_by_market: Pre-fetched open orders grouped by market_id (from DynamoDB state)
+        open_orders_last_updated: Timestamp when open orders were last synced with exchange
     """
     st.subheader("Active Markets")
 
@@ -459,16 +386,10 @@ def render_active_markets_table(
     # Pre-calculate 24h cutoff
     cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
 
-    # Track terminations across all markets to handle legacy events missing market_id
-    global_terminated_order_ids: set = set()
-    for e in executions:
-        order_id = e.get('order_id')
-        if not order_id:
-            continue
-        if e.get('event_type') == 'ORDER_RESULT' and e.get('status') in ('CANCELLED', 'ALREADY_GONE'):
-            global_terminated_order_ids.add(order_id)
-        elif e.get('event_type') == 'FILL':
-            global_terminated_order_ids.add(order_id)
+    # Display open orders sync timestamp if available
+    if open_orders_last_updated:
+        sync_time_ago = get_time_ago(open_orders_last_updated)
+        st.caption(f"Open orders last synced with exchange: {sync_time_ago}")
 
     # Build table data
     table_data = []
@@ -490,16 +411,14 @@ def render_active_markets_table(
         target_bids.sort(key=lambda x: x.get('price', 0), reverse=True)
         target_asks.sort(key=lambda x: x.get('price', 0))
 
-        # Get ACTUAL live orders from execution logs
-        market_executions = executions_by_market.get(market_id, [])
-        live_orders = get_live_orders_from_executions(
-            market_executions,
-            extra_terminated_order_ids=global_terminated_order_ids,
-        )
+        # Get ACTUAL live orders from DynamoDB state (synced from exchange)
+        # Orders have side='yes' (bid) or side='no' (ask) in Kalshi format
+        market_orders = open_orders_by_market.get(market_id, [])
 
         # Separate live orders into bids and asks
-        live_bids = [o for o in live_orders.values() if o.get('side') == 'bid']
-        live_asks = [o for o in live_orders.values() if o.get('side') == 'ask']
+        # side='yes' means buying YES = bid, side='no' means buying NO = selling YES = ask
+        live_bids = [o for o in market_orders if o.get('side') == 'yes']
+        live_asks = [o for o in market_orders if o.get('side') == 'no']
         live_bids.sort(key=lambda x: x.get('price', 0) or 0, reverse=True)
         live_asks.sort(key=lambda x: x.get('price', 0) or 0)
 
@@ -801,6 +720,10 @@ def render(environment: str, region: str):
         # Pre-fetch decision logs and execution logs for the active markets table
         decisions = db_client.get_recent_decision_logs(days=1)
         executions = db_client.get_recent_execution_logs(days=1)
+        # Fetch open orders from DynamoDB state (synced from exchange by bot)
+        open_orders_data = db_client.get_open_orders()
+        open_orders_by_market = db_client.get_open_orders_by_market()
+        open_orders_last_updated = open_orders_data.get('last_updated')
 
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])
@@ -819,7 +742,16 @@ def render(environment: str, region: str):
     st.markdown("---")
 
     # Bottom row - Active markets table
-    render_active_markets_table(db_client, positions, market_configs, trades, decisions, executions)
+    render_active_markets_table(
+        db_client,
+        positions,
+        market_configs,
+        trades,
+        decisions,
+        executions,
+        open_orders_by_market,
+        open_orders_last_updated,
+    )
 
     # Display risk state
     st.markdown("---")

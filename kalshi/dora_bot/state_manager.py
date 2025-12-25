@@ -135,11 +135,13 @@ class StateManager:
             "orders_only_exchange": [],
             "orders_matched": 0,
         }
-
+        orders = {}
         if log_drift:
             # Build sets of order IDs for comparison
             local_order_ids = set(self.open_orders.keys())
             exchange_order_ids = {order.order_id for order in exchange_orders}
+            orders['local'] = local_order_ids
+            orders['exchange'] = exchange_order_ids
 
             # Orders in local state but not on exchange (stale local state)
             only_local = local_order_ids - exchange_order_ids
@@ -192,7 +194,7 @@ class StateManager:
                 "drift_matched": drift_stats["orders_matched"],
             })
 
-        logger.info("State reconciled with exchange", extra=log_extra)
+        logger.info(f"State reconciled with exchange: order dump: {orders}", extra=log_extra)
 
         return drift_stats
 

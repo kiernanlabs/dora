@@ -131,6 +131,49 @@ class ReadOnlyDynamoDBClient:
             logger.error(f"Error fetching risk state: {e}")
             return None
 
+    def get_open_orders(self) -> Dict[str, Dict]:
+        """Get all current open orders from state table.
+
+        Returns:
+            Dictionary mapping order_id to order details, or empty dict if none.
+            Also includes 'last_updated' timestamp in the response.
+        """
+        try:
+            response = self.state_table.get_item(Key={'key': 'open_orders'})
+            item = response.get('Item')
+            if item:
+                return self._deserialize_decimal(item)
+            return {}
+        except Exception as e:
+            logger.error(f"Error fetching open orders: {e}")
+            return {}
+
+    def get_open_orders_by_market(self) -> Dict[str, List[Dict]]:
+        """Get open orders grouped by market_id.
+
+        Returns:
+            Dictionary mapping market_id to list of orders for that market.
+        """
+        try:
+            open_orders_data = self.get_open_orders()
+            orders = open_orders_data.get('orders', {})
+
+            # Group by market_id
+            by_market: Dict[str, List[Dict]] = {}
+            for order_id, order in orders.items():
+                market_id = order.get('market_id')
+                if market_id:
+                    if market_id not in by_market:
+                        by_market[market_id] = []
+                    # Include order_id in the order dict for reference
+                    order_with_id = {'order_id': order_id, **order}
+                    by_market[market_id].append(order_with_id)
+
+            return by_market
+        except Exception as e:
+            logger.error(f"Error grouping open orders by market: {e}")
+            return {}
+
     # ==================== Trade Log Methods ====================
 
     def get_recent_trades(self, days: int = 7, market_id: Optional[str] = None) -> List[Dict]:
