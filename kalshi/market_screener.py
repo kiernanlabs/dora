@@ -328,7 +328,7 @@ Please return your assessment in the form of a likelihood percentage (number fro
 Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
 
         response = client.responses.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,
@@ -428,7 +428,7 @@ Please return your assessment in the form of a likelihood percentage (number fro
 Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
 
         response = client.responses.create(
-                model="gpt-5.2",
+                model="gpt-5-mini",
                 reasoning={"effort": "medium"},
                 tools=[{"type": "web_search"}],
                 input=prompt,

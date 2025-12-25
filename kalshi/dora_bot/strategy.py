@@ -222,8 +222,11 @@ class MarketMaker:
         market_ask = min(inside_ask - skew, best_ask)
 
         # More aggressive fair value levels to allow us to flex up/down to market
-        fair_value_bid = (fair_value - skew)*1.1
-        fair_value_ask = (fair_value - skew)*0.9
+        fair_value_bid = (fair_value - skew) + 0.1
+        fair_value_ask = (fair_value - skew) - 0.1
+
+        if skew < 0: fair_value_bid = market_bid # if we need to buy, then just bid at market
+        if skew > 0: fair_value_ask = market_ask # if we need to sell, then just ask at market
 
         # If the market is telling us better prices than fair value levels, use those
         target_bid = min(market_bid, fair_value_bid)

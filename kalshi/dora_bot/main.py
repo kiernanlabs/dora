@@ -295,7 +295,7 @@ class DoraBot:
                     self.state.save_to_dynamo()
                     break
 
-                # Refresh configs periodically
+                # Refresh configs and reconcile with exchange periodically
                 if self.loop_count % self.config_refresh_interval == 0:
                     market_configs = self.dynamo.get_all_market_configs(enabled_only=True)
                     logger.info("Refreshed market configs", extra={
@@ -303,6 +303,20 @@ class DoraBot:
                         "enabled_markets": len(market_configs),
                         "loop_count": self.loop_count,
                     })
+
+                    # Reconcile open orders with exchange to fix any state drift
+                    exchange_orders = self.exchange.get_open_orders()
+                    drift_stats = self.state.reconcile_with_exchange(exchange_orders, log_drift=True)
+
+                    # Log if significant drift detected
+                    if drift_stats["orders_only_local"] or drift_stats["orders_only_exchange"]:
+                        logger.warning("Order state drift detected during reconciliation", extra={
+                            "event_type": EventType.LOG,
+                            "loop_count": self.loop_count,
+                            "stale_local_orders": len(drift_stats["orders_only_local"]),
+                            "untracked_exchange_orders": len(drift_stats["orders_only_exchange"]),
+                            "matched_orders": drift_stats["orders_matched"],
+                        })
                 else:
                     market_configs = self.dynamo.get_all_market_configs(enabled_only=True)
 

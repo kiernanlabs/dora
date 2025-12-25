@@ -6,7 +6,7 @@ from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
 
-from dora_bot.models import MarketConfig, GlobalConfig, RiskState, Position
+from dora_bot.models import MarketConfig, GlobalConfig, RiskState, Position, Order
 from dora_bot.structured_logger import get_logger, EventType
 
 logger = get_logger(__name__)
@@ -257,6 +257,84 @@ class DynamoDBClient:
             return True
         except ClientError as e:
             logger.error("Error saving positions", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
+            return False
+
+    def get_open_orders(self) -> Dict[str, Order]:
+        """Fetch open orders from state table.
+
+        Returns:
+            Dictionary mapping order_id to Order
+        """
+        try:
+            response = self.state_table.get_item(Key={'key': 'open_orders'})
+            if 'Item' not in response:
+                return {}
+
+            orders_data = self._serialize_decimal(response['Item'].get('orders', {}))
+            orders = {}
+
+            for order_id, order_data in orders_data.items():
+                created_at = order_data.get('created_at')
+                orders[order_id] = Order(
+                    order_id=order_id,
+                    market_id=order_data.get('market_id', ''),
+                    side=order_data.get('side', 'yes'),
+                    price=order_data.get('price', 0.0),
+                    size=order_data.get('size', 0),
+                    decision_id=order_data.get('decision_id'),
+                    client_order_id=order_data.get('client_order_id'),
+                    filled_size=order_data.get('filled_size', 0),
+                    status=order_data.get('status', 'pending'),
+                    created_at=datetime.fromisoformat(created_at) if created_at else datetime.utcnow(),
+                    tif=order_data.get('tif', 'gtc')
+                )
+
+            return orders
+        except ClientError as e:
+            logger.error("Error fetching open orders", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
+            return {}
+
+    def save_open_orders(self, orders: Dict[str, Order]) -> bool:
+        """Save open orders to state table.
+
+        Args:
+            orders: Dictionary mapping order_id to Order
+
+        Returns:
+            True if successful
+        """
+        try:
+            orders_data = {}
+            for order_id, order in orders.items():
+                orders_data[order_id] = self._to_dynamo_item({
+                    'market_id': order.market_id,
+                    'side': order.side,
+                    'price': order.price,
+                    'size': order.size,
+                    'decision_id': order.decision_id,
+                    'client_order_id': order.client_order_id,
+                    'filled_size': order.filled_size,
+                    'status': order.status,
+                    'created_at': order.created_at.isoformat() if order.created_at else None,
+                    'tif': order.tif
+                })
+
+            self.state_table.put_item(Item={
+                'key': 'open_orders',
+                'orders': orders_data,
+                'last_updated': datetime.utcnow().isoformat()
+            })
+            return True
+        except ClientError as e:
+            logger.error("Error saving open orders", extra={
                 "event_type": EventType.ERROR,
                 "error_type": "ClientError",
                 "error_msg": str(e),

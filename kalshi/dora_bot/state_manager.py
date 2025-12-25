@@ -95,9 +95,17 @@ class StateManager:
                 })
                 return False
 
+            # Save open orders
+            if not self.dynamo.save_open_orders(self.open_orders):
+                logger.error("Failed to save open orders", extra={
+                    "event_type": EventType.ERROR,
+                })
+                return False
+
             logger.debug("State saved to DynamoDB", extra={
                 "event_type": EventType.STATE_SAVE,
                 "positions_count": len(self.positions),
+                "open_orders_count": len(self.open_orders),
                 "daily_pnl": self.risk_state.daily_pnl,
             })
 
@@ -112,12 +120,60 @@ class StateManager:
             })
             return False
 
-    def reconcile_with_exchange(self, exchange_orders: List[Order]) -> None:
+    def reconcile_with_exchange(self, exchange_orders: List[Order], log_drift: bool = False) -> dict:
         """Reconcile in-memory state with exchange reality.
 
         Args:
             exchange_orders: List of open orders from exchange
+            log_drift: If True, detect and log differences between local and exchange state
+
+        Returns:
+            Dictionary with drift statistics (only populated if log_drift=True)
         """
+        drift_stats = {
+            "orders_only_local": [],
+            "orders_only_exchange": [],
+            "orders_matched": 0,
+        }
+
+        if log_drift:
+            # Build sets of order IDs for comparison
+            local_order_ids = set(self.open_orders.keys())
+            exchange_order_ids = {order.order_id for order in exchange_orders}
+
+            # Orders in local state but not on exchange (stale local state)
+            only_local = local_order_ids - exchange_order_ids
+            if only_local:
+                drift_stats["orders_only_local"] = list(only_local)
+                for order_id in only_local:
+                    order = self.open_orders.get(order_id)
+                    logger.warning("Order in local state but not on exchange (stale)", extra={
+                        "event_type": EventType.LOG,
+                        "order_id": order_id,
+                        "market": order.market_id if order else "unknown",
+                        "side": order.side if order else "unknown",
+                        "price": order.price if order else 0,
+                        "size": order.size if order else 0,
+                    })
+
+            # Orders on exchange but not in local state (missed tracking)
+            only_exchange = exchange_order_ids - local_order_ids
+            if only_exchange:
+                drift_stats["orders_only_exchange"] = list(only_exchange)
+                exchange_orders_map = {o.order_id: o for o in exchange_orders}
+                for order_id in only_exchange:
+                    order = exchange_orders_map.get(order_id)
+                    logger.warning("Order on exchange but not in local state (untracked)", extra={
+                        "event_type": EventType.LOG,
+                        "order_id": order_id,
+                        "market": order.market_id if order else "unknown",
+                        "side": order.side if order else "unknown",
+                        "price": order.price if order else 0,
+                        "size": order.size if order else 0,
+                    })
+
+            drift_stats["orders_matched"] = len(local_order_ids & exchange_order_ids)
+
         # Clear existing open orders
         self.open_orders.clear()
 
@@ -125,10 +181,20 @@ class StateManager:
         for order in exchange_orders:
             self.open_orders[order.order_id] = order
 
-        logger.info("State reconciled with exchange", extra={
+        log_extra = {
             "event_type": EventType.STATE_LOAD,
             "open_orders_count": len(self.open_orders),
-        })
+        }
+        if log_drift:
+            log_extra.update({
+                "drift_only_local": len(drift_stats["orders_only_local"]),
+                "drift_only_exchange": len(drift_stats["orders_only_exchange"]),
+                "drift_matched": drift_stats["orders_matched"],
+            })
+
+        logger.info("State reconciled with exchange", extra=log_extra)
+
+        return drift_stats
 
     def reconcile_positions_from_fills(self, fills: List[Fill]) -> int:
         """Reconcile positions from fills, processing even already-logged fills.

@@ -19,6 +19,10 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.exceptions import InvalidSignature
 
+from dora_bot.structured_logger import get_logger, EventType
+
+logger = get_logger(__name__)
+
 
 class Environment(Enum):
     DEMO = "demo"
@@ -117,25 +121,30 @@ class KalshiHttpClient(KalshiBaseClient):
     def raise_if_bad_response(self, response: requests.Response) -> None:
         """Raises an HTTPError if the response status code indicates an error."""
         if response.status_code not in range(200, 299):
-            # Log the full raw response for debugging
-            print(f"Kalshi API Error (status {response.status_code}):")
-            print(f"  URL: {response.url}")
-            print(f"  Headers: {dict(response.headers)}")
-            print(f"  Response Body: {response.text}")
+            error_fields = {
+                "event_type": EventType.ERROR,
+                "status_code": response.status_code,
+                "url": response.url,
+                "response_headers": dict(response.headers),
+                "response_body": response.text,
+            }
 
             # Try to extract structured error details
             try:
                 error_data = response.json()
-                if error_data.get('code') or error_data.get('message'):
-                    error_msg = f"  Structured Error: {error_data.get('code', 'N/A')} - {error_data.get('message', 'N/A')}"
-                    if 'details' in error_data:
-                        error_msg += f" | Details: {error_data['details']}"
-                    if 'service' in error_data:
-                        error_msg += f" | Service: {error_data['service']}"
-                    print(error_msg)
+                if isinstance(error_data, dict):
+                    if error_data.get('code') is not None:
+                        error_fields['error_code'] = error_data.get('code')
+                    if error_data.get('message') is not None:
+                        error_fields['error_msg'] = error_data.get('message')
+                    if error_data.get('details') is not None:
+                        error_fields['error_details'] = error_data.get('details')
+                    if error_data.get('service') is not None:
+                        error_fields['error_service'] = error_data.get('service')
             except:
                 pass
 
+            logger.error("Kalshi API Error", extra=error_fields)
             response.raise_for_status()
 
     def post(self, path: str, body: dict) -> Any:
