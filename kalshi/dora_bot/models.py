@@ -194,6 +194,7 @@ class GlobalConfig:
     trading_enabled: bool = True
     risk_aversion_k: float = 0.5
     cancel_on_startup: bool = True  # Whether to cancel all orders on bot startup
+    use_batch_execution: bool = False  # Use batch order execution (new architecture)
 
 
 @dataclass
@@ -251,3 +252,47 @@ class Balance:
     def total(self) -> float:
         """Total available funds."""
         return self.balance + self.payout
+
+
+# Batch operation models
+
+@dataclass
+class OrderRequest:
+    """Request to place a new order."""
+    market_id: str
+    side: Literal["yes", "no"]  # Kalshi format
+    price: int  # Price in cents (1-99)
+    size: int
+    client_order_id: str
+    decision_id: Optional[str] = None
+
+
+@dataclass
+class BatchCancelResult:
+    """Result from a single batch cancel API call."""
+    succeeded: List[str]  # order_ids that were cancelled
+    failed: List[Tuple[str, str]]  # (order_id, error_message)
+
+
+@dataclass
+class BatchPlaceResult:
+    """Result from a single batch place API call."""
+    placed: List[Order]
+    failed: List[Tuple[OrderRequest, str]]  # (request, error_message)
+
+
+@dataclass
+class BatchCancelSummary:
+    """Summary across all cancel batches in a loop."""
+    succeeded: int
+    failed: int
+    failures: List[Tuple[str, str]]  # (order_id, error_message) - for recurring failure tracking
+
+
+@dataclass
+class BatchPlaceSummary:
+    """Summary across all place batches in a loop."""
+    succeeded: int
+    failed: int
+    failures: List[Tuple[OrderRequest, str]]  # for recurring failure tracking
+    placed_orders: List[Order] = field(default_factory=list)

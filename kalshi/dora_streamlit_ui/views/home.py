@@ -8,10 +8,14 @@ from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional
 import sys
 import os
+import time
+import logging
 
 # Add parent directory to path to import db_client
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from db_client import ReadOnlyDynamoDBClient
+
+logger = logging.getLogger(__name__)
 
 
 def to_local_time(timestamp_str: str) -> str:
@@ -712,18 +716,32 @@ def render(environment: str, region: str):
 
     # Fetch data - bulk load everything upfront to avoid N+1 queries
     with st.spinner("Loading data from DynamoDB..."):
-        positions = db_client.get_positions()
-        market_configs = db_client.get_all_market_configs(enabled_only=True)
-        pnl_data = db_client.get_pnl_over_time(days=30)
+        timings: List[tuple[str, float]] = []
+
+        def _timed(label: str, func, *args, **kwargs):
+            start = time.perf_counter()
+            result = func(*args, **kwargs)
+            elapsed = time.perf_counter() - start
+            timings.append((label, elapsed))
+            return result
+
+        overall_start = time.perf_counter()
+        positions = _timed("get_positions", db_client.get_positions)
+        market_configs = _timed("get_all_market_configs", db_client.get_all_market_configs, enabled_only=True)
+        pnl_data = _timed("get_pnl_over_time", db_client.get_pnl_over_time, days=30)
         # Load all trades (at least 30 days) to properly calculate realized P&L with cost basis
-        trades = db_client.get_recent_trades(days=30)
+        trades = _timed("get_recent_trades", db_client.get_recent_trades, days=30)
         # Pre-fetch decision logs and execution logs for the active markets table
-        decisions = db_client.get_recent_decision_logs(days=1)
-        executions = db_client.get_recent_execution_logs(days=1)
+        decisions = _timed("get_recent_decision_logs", db_client.get_recent_decision_logs, days=1)
+        executions = _timed("get_recent_execution_logs", db_client.get_recent_execution_logs, days=1)
         # Fetch open orders from DynamoDB state (synced from exchange by bot)
-        open_orders_data = db_client.get_open_orders()
-        open_orders_by_market = db_client.get_open_orders_by_market()
+        open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
+        open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)
         open_orders_last_updated = open_orders_data.get('last_updated')
+
+        overall_elapsed = time.perf_counter() - overall_start
+        timings_str = ", ".join(f"{label}={elapsed:.3f}s" for label, elapsed in timings)
+        logger.info("Home page fetch timings: %s (total=%.3fs)", timings_str, overall_elapsed)
 
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])

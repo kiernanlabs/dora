@@ -27,6 +27,7 @@ class EventType(str, Enum):
     HEARTBEAT = "HEARTBEAT"
     DECISION_MADE = "DECISION_MADE"
     ORDER_PLACE = "ORDER_PLACE"
+    ORDER_PLACED = "ORDER_PLACED"  # Successful order placement
     ORDER_CANCEL = "ORDER_CANCEL"
     ORDER_RESULT = "ORDER_RESULT"
     FILL = "FILL"
@@ -37,7 +38,19 @@ class EventType(str, Enum):
     ERROR = "ERROR"
     # Generic for logs that don't fit a specific event type
     LOG = "LOG"
-    FLAG = "FLAG" # for one-off debugging
+    FLAG = "FLAG"  # for one-off debugging
+
+    # Batch operations
+    BATCH_CANCEL = "BATCH_CANCEL"  # Starting a cancel batch
+    BATCH_CANCEL_FAILED = "BATCH_CANCEL_FAILED"  # Individual cancel failure
+    BATCH_CANCEL_SUMMARY = "BATCH_CANCEL_SUMMARY"  # Summary after all cancel batches
+    BATCH_PLACE = "BATCH_PLACE"  # Starting a place batch
+    BATCH_PLACE_FAILED = "BATCH_PLACE_FAILED"  # Individual place failure
+    BATCH_PLACE_SUMMARY = "BATCH_PLACE_SUMMARY"  # Summary after all place batches
+
+    # Rate limiting
+    RATE_LIMIT = "RATE_LIMIT"  # Hit rate limit (429 response)
+    RATE_LIMIT_BACKOFF = "RATE_LIMIT_BACKOFF"  # Backing off due to rate limits
 
 
 # Context variables for correlation IDs

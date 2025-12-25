@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from requests.exceptions import HTTPError, RequestException
 
 from dora_bot.kalshi_client import KalshiHttpClient, Environment
-from dora_bot.models import OrderBook, Order, Fill, Balance
+from dora_bot.models import OrderBook, Order, Fill, Balance, OrderRequest, BatchCancelResult, BatchPlaceResult
 from dora_bot.structured_logger import get_logger, EventType, log_execution_event
 
 logger = get_logger(__name__)
@@ -830,6 +830,275 @@ class KalshiExchangeClient:
             "total_orders": len(open_orders),
         })
         return cancelled_count
+
+    def batch_cancel_orders(
+        self,
+        order_ids: List[str],
+        decision_id: Optional[str] = None,
+    ) -> BatchCancelResult:
+        """Cancel up to 20 orders in a single API call.
+
+        Uses Kalshi's batch cancel endpoint for efficiency.
+
+        Args:
+            order_ids: List of order IDs to cancel (max 20)
+            decision_id: Decision ID for correlation
+
+        Returns:
+            BatchCancelResult with succeeded/failed order IDs
+        """
+        if not order_ids:
+            return BatchCancelResult(succeeded=[], failed=[])
+
+        if len(order_ids) > 20:
+            raise ValueError(f"Batch cancel supports max 20 orders, got {len(order_ids)}")
+
+        start_time = time.time()
+
+        logger.info("Batch cancelling orders", extra={
+            "event_type": EventType.BATCH_CANCEL,
+            "decision_id": decision_id,
+            "order_count": len(order_ids),
+            "order_ids": order_ids,
+        })
+
+        try:
+            # Kalshi batch cancel endpoint
+            response = self.client.delete_with_body(
+                "/trade-api/v2/portfolio/orders/batched",
+                {"ids": order_ids}
+            )
+
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            # Parse response - each order has its own result
+            succeeded = []
+            failed = []
+
+            # Response format: {"orders": [{"order": {...}, "error": null}, ...]}
+            orders_response = response.get("orders", [])
+
+            for i, result in enumerate(orders_response):
+                order_id = order_ids[i] if i < len(order_ids) else "unknown"
+                error = result.get("error")
+
+                if error:
+                    error_msg = error.get("message", "Unknown error")
+                    failed.append((order_id, error_msg))
+                    logger.warning("Batch cancel - order failed", extra={
+                        "event_type": EventType.BATCH_CANCEL_FAILED,
+                        "decision_id": decision_id,
+                        "order_id": order_id,
+                        "error_msg": error_msg,
+                        "error_code": error.get("code"),
+                    })
+                else:
+                    succeeded.append(order_id)
+
+            logger.info("Batch cancel complete", extra={
+                "event_type": EventType.BATCH_CANCEL,
+                "decision_id": decision_id,
+                "succeeded_count": len(succeeded),
+                "failed_count": len(failed),
+                "latency_ms": latency_ms,
+            })
+
+            return BatchCancelResult(succeeded=succeeded, failed=failed)
+
+        except HTTPError as e:
+            latency_ms = int((time.time() - start_time) * 1000)
+            error_msg = str(e)
+
+            # Try to extract error details from response
+            if e.response is not None:
+                try:
+                    error_data = e.response.json()
+                    error_msg = error_data.get("error", {}).get("message", str(e))
+                except Exception:
+                    pass
+
+            logger.error("Batch cancel API error", extra={
+                "event_type": EventType.ERROR,
+                "decision_id": decision_id,
+                "order_count": len(order_ids),
+                "error_type": "HTTPError",
+                "error_msg": error_msg,
+                "status_code": e.response.status_code if e.response else None,
+                "latency_ms": latency_ms,
+            })
+
+            # All orders failed
+            return BatchCancelResult(
+                succeeded=[],
+                failed=[(oid, error_msg) for oid in order_ids]
+            )
+
+        except Exception as e:
+            latency_ms = int((time.time() - start_time) * 1000)
+            error_msg = str(e)
+
+            logger.error("Batch cancel unexpected error", extra={
+                "event_type": EventType.ERROR,
+                "decision_id": decision_id,
+                "order_count": len(order_ids),
+                "error_type": type(e).__name__,
+                "error_msg": error_msg,
+                "latency_ms": latency_ms,
+            })
+
+            return BatchCancelResult(
+                succeeded=[],
+                failed=[(oid, error_msg) for oid in order_ids]
+            )
+
+    def batch_place_orders(
+        self,
+        orders: List[OrderRequest],
+        decision_id: Optional[str] = None,
+    ) -> BatchPlaceResult:
+        """Place up to 20 orders in a single API call.
+
+        Uses Kalshi's batch create endpoint for efficiency.
+
+        Args:
+            orders: List of OrderRequest objects (max 20)
+            decision_id: Decision ID for correlation
+
+        Returns:
+            BatchPlaceResult with placed orders and any failures
+        """
+        if not orders:
+            return BatchPlaceResult(placed=[], failed=[])
+
+        if len(orders) > 20:
+            raise ValueError(f"Batch place supports max 20 orders, got {len(orders)}")
+
+        start_time = time.time()
+
+        # Build request payload
+        order_payloads = []
+        for req in orders:
+            payload = {
+                "ticker": req.market_id,
+                "action": "buy",  # Always buy - side determines yes/no
+                "side": req.side,  # "yes" or "no"
+                "count": req.size,
+                "yes_price": req.price,  # Price in cents
+                "type": "limit",
+                "client_order_id": req.client_order_id,
+            }
+            order_payloads.append(payload)
+
+        logger.info("Batch placing orders", extra={
+            "event_type": EventType.BATCH_PLACE,
+            "decision_id": decision_id,
+            "order_count": len(orders),
+            "orders": [
+                {"market": o.market_id, "side": o.side, "price": o.price, "size": o.size}
+                for o in orders
+            ],
+        })
+
+        try:
+            response = self.client.post(
+                "/trade-api/v2/portfolio/orders/batched",
+                {"orders": order_payloads}
+            )
+
+            latency_ms = int((time.time() - start_time) * 1000)
+
+            placed = []
+            failed = []
+
+            # Response format: {"orders": [{"order": {...}, "error": null}, ...]}
+            orders_response = response.get("orders", [])
+
+            for i, result in enumerate(orders_response):
+                req = orders[i] if i < len(orders) else None
+                error = result.get("error")
+                order_data = result.get("order")
+
+                if error:
+                    error_msg = error.get("message", "Unknown error")
+                    if req:
+                        failed.append((req, error_msg))
+                    logger.warning("Batch place - order failed", extra={
+                        "event_type": EventType.BATCH_PLACE_FAILED,
+                        "decision_id": decision_id,
+                        "market": req.market_id if req else "unknown",
+                        "side": req.side if req else "unknown",
+                        "price": req.price if req else 0,
+                        "size": req.size if req else 0,
+                        "client_order_id": req.client_order_id if req else "unknown",
+                        "error_msg": error_msg,
+                        "error_code": error.get("code"),
+                    })
+                elif order_data:
+                    order = Order(
+                        order_id=order_data.get("order_id"),
+                        market_id=order_data.get("ticker"),
+                        side=order_data.get("side"),
+                        price=order_data.get("yes_price", 0) / 100.0,  # Convert cents to decimal
+                        size=order_data.get("count", 0),
+                        decision_id=req.decision_id if req else decision_id,
+                        client_order_id=order_data.get("client_order_id"),
+                        status="resting",
+                    )
+                    placed.append(order)
+
+            logger.info("Batch place complete", extra={
+                "event_type": EventType.BATCH_PLACE,
+                "decision_id": decision_id,
+                "placed_count": len(placed),
+                "failed_count": len(failed),
+                "latency_ms": latency_ms,
+            })
+
+            return BatchPlaceResult(placed=placed, failed=failed)
+
+        except HTTPError as e:
+            latency_ms = int((time.time() - start_time) * 1000)
+            error_msg = str(e)
+
+            if e.response is not None:
+                try:
+                    error_data = e.response.json()
+                    error_msg = error_data.get("error", {}).get("message", str(e))
+                except Exception:
+                    pass
+
+            logger.error("Batch place API error", extra={
+                "event_type": EventType.ERROR,
+                "decision_id": decision_id,
+                "order_count": len(orders),
+                "error_type": "HTTPError",
+                "error_msg": error_msg,
+                "status_code": e.response.status_code if e.response else None,
+                "latency_ms": latency_ms,
+            })
+
+            return BatchPlaceResult(
+                placed=[],
+                failed=[(req, error_msg) for req in orders]
+            )
+
+        except Exception as e:
+            latency_ms = int((time.time() - start_time) * 1000)
+            error_msg = str(e)
+
+            logger.error("Batch place unexpected error", extra={
+                "event_type": EventType.ERROR,
+                "decision_id": decision_id,
+                "order_count": len(orders),
+                "error_type": type(e).__name__,
+                "error_msg": error_msg,
+                "latency_ms": latency_ms,
+            })
+
+            return BatchPlaceResult(
+                placed=[],
+                failed=[(req, error_msg) for req in orders]
+            )
 
     def get_market_info(self, market_id: str) -> Dict[str, Any]:
         """Get market metadata.

@@ -359,7 +359,8 @@ class DynamoDBClient:
                 loop_interval_ms=item.get('loop_interval_ms', 5000),
                 trading_enabled=item.get('trading_enabled', True),
                 risk_aversion_k=item.get('risk_aversion_k', 0.5),
-                cancel_on_startup=item.get('cancel_on_startup', True)
+                cancel_on_startup=item.get('cancel_on_startup', True),
+                use_batch_execution=item.get('use_batch_execution', False),
             )
         except ClientError as e:
             logger.error("Error fetching global config", extra={

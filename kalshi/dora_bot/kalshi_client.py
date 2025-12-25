@@ -180,6 +180,20 @@ class KalshiHttpClient(KalshiBaseClient):
         self.raise_if_bad_response(response)
         return response.json()
 
+    def delete_with_body(self, path: str, body: dict) -> Any:
+        """Performs an authenticated DELETE request with JSON body to the Kalshi API.
+
+        Used for batch operations like batch cancel orders.
+        """
+        self.rate_limit()
+        response = requests.delete(
+            self.host + path,
+            json=body,
+            headers=self.request_headers("DELETE", path)
+        )
+        self.raise_if_bad_response(response)
+        return response.json()
+
     def get_balance(self) -> Dict[str, Any]:
         """Retrieves the account balance."""
         return self.get(self.portfolio_url + '/balance')
