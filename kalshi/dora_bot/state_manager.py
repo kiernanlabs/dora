@@ -139,34 +139,64 @@ class StateManager:
             })
             return False
 
-    def reconcile_with_exchange(self, exchange_orders: List[Order], log_drift: bool = False) -> dict:
+    def reconcile_with_exchange(
+        self,
+        exchange_orders: List[Order],
+        log_drift: bool = False,
+        recent_order_grace_period_seconds: float = 60.0,
+    ) -> dict:
         """Reconcile in-memory state with exchange reality.
+
+        Orders that were placed recently (within grace period) are preserved even if
+        they don't appear in the exchange response yet, to handle eventual consistency.
 
         Args:
             exchange_orders: List of open orders from exchange
             log_drift: If True, detect and log differences between local and exchange state
+            recent_order_grace_period_seconds: Preserve local orders created within this many seconds
 
         Returns:
             Dictionary with drift statistics (only populated if log_drift=True)
         """
+        now = datetime.utcnow()
         drift_stats = {
             "orders_only_local": [],
             "orders_only_exchange": [],
             "orders_matched": 0,
+            "orders_preserved_recent": 0,
         }
         orders = {}
+
+        # Build sets of order IDs for comparison
+        local_order_ids = set(self.open_orders.keys())
+        exchange_order_ids = {order.order_id for order in exchange_orders}
+
+        # Identify orders only in local state
+        only_local = local_order_ids - exchange_order_ids
+
+        # Separate recent orders (preserve them) from stale orders (log them)
+        recent_local_orders = {}
+        stale_local_order_ids = []
+
+        for order_id in only_local:
+            order = self.open_orders.get(order_id)
+            if order and order.created_at:
+                age_seconds = (now - order.created_at).total_seconds()
+                if age_seconds < recent_order_grace_period_seconds:
+                    # This order was placed recently - keep it despite not being on exchange yet
+                    recent_local_orders[order_id] = order
+                    continue
+            # This order is stale - it should have appeared on exchange by now
+            stale_local_order_ids.append(order_id)
+
         if log_drift:
-            # Build sets of order IDs for comparison
-            local_order_ids = set(self.open_orders.keys())
-            exchange_order_ids = {order.order_id for order in exchange_orders}
             orders['local'] = local_order_ids
             orders['exchange'] = exchange_order_ids
 
-            # Orders in local state but not on exchange (stale local state)
-            only_local = local_order_ids - exchange_order_ids
-            if only_local:
-                drift_stats["orders_only_local"] = list(only_local)
-                for order_id in only_local:
+            # Log stale orders (not recent, should have been on exchange)
+            if stale_local_order_ids:
+                drift_stats["orders_only_local"] = stale_local_order_ids
+                for order_id in stale_local_order_ids:
                     order = self.open_orders.get(order_id)
                     logger.warning("Order in local state but not on exchange (stale)", extra={
                         "event_type": EventType.LOG,
@@ -175,6 +205,21 @@ class StateManager:
                         "side": order.side if order else "unknown",
                         "price": order.price if order else 0,
                         "size": order.size if order else 0,
+                    })
+
+            # Log recent orders being preserved
+            if recent_local_orders:
+                drift_stats["orders_preserved_recent"] = len(recent_local_orders)
+                for order_id, order in recent_local_orders.items():
+                    age_seconds = (now - order.created_at).total_seconds() if order.created_at else 0
+                    logger.info("Preserving recently placed order not yet on exchange", extra={
+                        "event_type": EventType.LOG,
+                        "order_id": order_id,
+                        "market": order.market_id,
+                        "side": order.side,
+                        "price": order.price,
+                        "size": order.size,
+                        "age_seconds": round(age_seconds, 1),
                     })
 
             # Orders on exchange but not in local state (missed tracking)
@@ -202,6 +247,11 @@ class StateManager:
         for order in exchange_orders:
             self.open_orders[order.order_id] = order
 
+        # Preserve recently-placed local orders that haven't appeared on exchange yet
+        for order_id, order in recent_local_orders.items():
+            if order_id not in self.open_orders:
+                self.open_orders[order_id] = order
+
         log_extra = {
             "event_type": EventType.STATE_LOAD,
             "open_orders_count": len(self.open_orders),
@@ -211,6 +261,7 @@ class StateManager:
                 "drift_only_local": len(drift_stats["orders_only_local"]),
                 "drift_only_exchange": len(drift_stats["orders_only_exchange"]),
                 "drift_matched": drift_stats["orders_matched"],
+                "drift_preserved_recent": drift_stats["orders_preserved_recent"],
             })
 
         logger.info(f"State reconciled with exchange: order dump: {orders}", extra=log_extra)

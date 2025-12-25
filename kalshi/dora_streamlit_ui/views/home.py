@@ -746,9 +746,9 @@ def render(environment: str, region: str):
         pnl_data = _timed("get_pnl_over_time", db_client.get_pnl_over_time, days=30)
         # Load all trades (at least 30 days) to properly calculate realized P&L with cost basis
         trades = _timed("get_recent_trades", db_client.get_recent_trades, days=30)
-        # Pre-fetch decision logs and execution logs for the active markets table
+        # Pre-fetch decision logs for the active markets table
         decisions = _timed("get_recent_decision_logs", db_client.get_recent_decision_logs, days=1)
-        executions = _timed("get_recent_execution_logs", db_client.get_recent_execution_logs, days=1)
+        executions: List[Dict] = []
         # Fetch open orders from DynamoDB state (synced from exchange by bot)
         open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
         open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)

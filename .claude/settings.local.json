@@ -15,7 +15,9 @@
       "Bash(pip install:*)",
       "Bash(cat:*)",
       "Bash(env)",
-      "Bash(aws sts get-caller-identity:*)"
+      "Bash(aws sts get-caller-identity:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)"
     ],
     "deny": [],
     "ask": []

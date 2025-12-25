@@ -827,6 +827,17 @@ class DoraBot:
                         })
 
                 # 8. Execute placements in batches
+                # Add delay between cancel and place phases to avoid rate limits
+                if to_cancel and to_place:
+                    CANCEL_TO_PLACE_DELAY_SECONDS = 1.0
+                    logger.debug("Rate limit pause between cancel and place phases", extra={
+                        "event_type": EventType.RATE_LIMIT_BACKOFF,
+                        "delay_seconds": CANCEL_TO_PLACE_DELAY_SECONDS,
+                        "cancel_count": len(to_cancel),
+                        "place_count": len(to_place),
+                    })
+                    await asyncio.sleep(CANCEL_TO_PLACE_DELAY_SECONDS)
+
                 if to_place:
                     place_summary = await self._batch_place(to_place, rate_limiter)
 
