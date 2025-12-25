@@ -12,7 +12,10 @@
       "Bash(aws dynamodb scan:*)",
       "Bash(aws dynamodb get-item:*)",
       "Bash(curl:*)",
-      "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(cat:*)",
+      "Bash(env)",
+      "Bash(aws sts get-caller-identity:*)"
     ],
     "deny": [],
     "ask": []

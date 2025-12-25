@@ -5,15 +5,17 @@ This script reads a markets.csv file (output from market_screener.py) with addit
 manually-added columns and creates/updates items in the dora_market_config_prod table
 for each row where activate=1.
 
-Required CSV columns (manually added):
+Required CSV columns:
+    - ticker: Market ticker
     - activate: 1 to enable, 0 to skip
-    - min_spread: Minimum spread to quote (e.g., 0.06)
-    - inventory_skew_factor: How aggressively to skew quotes (e.g., 0.5)
-    - max_inventory_no: Maximum NO contracts to hold
-    - max_inventory_yes: Maximum YES contracts to hold
-    - quote_size: Size of quotes to post
 
-The script also uses fair_value from the CSV if present.
+Optional columns (defaults used if missing):
+    - min_spread: Minimum spread to quote (default: 0.04)
+    - inventory_skew_factor: How aggressively to skew quotes (default: 0.5)
+    - max_inventory_no: Maximum NO contracts to hold (default: 20)
+    - max_inventory_yes: Maximum YES contracts to hold (default: 20)
+    - quote_size: Size of quotes to post (default: 10)
+    - fair_value: AI-estimated fair value probability (CSV: 0-100%, converted to 0-1 decimal)
 
 Usage:
     python sync_to_market_config.py markets.csv [--dry-run] [--environment prod]
@@ -21,7 +23,7 @@ Usage:
 import argparse
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -37,12 +39,16 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 REQUIRED_COLUMNS = [
     "ticker",
     "activate",
-    "min_spread",
-    "inventory_skew_factor",
-    "max_inventory_no",
-    "max_inventory_yes",
-    "quote_size",
 ]
+
+# Columns with default values if not present in CSV
+DEFAULT_VALUES = {
+    "min_spread": 0.04,
+    "inventory_skew_factor": 0.5,
+    "max_inventory_no": 20,
+    "max_inventory_yes": 20,
+    "quote_size": 10,
+}
 
 # Optional columns
 OPTIONAL_COLUMNS = ["fair_value", "title"]
@@ -98,17 +104,24 @@ def parse_row(row: pd.Series) -> Optional[Dict[str, Any]]:
     if pd.isna(ticker):
         return None
 
-    # Parse required fields
+    # Helper to get value from row or use default
+    def get_value(col: str, convert_func, default=None):
+        val = row.get(col)
+        if pd.isna(val) if hasattr(pd, 'isna') else val is None:
+            return default if default is not None else DEFAULT_VALUES.get(col)
+        return convert_func(val)
+
+    # Parse fields with defaults
     try:
         config = {
             "market_id": str(ticker),
             "enabled": True,
-            "min_spread": float(row["min_spread"]),
-            "inventory_skew_factor": float(row["inventory_skew_factor"]),
-            "max_inventory_no": int(row["max_inventory_no"]),
-            "max_inventory_yes": int(row["max_inventory_yes"]),
-            "quote_size": int(row["quote_size"]),
-            "updated_at": datetime.utcnow().isoformat(),
+            "min_spread": get_value("min_spread", float),
+            "inventory_skew_factor": get_value("inventory_skew_factor", float),
+            "max_inventory_no": get_value("max_inventory_no", int),
+            "max_inventory_yes": get_value("max_inventory_yes", int),
+            "quote_size": get_value("quote_size", int),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }
     except (ValueError, KeyError) as e:
         print(f"  WARNING: Could not parse row for {ticker}: {e}")
@@ -118,7 +131,8 @@ def parse_row(row: pd.Series) -> Optional[Dict[str, Any]]:
     fair_value = row.get("fair_value")
     if not pd.isna(fair_value):
         try:
-            config["fair_value"] = float(fair_value)
+            # Convert from percentage (0-100) to decimal (0-1)
+            config["fair_value"] = float(fair_value) / 100.0
         except ValueError:
             pass
 
@@ -262,7 +276,8 @@ def main():
     print("\nMarkets to sync:")
     for config in configs:
         fv = config.get("fair_value", "N/A")
-        fv_str = f"{fv:.0f}%" if isinstance(fv, (int, float)) else fv
+        # fair_value is stored as decimal (0-1), display as percentage
+        fv_str = f"{fv * 100:.0f}%" if isinstance(fv, (int, float)) else fv
         print(f"  {config['market_id']}: "
               f"spread={config['min_spread']}, "
               f"size={config['quote_size']}, "

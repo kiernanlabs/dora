@@ -11,6 +11,8 @@ from typing import List, Dict, Optional
 from dotenv import load_dotenv
 from cryptography.hazmat.primitives import serialization
 
+from requests.exceptions import HTTPError
+
 from dora_bot.kalshi_client import KalshiHttpClient, Environment
 from dora_bot.models import TargetOrder, Order, MarketConfig
 from dora_bot.exchange_client import KalshiExchangeClient
@@ -305,8 +307,8 @@ class DoraBot:
                     })
 
                     # Reconcile open orders with exchange to fix any state drift
-                    exchange_orders = self.exchange.get_open_orders()
-                    drift_stats = self.state.reconcile_with_exchange(exchange_orders, log_drift=True)
+                    all_exchange_orders = self.exchange.get_open_orders()
+                    drift_stats = self.state.reconcile_with_exchange(all_exchange_orders, log_drift=True)
 
                     # Log if significant drift detected
                     if drift_stats["orders_only_local"] or drift_stats["orders_only_exchange"]:
@@ -319,13 +321,23 @@ class DoraBot:
                         })
                 else:
                     market_configs = self.dynamo.get_all_market_configs(enabled_only=True)
+                    # Fetch all exchange orders once for safeguard checks
+                    all_exchange_orders = self.exchange.get_open_orders()
+
+                # Group exchange orders by market for efficient lookup in process_market
+                exchange_orders_by_market: Dict[str, List[Order]] = {}
+                for order in all_exchange_orders:
+                    if order.market_id not in exchange_orders_by_market:
+                        exchange_orders_by_market[order.market_id] = []
+                    exchange_orders_by_market[order.market_id].append(order)
 
                 # Process each enabled market
                 for market_id, config in market_configs.items():
                     # Generate decision_id for this market processing cycle
                     decision_id = generate_decision_id(self.bot_run_id, market_id, self.loop_count)
                     set_context(decision_id=decision_id, market=market_id)
-                    await self.process_market(market_id, config, decision_id)
+                    market_orders = exchange_orders_by_market.get(market_id, [])
+                    await self.process_market(market_id, config, decision_id, market_orders)
                     clear_context()
 
                 # Process fills
@@ -401,17 +413,19 @@ class DoraBot:
             "graceful": True,
         })
 
-    async def process_market(self, market_id: str, config: MarketConfig, decision_id: str):
+    async def process_market(self, market_id: str, config: MarketConfig, decision_id: str,
+                             exchange_orders_for_market: List[Order]):
         """Process a single market.
 
         Args:
             market_id: Market ticker
             config: Market configuration
             decision_id: Unique identifier for this decision cycle
+            exchange_orders_for_market: Pre-fetched list of open orders on exchange for this market
         """
         try:
-            # 1. Fetch order book
-            order_book = self.exchange.get_order_book(market_id)
+            # 1. Fetch order book (pass pre-fetched orders to avoid extra API call)
+            order_book = self.exchange.get_order_book(market_id, own_orders=exchange_orders_for_market)
 
             # 2. Get current position
             position = self.state.get_inventory(market_id)
@@ -486,6 +500,23 @@ class DoraBot:
             existing_orders = self.state.get_open_orders_for_market(market_id)
             to_cancel, to_place = self.diff_orders(existing_orders, target_orders)
 
+            # Debug: Log the full state before diff decision
+            logger.debug("Order diff inputs", extra={
+                "event_type": EventType.LOG,
+                "market": market_id,
+                "decision_id": decision_id,
+                "existing_orders": [
+                    {"order_id": o.order_id, "side": o.side, "price": o.price, "size": o.size}
+                    for o in existing_orders
+                ],
+                "target_orders": [
+                    {"side": t.side, "price": t.price, "size": t.size}
+                    for t in target_orders
+                ],
+                "to_cancel_ids": [o.order_id for o in to_cancel],
+                "to_place_count": len(to_place),
+            })
+
             # Log order diff results
             if not to_cancel and not to_place:
                 logger.info("No order changes needed - existing orders match targets", extra={
@@ -515,6 +546,49 @@ class DoraBot:
                     self.state.remove_order(order.order_id)
 
             # 6. Place new orders (with risk checks)
+            # SAFEGUARD: Verify we don't already have a bid or ask on the market
+            # Constraint: Only one bid and one ask allowed per market at a time
+            # Uses pre-fetched exchange_orders_for_market to avoid extra API calls
+            if to_place:
+                # Check if we already have a bid (side='yes') or ask (side='no') on exchange
+                has_bid_on_exchange = any(o.side == 'yes' for o in exchange_orders_for_market)
+                has_ask_on_exchange = any(o.side == 'no' for o in exchange_orders_for_market)
+
+                # Sync local state with exchange orders we found
+                for exchange_order in exchange_orders_for_market:
+                    if exchange_order.order_id not in self.state.open_orders:
+                        self.state.record_order(exchange_order)
+
+                filtered_to_place = []
+                for target in to_place:
+                    # target.side is 'bid' or 'ask', exchange uses 'yes' or 'no'
+                    is_bid = target.side == 'bid'
+
+                    if is_bid and has_bid_on_exchange:
+                        logger.warning("Skipping bid - already have bid order on exchange", extra={
+                            "event_type": EventType.LOG,
+                            "market": market_id,
+                            "decision_id": decision_id,
+                            "target_price": target.price,
+                            "target_size": target.size,
+                            "existing_bids": [{"order_id": o.order_id, "price": o.price, "size": o.size}
+                                              for o in exchange_orders_for_market if o.side == 'yes'],
+                        })
+                    elif not is_bid and has_ask_on_exchange:
+                        logger.warning("Skipping ask - already have ask order on exchange", extra={
+                            "event_type": EventType.LOG,
+                            "market": market_id,
+                            "decision_id": decision_id,
+                            "target_price": target.price,
+                            "target_size": target.size,
+                            "existing_asks": [{"order_id": o.order_id, "price": o.price, "size": o.size}
+                                              for o in exchange_orders_for_market if o.side == 'no'],
+                        })
+                    else:
+                        filtered_to_place.append(target)
+
+                to_place = filtered_to_place
+
             for target in to_place:
                 allowed, reason = self.risk.check_order(target, position, config, self.state)
 
@@ -540,13 +614,55 @@ class DoraBot:
                         "blocked_reason": reason,
                     })
 
+        except HTTPError as e:
+            # Track API errors by market
+            status_code = e.response.status_code if e.response is not None else None
+            error_code = None
+            error_msg = str(e)
+
+            # Try to extract error code from response
+            try:
+                if e.response is not None:
+                    error_data = e.response.json()
+                    if isinstance(error_data, dict):
+                        error_code = error_data.get('error', {}).get('code')
+            except:
+                pass
+
+            self.state.record_api_error(
+                market_id=market_id,
+                status_code=status_code,
+                error_code=error_code,
+                error_msg=error_msg
+            )
+
+            logger.error("API error processing market", extra={
+                "event_type": EventType.ERROR,
+                "market": market_id,
+                "decision_id": decision_id,
+                "error_type": type(e).__name__,
+                "error_msg": error_msg,
+                "status_code": status_code,
+                "error_code": error_code,
+                "api_error_count": self.state.get_api_error_count(market_id),
+            }, exc_info=True)
+
         except Exception as e:
+            # Track non-HTTP errors as well
+            self.state.record_api_error(
+                market_id=market_id,
+                status_code=None,
+                error_code=type(e).__name__,
+                error_msg=str(e)
+            )
+
             logger.error("Error processing market", extra={
                 "event_type": EventType.ERROR,
                 "market": market_id,
                 "decision_id": decision_id,
                 "error_type": type(e).__name__,
                 "error_msg": str(e),
+                "api_error_count": self.state.get_api_error_count(market_id),
             }, exc_info=True)
 
     def diff_orders(

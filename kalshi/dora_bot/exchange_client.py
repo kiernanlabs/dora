@@ -129,12 +129,16 @@ class KalshiExchangeClient:
 
         raise last_error
 
-    def get_order_book(self, market_id: str, exclude_own_orders: bool = True) -> OrderBook:
+    def get_order_book(self, market_id: str, exclude_own_orders: bool = True,
+                       own_orders: Optional[List[Order]] = None) -> OrderBook:
         """Fetch order book for a market.
 
         Args:
             market_id: Market ticker symbol
             exclude_own_orders: If True, filter out the bot's own orders from the order book
+            own_orders: Pre-fetched list of own orders. If provided, uses these instead of
+                        making an API call. This improves performance when orders are
+                        already fetched at loop start.
 
         Returns:
             OrderBook object with current market state
@@ -152,21 +156,26 @@ class KalshiExchangeClient:
             # Get bot's own orders to filter them out
             own_orders_by_price = {'yes': {}, 'no': {}}
             if exclude_own_orders:
-                try:
-                    own_orders = self.get_open_orders(market_id=market_id)
-                    for order in own_orders:
-                        # Group by side and price (in cents)
-                        price_cents = int(order.price * 100)
-                        if order.side in own_orders_by_price:
-                            if price_cents not in own_orders_by_price[order.side]:
-                                own_orders_by_price[order.side][price_cents] = 0
-                            own_orders_by_price[order.side][price_cents] += order.size
-                except Exception as e:
-                    logger.warning("Failed to fetch own orders for filtering", extra={
-                        "event_type": EventType.LOG,
-                        "market": market_id,
-                        "error_msg": str(e),
-                    })
+                # Use pre-fetched orders if provided, otherwise fetch from API
+                orders_to_filter = own_orders if own_orders is not None else []
+                if own_orders is None:
+                    try:
+                        orders_to_filter = self.get_open_orders(market_id=market_id)
+                    except Exception as e:
+                        logger.warning("Failed to fetch own orders for filtering", extra={
+                            "event_type": EventType.LOG,
+                            "market": market_id,
+                            "error_msg": str(e),
+                        })
+                        orders_to_filter = []
+
+                for order in orders_to_filter:
+                    # Group by side and price (in cents)
+                    price_cents = int(order.price * 100)
+                    if order.side in own_orders_by_price:
+                        if price_cents not in own_orders_by_price[order.side]:
+                            own_orders_by_price[order.side][price_cents] = 0
+                        own_orders_by_price[order.side][price_cents] += order.size
 
             # Filter out bot's own YES bids
             yes_bids_filtered = []
@@ -258,7 +267,7 @@ class KalshiExchangeClient:
         return self._retry_request(_fetch)
 
     def get_open_orders(self, market_id: Optional[str] = None) -> List[Order]:
-        """Fetch all open orders.
+        """Fetch all open orders with pagination.
 
         Args:
             market_id: Optional market filter
@@ -267,41 +276,55 @@ class KalshiExchangeClient:
             List of open Order objects
         """
         def _fetch():
-            params = {}
-            if market_id:
-                params['ticker'] = market_id
+            all_orders = []
+            cursor = None
 
-            response = self.client.get("/trade-api/v2/portfolio/orders", params=params)
-            orders_data = response.get('orders', [])
+            while True:
+                params = {'limit': 100}  # Max page size
+                if market_id:
+                    params['ticker'] = market_id
+                if cursor:
+                    params['cursor'] = cursor
 
-            orders = []
-            for order_data in orders_data:
-                # Only include active orders
-                status = order_data.get('status', '').lower()
-                if status not in ['resting', 'pending']:
-                    continue
+                response = self.client.get("/trade-api/v2/portfolio/orders", params=params)
+                orders_data = response.get('orders', [])
 
-                # Store exactly as Kalshi returns it:
-                # side = 'yes' or 'no' (Kalshi's format)
-                # price = yes_price (what Kalshi stores, always the YES price regardless of side)
-                orders.append(Order(
-                    order_id=order_data.get('order_id'),
-                    market_id=order_data.get('ticker'),
-                    side=order_data.get('side'),  # 'yes' or 'no' (Kalshi format)
-                    price=order_data.get('yes_price', 0) / 100.0,  # Always YES price
-                    size=order_data.get('remaining_count', order_data.get('count', 0)),
-                    filled_size=order_data.get('count', 0) - order_data.get('remaining_count', 0),
-                    status=status,
-                    created_at=parse_kalshi_timestamp(order_data.get('created_time', '')),
-                    tif=order_data.get('tif', 'gtc')
-                ))
+                for order_data in orders_data:
+                    # Only include active orders
+                    status = order_data.get('status', '').lower()
+                    if status not in ['resting', 'pending']:
+                        continue
 
-            return orders
+                    # Store exactly as Kalshi returns it:
+                    # side = 'yes' or 'no' (Kalshi's format)
+                    # price = yes_price (what Kalshi stores, always the YES price regardless of side)
+                    all_orders.append(Order(
+                        order_id=order_data.get('order_id'),
+                        market_id=order_data.get('ticker'),
+                        side=order_data.get('side'),  # 'yes' or 'no' (Kalshi format)
+                        price=order_data.get('yes_price', 0) / 100.0,  # Always YES price
+                        size=order_data.get('remaining_count', order_data.get('count', 0)),
+                        filled_size=order_data.get('count', 0) - order_data.get('remaining_count', 0),
+                        status=status,
+                        created_at=parse_kalshi_timestamp(order_data.get('created_time', '')),
+                        tif=order_data.get('tif', 'gtc')
+                    ))
+
+                # Check for next page
+                cursor = response.get('cursor')
+                if not cursor:
+                    break
+
+            logger.info(f"Fetched all open orders for {market_id}", extra={
+                "event_type": EventType.FLAG,
+                "open_orders_count": len(all_orders),
+            })
+            return all_orders
 
         return self._retry_request(_fetch)
 
     def get_fills(self, since: Optional[datetime] = None, market_id: Optional[str] = None) -> List[Fill]:
-        """Fetch recent fills.
+        """Fetch all fills with pagination.
 
         Args:
             since: Only return fills after this timestamp
@@ -310,20 +333,28 @@ class KalshiExchangeClient:
         Returns:
             List of Fill objects
         """
-        def _fetch():
-            params = {}
-            if market_id:
-                params['ticker'] = market_id
-            if since:
-                # Kalshi expects timestamp in milliseconds
-                params['min_ts'] = int(since.timestamp() * 1000)
+        all_fills: List[Fill] = []
+        cursor = None
 
-            response = self.client.get("/trade-api/v2/portfolio/fills", params=params)
+        while True:
+            def _fetch(cur=cursor):
+                params = {'limit': 100}  # Max page size
+                if market_id:
+                    params['ticker'] = market_id
+                if since:
+                    # Kalshi expects timestamp in milliseconds
+                    params['min_ts'] = int(since.timestamp() * 1000)
+                if cur:
+                    params['cursor'] = cur
+
+                response = self.client.get("/trade-api/v2/portfolio/fills", params=params)
+                return response
+
+            response = self._retry_request(_fetch)
             fills_data = response.get('fills', [])
 
-            fills = []
             for fill_data in fills_data:
-                fills.append(Fill(
+                all_fills.append(Fill(
                     fill_id=fill_data.get('trade_id'),
                     order_id=fill_data.get('order_id'),
                     market_id=fill_data.get('ticker'),
@@ -334,9 +365,19 @@ class KalshiExchangeClient:
                     fees=fill_data.get('fees', 0) / 100.0
                 ))
 
-            return fills
+            # Check for next page
+            cursor = response.get('cursor')
+            if not cursor:
+                break
 
-        return self._retry_request(_fetch)
+        logger.debug("Fetched fills with pagination", extra={
+            "event_type": EventType.LOG,
+            "total_fills": len(all_fills),
+            "market_filter": market_id,
+            "since": since.isoformat() if since else None,
+        })
+
+        return all_fills
 
     def get_balance(self) -> Optional[Balance]:
         """Fetch account balance.

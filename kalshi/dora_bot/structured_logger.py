@@ -37,6 +37,7 @@ class EventType(str, Enum):
     ERROR = "ERROR"
     # Generic for logs that don't fit a specific event type
     LOG = "LOG"
+    FLAG = "FLAG" # for one-off debugging
 
 
 # Context variables for correlation IDs

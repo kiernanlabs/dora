@@ -589,3 +589,58 @@ class DynamoDBClient:
                 "error_msg": str(e),
             })
             return False
+
+    # API Error tracking
+
+    def get_api_errors(self) -> Dict[str, Dict[str, Any]]:
+        """Fetch API error counts by market_id from state table.
+
+        Returns:
+            Dictionary mapping market_id to error stats:
+            {
+                "MARKET-ID": {
+                    "count": 5,
+                    "last_error": "2025-12-25T12:00:00",
+                    "last_error_code": "not_found",
+                    "last_status_code": 404
+                }
+            }
+        """
+        try:
+            response = self.state_table.get_item(Key={'key': 'api_errors'})
+            if 'Item' not in response:
+                return {}
+
+            errors_data = self._serialize_decimal(response['Item'].get('errors', {}))
+            return errors_data
+        except ClientError as e:
+            logger.error("Error fetching API errors", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
+            return {}
+
+    def save_api_errors(self, errors: Dict[str, Dict[str, Any]]) -> bool:
+        """Save API error counts to state table.
+
+        Args:
+            errors: Dictionary mapping market_id to error stats
+
+        Returns:
+            True if successful
+        """
+        try:
+            self.state_table.put_item(Item={
+                'key': 'api_errors',
+                'errors': self._to_dynamo_item(errors),
+                'last_updated': datetime.utcnow().isoformat()
+            })
+            return True
+        except ClientError as e:
+            logger.error("Error saving API errors", extra={
+                "event_type": EventType.ERROR,
+                "error_type": "ClientError",
+                "error_msg": str(e),
+            })
+            return False

@@ -32,6 +32,10 @@ class StateManager:
         # Track logged fills to avoid duplicates
         self.logged_fills: set = set()
 
+        # API error tracking by market_id
+        # Structure: {market_id: {count, last_error, last_error_code, last_status_code}}
+        self.api_errors: Dict[str, Dict] = {}
+
         # Performance tracking
         self.last_sync_time: Optional[datetime] = None
 
@@ -55,12 +59,16 @@ class StateManager:
             # Load logged fills to prevent duplicate processing
             self.logged_fills = self.dynamo.get_all_fill_ids()
 
+            # Load API error counts
+            self.api_errors = self.dynamo.get_api_errors()
+
             logger.info("State loaded from DynamoDB", extra={
                 "event_type": EventType.STATE_LOAD,
                 "positions_count": len(self.positions),
                 "daily_pnl": self.risk_state.daily_pnl,
                 "trading_halted": self.risk_state.trading_halted,
                 "logged_fills_count": len(self.logged_fills),
+                "api_errors_markets": len(self.api_errors),
             })
 
             self.last_sync_time = datetime.utcnow()
@@ -81,6 +89,9 @@ class StateManager:
             True if successful
         """
         try:
+            # Clean up zero positions before saving
+            self.cleanup_zero_positions()
+
             # Save positions
             if not self.dynamo.save_positions(self.positions):
                 logger.error("Failed to save positions", extra={
@@ -102,11 +113,19 @@ class StateManager:
                 })
                 return False
 
+            # Save API errors
+            if not self.dynamo.save_api_errors(self.api_errors):
+                logger.error("Failed to save API errors", extra={
+                    "event_type": EventType.ERROR,
+                })
+                return False
+
             logger.debug("State saved to DynamoDB", extra={
                 "event_type": EventType.STATE_SAVE,
                 "positions_count": len(self.positions),
                 "open_orders_count": len(self.open_orders),
                 "daily_pnl": self.risk_state.daily_pnl,
+                "api_errors_markets": len(self.api_errors),
             })
 
             self.last_sync_time = datetime.utcnow()
@@ -400,6 +419,82 @@ class StateManager:
             Total exposure (sum of absolute positions)
         """
         return sum(pos.total_exposure for pos in self.positions.values())
+
+    def record_api_error(self, market_id: str, status_code: int = None,
+                         error_code: str = None, error_msg: str = None) -> None:
+        """Record an API error for a market.
+
+        Args:
+            market_id: Market ticker (use 'global' for non-market-specific errors)
+            status_code: HTTP status code (e.g., 404, 500)
+            error_code: API error code (e.g., 'not_found')
+            error_msg: Error message
+        """
+        if market_id not in self.api_errors:
+            self.api_errors[market_id] = {
+                'count': 0,
+                'last_error': None,
+                'last_error_code': None,
+                'last_status_code': None,
+                'last_error_msg': None,
+            }
+
+        self.api_errors[market_id]['count'] += 1
+        self.api_errors[market_id]['last_error'] = datetime.utcnow().isoformat()
+        if status_code is not None:
+            self.api_errors[market_id]['last_status_code'] = status_code
+        if error_code is not None:
+            self.api_errors[market_id]['last_error_code'] = error_code
+        if error_msg is not None:
+            self.api_errors[market_id]['last_error_msg'] = error_msg
+
+    def get_api_error_count(self, market_id: str) -> int:
+        """Get the API error count for a market.
+
+        Args:
+            market_id: Market ticker
+
+        Returns:
+            Number of API errors recorded for this market
+        """
+        return self.api_errors.get(market_id, {}).get('count', 0)
+
+    def clear_api_errors(self, market_id: str = None) -> None:
+        """Clear API error counts.
+
+        Args:
+            market_id: If provided, clear only for this market. Otherwise clear all.
+        """
+        if market_id:
+            if market_id in self.api_errors:
+                del self.api_errors[market_id]
+        else:
+            self.api_errors = {}
+
+    def cleanup_zero_positions(self) -> int:
+        """Remove positions with zero quantity from state.
+
+        This prevents old inactive markets from accumulating in the positions dict.
+
+        Returns:
+            Number of positions removed
+        """
+        zero_positions = [
+            market_id for market_id, pos in self.positions.items()
+            if pos.net_yes_qty == 0
+        ]
+
+        for market_id in zero_positions:
+            del self.positions[market_id]
+
+        if zero_positions:
+            logger.info("Cleaned up zero positions", extra={
+                "event_type": EventType.LOG,
+                "removed_markets": zero_positions,
+                "removed_count": len(zero_positions),
+            })
+
+        return len(zero_positions)
 
     def reset_daily_pnl(self) -> None:
         """Reset daily PnL (call at start of new trading day)."""

@@ -12,10 +12,11 @@ By default, fetches only open markets and excludes MVE (multi-variate event) mar
 
 Filters applied:
     1. 24hr volume > 100 contracts
-    2. Current AND previous spread both > 5 cents
-    3. Event ticker prefix not in restricted_markets.csv
-    4. 24hr midpoint change <= 20%
-    5. Information risk < 25% (likelihood of market-moving news in next 7 days)
+    2. Close time > 7 days away
+    3. Current AND previous spread both > 5 cents
+    4. Event ticker prefix not in restricted_markets.csv
+    5. 24hr midpoint change <= 20%
+    6. Information risk < 25% (likelihood of market-moving news in next 7 days)
 
 Additional analysis:
     - Fair value assessment (AI estimate of YES probability without market reference)
@@ -41,6 +42,7 @@ MIN_VOLUME_24H = 100
 MIN_SPREAD = 5  # cents
 MAX_INFO_RISK = 25  # percent - maximum acceptable information risk
 MAX_MIDPOINT_CHANGE = 20  # percent - maximum 24hr midpoint change allowed
+MIN_DAYS_UNTIL_CLOSE = 7  # minimum days until market closes
 DEFAULT_THREADS = 10  # default number of parallel threads for API calls
 
 # Load environment variables from .env file
@@ -96,6 +98,30 @@ def calculate_midpoint(ask: Optional[int], bid: Optional[int]) -> Optional[float
     return (ask + bid) / 2
 
 
+def is_closing_soon(close_time: Optional[str], min_days: int = MIN_DAYS_UNTIL_CLOSE) -> bool:
+    """Check if a market closes within the minimum days threshold.
+
+    Args:
+        close_time: ISO format datetime string for when market closes
+        min_days: Minimum days until close (default: MIN_DAYS_UNTIL_CLOSE)
+
+    Returns:
+        True if market closes within min_days, False otherwise (or if close_time is None)
+    """
+    if not close_time:
+        return False
+
+    try:
+        # Parse ISO format datetime (e.g., "2025-01-15T12:00:00Z")
+        close_dt = datetime.fromisoformat(close_time.replace("Z", "+00:00"))
+        now = datetime.now(close_dt.tzinfo)
+        days_until_close = (close_dt - now).days
+        return days_until_close < min_days
+    except (ValueError, TypeError):
+        # If we can't parse the date, don't filter it out
+        return False
+
+
 def calculate_midpoint_change(
     current_ask: Optional[int],
     current_bid: Optional[int],
@@ -143,7 +169,11 @@ def filter_markets(
         if volume_24h <= MIN_VOLUME_24H:
             continue
 
-        # Filter 2: Current AND previous spread both > 5
+        # Filter 2: Market doesn't close within MIN_DAYS_UNTIL_CLOSE days
+        if is_closing_soon(market.get("close_time")):
+            continue
+
+        # Filter 3: Current AND previous spread both > 5
         current_spread = calculate_spread(
             market.get("yes_ask"),
             market.get("yes_bid"),
@@ -156,13 +186,13 @@ def filter_markets(
         if current_spread <= MIN_SPREAD or previous_spread <= MIN_SPREAD:
             continue
 
-        # Filter 3: Event ticker prefix not in restricted list
+        # Filter 4: Event ticker prefix not in restricted list
         event_ticker = market.get("event_ticker", "")
         prefix = event_ticker[:5] if event_ticker else ""
         if prefix in restricted_prefixes:
             continue
 
-        # Filter 4: Midpoint change < 20% over 24hrs
+        # Filter 5: Midpoint change < 20% over 24hrs
         midpoint_change = calculate_midpoint_change(
             market.get("yes_ask"),
             market.get("yes_bid"),
@@ -249,7 +279,7 @@ def markets_to_dataframe(markets: List[Dict[str, Any]]) -> pd.DataFrame:
         markets: List of market dictionaries from API
 
     Returns:
-        DataFrame with all market fields
+        DataFrame with all market fields, priority columns first
     """
     if not markets:
         return pd.DataFrame()
@@ -270,7 +300,33 @@ def markets_to_dataframe(markets: List[Dict[str, Any]]) -> pd.DataFrame:
                 row[key] = value
         flattened.append(row)
 
-    return pd.DataFrame(flattened)
+    df = pd.DataFrame(flattened)
+
+    # Add activate column defaulting to 0
+    df.insert(0, "activate", 0)
+
+    # Define priority columns to appear first (after activate)
+    priority_columns = [
+        "activate",
+        "ticker",
+        "title",
+        "rules_primary",
+        "volume_24h",
+        "yes_bid",
+        "yes_ask",
+        "info_risk_probability",
+        "info_risk_rationale",
+        "info_risk_error",
+        "fair_value",
+        "fair_value_rationale",
+    ]
+
+    # Reorder columns: priority columns first, then the rest
+    existing_priority = [col for col in priority_columns if col in df.columns]
+    other_columns = [col for col in df.columns if col not in priority_columns]
+    df = df[existing_priority + other_columns]
+
+    return df
 
 
 def assess_information_risk(
@@ -806,6 +862,7 @@ def main():
     filtered_markets = filter_markets(markets, restricted_prefixes)
     print(f"Markets after filtering: {len(filtered_markets)}")
     print(f"  - Volume > {MIN_VOLUME_24H}")
+    print(f"  - Close time > {MIN_DAYS_UNTIL_CLOSE} days away")
     print(f"  - Current & previous spread > {MIN_SPREAD}")
     print(f"  - Excluded {len(restricted_prefixes)} restricted prefixes")
     print(f"  - 24hr midpoint change <= {MAX_MIDPOINT_CHANGE}%")
