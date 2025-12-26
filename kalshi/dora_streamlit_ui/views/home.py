@@ -130,20 +130,29 @@ def render_exposure_chart(positions: Dict, market_configs: List[Dict]):
         st.info("No exposure found in enabled markets")
         return
 
+    event_totals = (
+        df.groupby('event', as_index=False)['exposure']
+        .sum()
+        .sort_values('exposure', ascending=False)
+    )
+    event_order = event_totals['event'].tolist()
+    df['event'] = pd.Categorical(df['event'], categories=event_order, ordered=True)
     df = df.sort_values(['event', 'exposure'], ascending=[True, False])
 
-    # Create vertical clustered bar chart by event (multi-category axis)
+    # Create vertical bar chart, clustered by event via ordering
     fig = go.Figure(go.Bar(
-        x=[df['event'], df['market']],
+        x=df['market'],
         y=df['exposure'],
+        customdata=df['event'],
         marker=dict(color='#636EFA'),
-        hovertemplate="Event: %{x[0]}<br>Market: %{x[1]}<br>Exposure: %{y}<extra></extra>",
+        hovertemplate="Event: %{customdata}<br>Market: %{x}<br>Exposure: %{y}<extra></extra>",
     ))
 
     fig.update_layout(
         height=400,
         margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="Event / Market",
+        xaxis=dict(categoryorder="array", categoryarray=df['market'].tolist()),
+        xaxis_title="Market",
         yaxis_title="Exposure (contracts)",
         showlegend=False,
     )
@@ -554,9 +563,19 @@ def render_active_markets_table(
         created_at_value = config.get('created_at')
         if created_at_value:
             if isinstance(created_at_value, datetime):
-                created_at_display = created_at_value.astimezone().strftime('%Y-%m-%d %I:%M:%S %p')
+                created_at_dt = created_at_value
             else:
-                created_at_display = to_local_time(str(created_at_value))
+                try:
+                    created_at_dt = datetime.fromisoformat(str(created_at_value).replace('Z', '+00:00'))
+                except ValueError:
+                    created_at_dt = None
+            if created_at_dt:
+                if created_at_dt.tzinfo is None:
+                    created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
+                days_ago = max(0, (datetime.now(timezone.utc) - created_at_dt).days)
+                created_at_display = f"{days_ago} days ago"
+            else:
+                created_at_display = 'N/A'
         else:
             created_at_display = 'N/A'
 
@@ -621,7 +640,7 @@ def render_active_markets_table(
     table_data.sort(
         key=lambda row: (
             _event_sort_key(row.get('Event', 'N/A')),
-            -abs(row.get('Net Position', 0)),
+            -row.get('Net Position', 0),
             row.get('Market', ''),
         )
     )
@@ -739,7 +758,27 @@ def render_active_markets_table(
         return styles
 
     styled_df = df.style.apply(highlight_spread, axis=1)
-    column_order = ['Event', 'Market'] + [col for col in df.columns if col not in ('Event', 'Market')]
+    column_order = [
+        'Event',
+        'Market',
+        'Realized P&L',
+        'P&L 24h Δ',
+        'Filled 24h',
+        'Best Bid',
+        'Our Bid',
+        'Best Ask',
+        'Our Ask',
+        'Spread',
+        'Minimum Spread',
+        'Net Position',
+        'Max Position',
+        'Avg Cost',
+        'Unrealized P&L',
+        'Config Created',
+    ]
+    for col in df.columns:
+        if col not in column_order:
+            column_order.append(col)
 
     # Style the dataframe
     st.dataframe(

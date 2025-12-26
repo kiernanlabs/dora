@@ -737,26 +737,60 @@ def assess_fair_value_for_markets(
     return markets
 
 
-def fetch_trade_history(market_id: str, limit: int = 100) -> List[Dict[str, Any]]:
-    """Fetch trade history for a market from Kalshi API.
+def fetch_trade_history(
+    market_id: str,
+    limit: int = 100,
+    max_retries: int = 5,
+    base_delay: float = 1.0,
+) -> List[Dict[str, Any]]:
+    """Fetch trade history for a market from Kalshi API with exponential backoff.
 
     Args:
         market_id: Market ticker
         limit: Maximum number of trades to fetch
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds for exponential backoff
 
     Returns:
         List of trade dictionaries
     """
-    try:
-        url = f"{KALSHI_API_BASE}/trade-api/v2/markets/{market_id}/trades"
-        params = {"limit": limit}
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data.get("trades", [])
-    except Exception as e:
-        print(f"  Warning: Could not fetch trades for {market_id}: {e}")
-        return []
+    import time
+    import random
+
+    url = f"{KALSHI_API_BASE}/trade-api/v2/markets/trades"
+    params = {"ticker": market_id, "limit": limit}
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, params=params, timeout=10)
+
+            # Handle rate limiting with exponential backoff
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    # Exponential backoff with jitter
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"  Warning: Rate limited for {market_id} after {max_retries} retries")
+                    return []
+
+            response.raise_for_status()
+            data = response.json()
+            return data.get("trades", [])
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429 and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                time.sleep(delay)
+                continue
+            print(f"  Warning: Could not fetch trades for {market_id}: {e}")
+            return []
+        except Exception as e:
+            print(f"  Warning: Could not fetch trades for {market_id}: {e}")
+            return []
+
+    return []
 
 
 def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int]:
