@@ -966,6 +966,8 @@ def render_active_markets_table(
         'Market',
         'Realized P&L',
         'P&L 24h Δ',
+        'Unrealized P&L (Worst)',
+        'Unrealized P&L (Best)',
         'Net Position',
         'Max Position',
         'Avg Cost',
@@ -976,8 +978,6 @@ def render_active_markets_table(
         'Spread',
         'Minimum Spread',
         'Filled 24h',
-        'Unrealized P&L (Worst)',
-        'Unrealized P&L (Best)',
         'Config Created',
     ]
     for col in df.columns:
