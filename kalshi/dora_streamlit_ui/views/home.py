@@ -39,7 +39,7 @@ def get_kalshi_market_url(market_id: str) -> str:
     return f"https://kalshi.com/markets/{market_id}"
 
 
-def render_pnl_chart(pnl_data: List[Dict], positions: Dict):
+def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] = None):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -93,6 +93,132 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict):
         # Calculate total exposure
         total_exposure = sum(abs(p.get('net_yes_qty', 0)) for p in positions.values())
         st.metric("Total Exposure", f"{total_exposure} contracts")
+
+    # Debug expander showing trade-by-trade P&L breakdown
+    if trades:
+        with st.expander("Debug: P&L Breakdown by Trade", expanded=False):
+            # Recalculate P&L with detailed tracking
+            trades_sorted = sorted(trades, key=lambda t: t.get('fill_timestamp') or t.get('timestamp', ''))
+
+            # Track position state per market
+            positions_state = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price, realized_pnl}
+            trade_details = []
+
+            for trade in trades_sorted:
+                market_id = trade.get('market_id')
+                if not market_id:
+                    continue
+
+                # Initialize position for this market if needed
+                if market_id not in positions_state:
+                    positions_state[market_id] = {
+                        'net_yes_qty': 0,
+                        'avg_buy_price': 0.0,
+                        'avg_sell_price': 0.0,
+                        'realized_pnl': 0.0
+                    }
+
+                pos = positions_state[market_id]
+                side = trade.get('side', '')
+                price = trade.get('price', 0.0)
+                size = trade.get('size', 0)
+                date_str = trade.get('date', '')
+                timestamp = trade.get('fill_timestamp') or trade.get('timestamp', '')
+
+                # Track state before update
+                pnl_before = pos['realized_pnl']
+                qty_before = pos['net_yes_qty']
+                avg_buy_before = pos['avg_buy_price']
+                avg_sell_before = pos['avg_sell_price']
+
+                # Update position using same logic as Position.update_from_fill()
+                if side in ['buy', 'yes']:
+                    # Bid fill - buying YES contracts
+                    if pos['net_yes_qty'] >= 0:
+                        # Adding to long position
+                        total_cost = pos['avg_buy_price'] * pos['net_yes_qty'] + price * size
+                        pos['net_yes_qty'] += size
+                        pos['avg_buy_price'] = total_cost / pos['net_yes_qty'] if pos['net_yes_qty'] > 0 else 0
+                    else:
+                        # Closing short position - realize P&L
+                        close_qty = min(abs(pos['net_yes_qty']), size)
+                        realized = (pos['avg_sell_price'] - price) * close_qty
+                        pos['realized_pnl'] += realized
+                        pos['net_yes_qty'] += size
+
+                        if pos['net_yes_qty'] > 0:
+                            pos['avg_buy_price'] = price
+                else:
+                    # Ask fill - selling YES contracts
+                    if pos['net_yes_qty'] <= 0:
+                        # Adding to short position
+                        total_cost = pos['avg_sell_price'] * abs(pos['net_yes_qty']) + price * size
+                        pos['net_yes_qty'] -= size
+                        pos['avg_sell_price'] = total_cost / abs(pos['net_yes_qty']) if pos['net_yes_qty'] != 0 else 0
+                    else:
+                        # Closing long position - realize P&L
+                        close_qty = min(pos['net_yes_qty'], size)
+                        realized = (price - pos['avg_buy_price']) * close_qty
+                        pos['realized_pnl'] += realized
+                        pos['net_yes_qty'] -= size
+
+                        if pos['net_yes_qty'] < 0:
+                            pos['avg_sell_price'] = price
+
+                # Calculate P&L change
+                pnl_change = pos['realized_pnl'] - pnl_before
+
+                trade_details.append({
+                    'Date': date_str,
+                    'Timestamp': timestamp,
+                    'Market': market_id,
+                    'Side': side,
+                    'Price': f"${price:.3f}",
+                    'Size': size,
+                    'Qty Before': qty_before,
+                    'Qty After': pos['net_yes_qty'],
+                    'Avg Buy Before': f"${avg_buy_before:.3f}" if avg_buy_before else 'N/A',
+                    'Avg Sell Before': f"${avg_sell_before:.3f}" if avg_sell_before else 'N/A',
+                    'Avg Buy After': f"${pos['avg_buy_price']:.3f}" if pos['avg_buy_price'] else 'N/A',
+                    'Avg Sell After': f"${pos['avg_sell_price']:.3f}" if pos['avg_sell_price'] else 'N/A',
+                    'P&L Change': f"${pnl_change:+.2f}",
+                    'Cumulative P&L': f"${pos['realized_pnl']:.2f}",
+                })
+
+            st.caption(f"Showing {len(trade_details)} trades sorted chronologically")
+
+            if trade_details:
+                # Display as dataframe
+                trade_df = pd.DataFrame(trade_details)
+                st.dataframe(
+                    trade_df,
+                    hide_index=True,
+                    width='stretch',
+                    height=400,
+                )
+
+                # Also show daily aggregation
+                st.markdown("#### Daily P&L Aggregation")
+                daily_breakdown = {}
+                for detail in trade_details:
+                    date = detail['Date']
+                    pnl_str = detail['P&L Change'].replace('$', '').replace('+', '')
+                    try:
+                        pnl_val = float(pnl_str)
+                        if date not in daily_breakdown:
+                            daily_breakdown[date] = 0.0
+                        daily_breakdown[date] += pnl_val
+                    except ValueError:
+                        pass
+
+                if daily_breakdown:
+                    daily_df = pd.DataFrame([
+                        {'Date': date, 'Daily P&L': f"${pnl:.2f}", 'Trade Count': sum(1 for d in trade_details if d['Date'] == date)}
+                        for date, pnl in sorted(daily_breakdown.items())
+                    ])
+                    st.dataframe(daily_df, hide_index=True, width='stretch')
+            else:
+                st.info("No trade details available")
 
 
 def render_exposure_chart(positions: Dict, market_configs: List[Dict]):
@@ -890,7 +1016,7 @@ def render(environment: str, region: str):
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        render_pnl_chart(pnl_data, positions)
+        render_pnl_chart(pnl_data, positions, trades)
 
     with col2:
         render_exposure_chart(positions, market_configs)
