@@ -352,7 +352,6 @@ def render_active_markets_table(
     market_configs: List[Dict],
     trades: List[Dict],
     decisions: List[Dict],
-    executions: List[Dict],
     open_orders_by_market: Dict[str, List[Dict]],
     open_orders_last_updated: Optional[str] = None,
 ):
@@ -364,7 +363,6 @@ def render_active_markets_table(
         market_configs: Pre-fetched market configs
         trades: Pre-fetched trades (last 30 days)
         decisions: Pre-fetched decision logs (last 1 day)
-        executions: Pre-fetched execution logs (last 1 day)
         open_orders_by_market: Pre-fetched open orders grouped by market_id (from DynamoDB state)
         open_orders_last_updated: Timestamp when open orders were last synced with exchange
     """
@@ -383,15 +381,6 @@ def render_active_markets_table(
             if mid not in decisions_by_market:
                 decisions_by_market[mid] = []
             decisions_by_market[mid].append(d)
-
-    # Index executions by market_id
-    executions_by_market: Dict[str, List[Dict]] = {}
-    for e in executions:
-        mid = e.get('market')
-        if mid:
-            if mid not in executions_by_market:
-                executions_by_market[mid] = []
-            executions_by_market[mid].append(e)
 
     # Index trades by market_id
     trades_by_market: Dict[str, List[Dict]] = {}
@@ -459,9 +448,13 @@ def render_active_markets_table(
                 'decision_id': decision.get('decision_id') if decision else None,
             })
 
-        # Format our bids/asks based on LIVE orders (from execution logs)
+        # Format our bids/asks based on LIVE orders (from state table)
         our_bid = 'N/A'
         our_ask = 'N/A'
+        our_bid_price = None
+        our_ask_price = None
+        is_bid_active = False
+        is_ask_active = False
         market_best_bid = order_book.get('best_bid', 0)
         market_best_ask = order_book.get('best_ask', 0)
 
@@ -472,9 +465,10 @@ def render_active_markets_table(
 
             # For bids: higher is better (we're at or above market best bid)
             if market_best_bid:
-                is_best_or_better = our_bid_price >= (market_best_bid - 0.0001)
-                indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+                is_bid_active = our_bid_price >= (market_best_bid - 0.0001)
+                indicator = "🟢 ✓" if is_bid_active else "🔴 ✗"
             else:
+                is_bid_active = True
                 indicator = "🟢 ✓"  # No competition
             our_bid = f"{indicator} ${our_bid_price:.3f} ({our_bid_size})"
 
@@ -485,9 +479,10 @@ def render_active_markets_table(
 
             # For asks: lower is better (we're at or below market best ask)
             if market_best_ask:
-                is_best_or_better = our_ask_price <= (market_best_ask + 0.0001)
-                indicator = "🟢 ✓" if is_best_or_better else "🔴 ✗"
+                is_ask_active = our_ask_price <= (market_best_ask + 0.0001)
+                indicator = "🟢 ✓" if is_ask_active else "🔴 ✗"
             else:
+                is_ask_active = True
                 indicator = "🟢 ✓"  # No competition
             our_ask = f"{indicator} ${our_ask_price:.3f} ({our_ask_size})"
 
@@ -515,26 +510,6 @@ def render_active_markets_table(
                     pass
         fill_time_ago = get_time_ago(most_recent_fill_ts)
 
-        # Calculate 24h execution count from pre-fetched executions
-        market_executions = executions_by_market.get(market_id, [])
-        execution_count_24h = 0
-        most_recent_exec_ts = None
-        most_recent_exec_dt = None
-        for e in market_executions:
-            ts_str = e.get('event_ts')
-            if ts_str:
-                try:
-                    ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
-                    # Track the most recent execution timestamp
-                    if most_recent_exec_dt is None or ts > most_recent_exec_dt:
-                        most_recent_exec_dt = ts
-                        most_recent_exec_ts = ts_str
-                    if ts > cutoff_24h:
-                        execution_count_24h += 1
-                except Exception:
-                    pass
-        exec_time_ago = get_time_ago(most_recent_exec_ts)
-
         # Calculate average cost for net position
         avg_cost = None
         net_qty = position.get('net_yes_qty', 0)
@@ -542,6 +517,16 @@ def render_active_markets_table(
             avg_cost = position.get('avg_buy_price', 0)
         elif net_qty < 0:
             avg_cost = position.get('avg_sell_price', 0)
+
+        avg_cost_display = 'N/A'
+        if avg_cost is not None:
+            is_profitable_active = False
+            if net_qty > 0 and our_ask_price is not None:
+                is_profitable_active = is_ask_active and our_ask_price > avg_cost
+            elif net_qty < 0 and our_bid_price is not None:
+                is_profitable_active = is_bid_active and our_bid_price < avg_cost
+            check_mark = " ✅" if is_profitable_active else ""
+            avg_cost_display = f"${avg_cost:.3f}{check_mark}"
 
         # Calculate unrealized P&L
         # For long positions (net_qty > 0): we'd sell at best_bid, so unrealized = (best_bid - avg_buy_price) * qty
@@ -556,19 +541,24 @@ def render_active_markets_table(
             if best_ask:
                 unrealized_pnl = (avg_cost - best_ask) * abs(net_qty)
 
+        spread_value = order_book.get('spread')
+        spread_display = f"${spread_value:.3f}" if spread_value else 'N/A'
+        min_spread_value = config.get('min_spread')
+        min_spread_display = f"${min_spread_value:.3f}" if min_spread_value is not None else 'N/A'
+
         table_data.append({
             'Market': market_id,
             'Best Bid': f"${order_book.get('best_bid', 0.0):.3f}" if order_book.get('best_bid') else 'N/A',
             'Best Ask': f"${order_book.get('best_ask', 0.0):.3f}" if order_book.get('best_ask') else 'N/A',
             'Our Bid': our_bid,
             'Our Ask': our_ask,
-            'Spread': f"${order_book.get('spread', 0.0):.3f}" if order_book.get('spread') else 'N/A',
+            'Spread': spread_display,
+            'Minimum Spread': min_spread_display,
             'Net Position': net_qty,
-            'Avg Cost': f"${avg_cost:.3f}" if avg_cost is not None else 'N/A',
+            'Avg Cost': avg_cost_display,
             'Unrealized P&L': f"${unrealized_pnl:+.2f}" if unrealized_pnl is not None else 'N/A',
             'Position 24h Δ': f"{pos_change_24h:+.0f}",
             'Filled 24h': f"{filled_24h} ({fill_time_ago})",
-            'Order Executions 24h': f"{execution_count_24h} ({exec_time_ago})",
             'Realized P&L': f"${position.get('realized_pnl', 0.0):.2f}",
             'P&L 24h Δ': f"${pnl_change_24h:+.2f}",
         })
@@ -612,15 +602,6 @@ def render_active_markets_table(
         except ValueError:
             pass
 
-    # Sum order executions (extract number from "X (time ago)" format)
-    total_executions = 0
-    for row in table_data:
-        exec_str = row['Order Executions 24h'].split('(')[0].strip()
-        try:
-            total_executions += int(exec_str)
-        except ValueError:
-            pass
-
     # Sum realized P&L (parse from formatted string)
     total_realized_pnl = 0.0
     for row in table_data:
@@ -647,12 +628,12 @@ def render_active_markets_table(
         'Our Bid': '',
         'Our Ask': '',
         'Spread': '',
+        'Minimum Spread': '',
         'Net Position': total_net_position,
         'Avg Cost': '',
         'Unrealized P&L': f"${total_unrealized_pnl:+.2f}" if total_unrealized_pnl != 0 else '$0.00',
         'Position 24h Δ': f"{total_pos_change:+.0f}",
         'Filled 24h': f"{total_filled}",
-        'Order Executions 24h': f"{total_executions}",
         'Realized P&L': f"${total_realized_pnl:.2f}",
         'P&L 24h Δ': f"${total_pnl_change:+.2f}",
     }
@@ -665,7 +646,6 @@ def render_active_markets_table(
             "unrealized_pnl": total_unrealized_pnl,
             "position_change_24h": total_pos_change,
             "filled_24h": total_filled,
-            "executions_24h": total_executions,
             "realized_pnl": total_realized_pnl,
             "pnl_change_24h": total_pnl_change,
         })
@@ -674,9 +654,31 @@ def render_active_markets_table(
     # Create DataFrame and display
     df = pd.DataFrame(table_data)
 
+    def _parse_money_value(value: str) -> Optional[float]:
+        if not isinstance(value, str):
+            return None
+        if not value or value == 'N/A':
+            return None
+        try:
+            return float(value.replace('$', ''))
+        except ValueError:
+            return None
+
+    def highlight_spread(row: pd.Series) -> List[str]:
+        spread_val = _parse_money_value(row.get('Spread', ''))
+        min_spread_val = _parse_money_value(row.get('Minimum Spread', ''))
+        if spread_val is None or min_spread_val is None:
+            return [''] * len(row)
+        color = '#D4EDDA' if spread_val >= min_spread_val else '#F8D7DA'
+        styles = [''] * len(row)
+        styles[row.index.get_loc('Spread')] = f'background-color: {color}'
+        return styles
+
+    styled_df = df.style.apply(highlight_spread, axis=1)
+
     # Style the dataframe
     st.dataframe(
-        df,
+        styled_df,
         width='stretch',
         hide_index=True,
         column_config={
@@ -686,12 +688,12 @@ def render_active_markets_table(
             'Our Bid': st.column_config.TextColumn('Our Bid', width='medium'),
             'Our Ask': st.column_config.TextColumn('Our Ask', width='medium'),
             'Spread': st.column_config.TextColumn('Spread', width='small'),
+            'Minimum Spread': st.column_config.TextColumn('Min Spread', width='small'),
             'Net Position': st.column_config.NumberColumn('Net Position', width='small'),
             'Avg Cost': st.column_config.TextColumn('Avg Cost', width='small'),
             'Unrealized P&L': st.column_config.TextColumn('Unreal P&L', width='small'),
             'Position 24h Δ': st.column_config.TextColumn('Pos Δ 24h', width='small'),
             'Filled 24h': st.column_config.TextColumn('Filled 24h', width='medium'),
-            'Order Executions 24h': st.column_config.TextColumn('Execs 24h', width='medium'),
             'Realized P&L': st.column_config.TextColumn('P&L', width='small'),
             'P&L 24h Δ': st.column_config.TextColumn('P&L Δ 24h', width='small'),
         }
@@ -748,7 +750,6 @@ def render(environment: str, region: str):
         trades = _timed("get_recent_trades", db_client.get_recent_trades, days=30)
         # Pre-fetch decision logs for the active markets table
         decisions = _timed("get_recent_decision_logs", db_client.get_recent_decision_logs, days=1)
-        executions: List[Dict] = []
         # Fetch open orders from DynamoDB state (synced from exchange by bot)
         open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
         open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)
@@ -790,7 +791,6 @@ def render(environment: str, region: str):
         market_configs,
         trades,
         decisions,
-        executions,
         open_orders_by_market,
         open_orders_last_updated,
     )
