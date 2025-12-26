@@ -18,7 +18,9 @@
       "Bash(aws sts get-caller-identity:*)",
       "Bash(head:*)",
       "Bash(tail:*)",
-      "Bash(pip show:*)"
+      "Bash(pip show:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(/usr/bin/python3:*)"
     ],
     "deny": [],
     "ask": []

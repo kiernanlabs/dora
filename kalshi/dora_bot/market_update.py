@@ -3,15 +3,15 @@
 Market Update Script for Dora Bot.
 
 This script analyzes market performance and generates recommended config updates:
-1. Markets to EXIT:
-   - (A) P&L < -$0.50 over last 24hrs, OR
-   - (B) No fills in last 48hrs
-   For exit markets: if position exists, set min_spread=0.50; otherwise set enabled=False
-   NOTE: Markets are kept active if other markets in the same event are still active
+1. Markets to SCALE DOWN (poor performance):
+   - (A) P&L < -$0.50 over lookback period, OR
+   - (B) No fills in lookback period
+   Scale down: cut quote_size and max_inventory by 50%, double min_spread
+   If quote_size is already <=5: exit (disable or set min_spread=0.50 if has position)
 
 2. Markets to EXPAND:
-   - Positive P&L in last 24hrs AND median fill size = current quote size
-   For expand markets: double quote_size, max_inventory_yes, max_inventory_no
+   - Positive P&L in lookback period AND median fill size = current quote size
+   For expand markets: double quote_size, max_inventory_yes, max_inventory_no (capped at 25)
 
 3. Sibling market ACTIVATION (when expanding):
    - For markets being expanded, fetch all sibling markets from the same event
@@ -20,6 +20,7 @@ This script analyzes market performance and generates recommended config updates
 
 Usage:
     python -m dora_bot.market_update --env prod
+    python -m dora_bot.market_update --env prod --pnl-lookback 48 --volume-lookback 72
     python -m dora_bot.market_update --env demo --dry-run
 """
 
@@ -54,10 +55,17 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 KALSHI_API_BASE = "https://api.elections.kalshi.com"
 
 # Default settings for newly activated sibling markets
-DEFAULT_QUOTE_SIZE = 10
-DEFAULT_MAX_INVENTORY_YES = 20
-DEFAULT_MAX_INVENTORY_NO = 20
-DEFAULT_MIN_SPREAD = 0.03
+DEFAULT_QUOTE_SIZE = 5
+DEFAULT_MAX_INVENTORY_YES = 5
+DEFAULT_MAX_INVENTORY_NO = 5
+DEFAULT_MIN_SPREAD = 0.04
+
+# Expansion caps
+MAX_QUOTE_SIZE = 25
+MAX_INVENTORY = 25
+
+# Scale down threshold - if quote_size is at or below this, exit instead of scaling down
+MIN_QUOTE_SIZE_FOR_SCALE_DOWN = 5
 
 
 @dataclass
@@ -84,7 +92,7 @@ class RecommendedAction:
     """A recommended action for a market."""
     market_id: str
     event_ticker: Optional[str]  # Event this market belongs to
-    action: str  # 'exit', 'expand', 'skip_event_active', or 'activate_sibling'
+    action: str  # 'exit', 'scale_down', 'expand', or 'activate_sibling'
     reason: str
     new_enabled: Optional[bool]
     new_min_spread: Optional[float]
@@ -324,20 +332,24 @@ def fetch_event_tickers(market_ids: List[str]) -> Dict[str, Optional[str]]:
 
 def analyze_markets(
     dynamo: DynamoDBClient,
-    environment: str
+    environment: str,
+    pnl_lookback_hours: int = 24,
+    volume_lookback_hours: int = 48
 ) -> Dict[str, MarketAnalysis]:
     """Analyze all markets based on fills and positions.
 
     Args:
         dynamo: DynamoDB client
         environment: 'demo' or 'prod'
+        pnl_lookback_hours: Hours to look back for P&L calculation (default 24)
+        volume_lookback_hours: Hours to look back for fill count (default 48)
 
     Returns:
         Dictionary mapping market_id to MarketAnalysis
     """
     now = datetime.now(timezone.utc)
-    cutoff_24h = now - timedelta(hours=24)
-    cutoff_48h = now - timedelta(hours=48)
+    cutoff_pnl = now - timedelta(hours=pnl_lookback_hours)
+    cutoff_volume = now - timedelta(hours=volume_lookback_hours)
 
     # Get all market configs (including disabled ones)
     configs = dynamo.get_all_market_configs(enabled_only=False)
@@ -349,14 +361,17 @@ def analyze_markets(
     # Get current positions
     positions = dynamo.get_positions()
 
-    # Get fills for the last 48 hours
+    # Get fills for the lookback period (use the longer of the two windows)
+    max_lookback = max(pnl_lookback_hours, volume_lookback_hours)
+    cutoff_max = now - timedelta(hours=max_lookback)
+
     suffix = '_demo' if environment == 'demo' else '_prod'
     table_name = f"dora_trade_log{suffix}"
 
     fills = get_fills_for_date_range(
         dynamo.dynamodb,
         table_name,
-        cutoff_48h,
+        cutoff_max,
         now
     )
 
@@ -373,8 +388,8 @@ def analyze_markets(
         market_fills = fills_by_market.get(market_id, [])
 
         # Parse fill timestamps and filter by time window
-        fills_24h = []
-        fills_48h = []
+        fills_pnl = []  # For P&L lookback
+        fills_volume = []  # For volume/fill count lookback
         last_fill_time = None
 
         for fill in market_fills:
@@ -400,23 +415,24 @@ def analyze_markets(
                         last_fill_time = ts
 
                     # Categorize by time window
-                    if ts >= cutoff_48h:
-                        fills_48h.append(fill)
-                        if ts >= cutoff_24h:
-                            fills_24h.append(fill)
+                    if ts >= cutoff_volume:
+                        fills_volume.append(fill)
+                    if ts >= cutoff_pnl:
+                        fills_pnl.append(fill)
                 except (ValueError, TypeError):
-                    # If we can't parse the timestamp, include in 48h window
-                    fills_48h.append(fill)
+                    # If we can't parse the timestamp, include in both windows
+                    fills_volume.append(fill)
+                    fills_pnl.append(fill)
 
-        # Calculate P&L for last 24 hours
-        pnl_24h = 0.0
+        # Calculate P&L for the P&L lookback period
+        pnl_lookback = 0.0
         fill_sizes = []
-        for fill in fills_24h:
+        for fill in fills_pnl:
             # P&L is calculated as: (sell_price - buy_price) * size - fees
             # For individual fills, we use pnl_realized if available
             pnl = fill.get('pnl_realized', 0.0) or 0.0
             fees = fill.get('fees', 0.0) or 0.0
-            pnl_24h += pnl - fees
+            pnl_lookback += pnl - fees
 
             # Track fill sizes for median calculation
             size = fill.get('size') or fill.get('fill_size', 0)
@@ -434,9 +450,9 @@ def analyze_markets(
         analyses[market_id] = MarketAnalysis(
             market_id=market_id,
             event_ticker=event_tickers.get(market_id),
-            pnl_24h=pnl_24h,
-            fill_count_24h=len(fills_24h),
-            fill_count_48h=len(fills_48h),
+            pnl_24h=pnl_lookback,  # Named pnl_24h for backward compat but uses configured lookback
+            fill_count_24h=len(fills_pnl),  # Fills in P&L lookback period
+            fill_count_48h=len(fills_volume),  # Fills in volume lookback period
             last_fill_time=last_fill_time,
             median_fill_size=median_fill_size,
             current_quote_size=config.quote_size,
@@ -467,15 +483,13 @@ def generate_recommendations(
     recommendations = []
 
     # Build maps for event-based analysis
-    # markets_by_event: all enabled markets grouped by event
-    # exit_candidates: markets that meet exit criteria
     all_markets_by_event: Dict[str, List[str]] = defaultdict(list)
-    exit_candidates: Dict[str, str] = {}  # market_id -> exit_reason
+    poor_performance_candidates: Dict[str, str] = {}  # market_id -> reason
 
     # Track events that have expand candidates (for sibling activation)
     expand_events: set = set()
 
-    # First pass: identify exit candidates and build event map
+    # First pass: identify poor performance candidates and build event map
     for market_id, analysis in analyses.items():
         # Skip disabled markets without positions (already exited)
         if not analysis.current_enabled and not analysis.has_position:
@@ -485,19 +499,19 @@ def generate_recommendations(
         if analysis.current_enabled and analysis.event_ticker:
             all_markets_by_event[analysis.event_ticker].append(market_id)
 
-        # Check EXIT conditions
-        exit_reason = None
+        # Check POOR PERFORMANCE conditions (scale down or exit)
+        poor_reason = None
 
-        # (A) P&L < -$0.50 over last 24hrs
+        # (A) P&L < -$0.50 over lookback period
         if analysis.pnl_24h < -0.50:
-            exit_reason = f"P&L < -$0.50 in 24h (${analysis.pnl_24h:.2f})"
+            poor_reason = f"P&L < -$0.50 (${analysis.pnl_24h:.2f})"
 
-        # (B) No fills in last 48hrs (only for enabled markets)
+        # (B) No fills in lookback period (only for enabled markets)
         elif analysis.current_enabled and analysis.fill_count_48h == 0:
-            exit_reason = "No fills in 48 hours"
+            poor_reason = "No fills in lookback period"
 
-        if exit_reason:
-            exit_candidates[market_id] = exit_reason
+        if poor_reason:
+            poor_performance_candidates[market_id] = poor_reason
 
         # Check EXPAND conditions (for tracking events with expanding markets)
         if (analysis.current_enabled and
@@ -507,36 +521,36 @@ def generate_recommendations(
             analysis.event_ticker):
             expand_events.add(analysis.event_ticker)
 
-    # Second pass: generate recommendations, checking event siblings
+    # Second pass: generate recommendations
     for market_id, analysis in analyses.items():
         # Skip disabled markets without positions (already exited)
         if not analysis.current_enabled and not analysis.has_position:
             continue
 
-        exit_reason = exit_candidates.get(market_id)
+        poor_reason = poor_performance_candidates.get(market_id)
 
-        if exit_reason:
-            # Check if other markets in the same event are still active AND not exit candidates
+        if poor_reason:
             event_ticker = analysis.event_ticker
-            sibling_active_non_exit_markets = []
-            if event_ticker:
-                sibling_active_non_exit_markets = [
-                    m for m in all_markets_by_event.get(event_ticker, [])
-                    if m != market_id and m not in exit_candidates
-                ]
 
-            if sibling_active_non_exit_markets:
-                # Other markets in this event are active and NOT exiting - skip exit, just note it
+            # Check if we can scale down or need to exit
+            # If quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN, scale down instead of exit
+            if analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
+                # Scale down: cut quote_size and max_inventory by 50%, double min_spread
+                new_quote_size = max(1, analysis.current_quote_size // 2)
+                new_max_inv_yes = max(1, analysis.current_max_inventory_yes // 2)
+                new_max_inv_no = max(1, analysis.current_max_inventory_no // 2)
+                new_min_spread = min(0.50, analysis.current_min_spread * 2)
+
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
-                    action='skip_event_active',
-                    reason=f"{exit_reason} (but {len(sibling_active_non_exit_markets)} sibling markets active)",
+                    action='scale_down',
+                    reason=f"{poor_reason} - scaling down (quote {analysis.current_quote_size}->{new_quote_size})",
                     new_enabled=None,
-                    new_min_spread=None,
-                    new_quote_size=None,
-                    new_max_inventory_yes=None,
-                    new_max_inventory_no=None,
+                    new_min_spread=new_min_spread,
+                    new_quote_size=new_quote_size,
+                    new_max_inventory_yes=new_max_inv_yes,
+                    new_max_inventory_no=new_max_inv_no,
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
@@ -544,12 +558,12 @@ def generate_recommendations(
                     position_qty=analysis.position_qty,
                 ))
             elif analysis.has_position:
-                # Has position: set min_spread to 0.50 to exit while allowing sells
+                # Quote size at minimum and has position: set min_spread to 0.50 to exit
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
                     action='exit',
-                    reason=exit_reason,
+                    reason=f"{poor_reason} (quote_size at minimum, has position)",
                     new_enabled=True,  # Keep enabled to allow position exit
                     new_min_spread=0.50,
                     new_quote_size=None,
@@ -562,12 +576,12 @@ def generate_recommendations(
                     position_qty=analysis.position_qty,
                 ))
             else:
-                # No position: disable the market
+                # Quote size at minimum and no position: disable the market
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
                     action='exit',
-                    reason=exit_reason,
+                    reason=f"{poor_reason} (quote_size at minimum)",
                     new_enabled=False,
                     new_min_spread=None,
                     new_quote_size=None,
@@ -587,6 +601,17 @@ def generate_recommendations(
             analysis.median_fill_size is not None and
             analysis.median_fill_size == analysis.current_quote_size):
 
+            # Cap expansion at MAX_QUOTE_SIZE and MAX_INVENTORY
+            new_quote_size = min(MAX_QUOTE_SIZE, analysis.current_quote_size * 2)
+            new_max_inv_yes = min(MAX_INVENTORY, analysis.current_max_inventory_yes * 2)
+            new_max_inv_no = min(MAX_INVENTORY, analysis.current_max_inventory_no * 2)
+
+            # Skip if already at max
+            if (new_quote_size == analysis.current_quote_size and
+                new_max_inv_yes == analysis.current_max_inventory_yes and
+                new_max_inv_no == analysis.current_max_inventory_no):
+                continue
+
             recommendations.append(RecommendedAction(
                 market_id=market_id,
                 event_ticker=analysis.event_ticker,
@@ -594,9 +619,9 @@ def generate_recommendations(
                 reason=f"Positive P&L (${analysis.pnl_24h:.2f}) and median fill = quote size ({analysis.current_quote_size})",
                 new_enabled=None,
                 new_min_spread=None,
-                new_quote_size=analysis.current_quote_size * 2,
-                new_max_inventory_yes=analysis.current_max_inventory_yes * 2,
-                new_max_inventory_no=analysis.current_max_inventory_no * 2,
+                new_quote_size=new_quote_size,
+                new_max_inventory_yes=new_max_inv_yes,
+                new_max_inventory_no=new_max_inv_no,
                 pnl_24h=analysis.pnl_24h,
                 fill_count_24h=analysis.fill_count_24h,
                 fill_count_48h=analysis.fill_count_48h,
@@ -843,6 +868,8 @@ def execute_updates(
                     min_spread=DEFAULT_MIN_SPREAD,
                     quote_size=DEFAULT_QUOTE_SIZE,
                     inventory_skew_factor=0.5,
+                    event_ticker=rec.get('event_ticker') or None,
+                    created_at=datetime.now(timezone.utc),
                 )
                 # Parse fair_value if present and set it
                 if rec.get('fair_value'):
@@ -936,6 +963,18 @@ def main():
         default=None,
         help='Skip analysis and execute from an existing CSV file'
     )
+    parser.add_argument(
+        '--pnl-lookback',
+        type=int,
+        default=24,
+        help='Hours to look back for P&L calculation (default: 24)'
+    )
+    parser.add_argument(
+        '--volume-lookback',
+        type=int,
+        default=48,
+        help='Hours to look back for fill count/volume (default: 48)'
+    )
 
     args = parser.parse_args()
 
@@ -960,7 +999,13 @@ def main():
 
     # Analysis mode
     print(f"Analyzing markets in {args.env} environment...")
-    analyses = analyze_markets(dynamo, args.env)
+    print(f"  P&L lookback: {args.pnl_lookback} hours")
+    print(f"  Volume lookback: {args.volume_lookback} hours")
+    analyses = analyze_markets(
+        dynamo, args.env,
+        pnl_lookback_hours=args.pnl_lookback,
+        volume_lookback_hours=args.volume_lookback
+    )
     print(f"Analyzed {len(analyses)} markets")
 
     # Get all existing configs (for sibling activation check)
@@ -975,10 +1020,10 @@ def main():
 
     # Summary
     exits = [r for r in recommendations if r.action == 'exit']
+    scale_downs = [r for r in recommendations if r.action == 'scale_down']
     expands = [r for r in recommendations if r.action == 'expand']
-    skipped = [r for r in recommendations if r.action == 'skip_event_active']
     siblings = [r for r in recommendations if r.action == 'activate_sibling']
-    print(f"\nRecommendations: {len(exits)} exits, {len(expands)} expansions, {len(siblings)} sibling activations, {len(skipped)} skipped (event active)")
+    print(f"\nRecommendations: {len(exits)} exits, {len(scale_downs)} scale-downs, {len(expands)} expansions, {len(siblings)} sibling activations")
 
     # Write CSV
     if args.output:

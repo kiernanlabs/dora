@@ -118,6 +118,8 @@ class DynamoDBClient:
                 inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
                 fair_value=item.get('fair_value'),
                 toxicity_score=item.get('toxicity_score'),
+                event_ticker=item.get('event_ticker'),
+                created_at=self._parse_datetime(item.get('created_at')) if item.get('created_at') else None,
                 updated_at=self._parse_datetime(item.get('updated_at'))
             )
         except ClientError as e:
@@ -155,6 +157,8 @@ class DynamoDBClient:
                     inventory_skew_factor=item.get('inventory_skew_factor', 0.5),
                     fair_value=item.get('fair_value'),
                     toxicity_score=item.get('toxicity_score'),
+                    event_ticker=item.get('event_ticker'),
+                    created_at=self._parse_datetime(item.get('created_at')) if item.get('created_at') else None,
                     updated_at=self._parse_datetime(item.get('updated_at'))
                 )
 
@@ -196,6 +200,12 @@ class DynamoDBClient:
 
             if config.toxicity_score is not None:
                 item['toxicity_score'] = self._to_dynamo_item(config.toxicity_score)
+
+            if config.event_ticker is not None:
+                item['event_ticker'] = config.event_ticker
+
+            if config.created_at is not None:
+                item['created_at'] = config.created_at.isoformat()
 
             self.market_config_table.put_item(Item=item)
             return True

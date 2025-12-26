@@ -865,17 +865,16 @@ class DoraBot:
                             "failed": place_summary.failed,
                         })
 
-                # 9. Periodic persistence
-                if self.loop_count % 10 == 0:
-                    self.state.save_to_dynamo()
-                    logger.info("Heartbeat", extra={
-                        "event_type": EventType.HEARTBEAT,
-                        "loop_count": self.loop_count,
-                        "markets_active": len(market_configs),
-                        "open_orders_count": len(self.state.open_orders),
-                        "daily_pnl": self.state.risk_state.daily_pnl,
-                        "rate_limiter": rate_limiter.get_stats(),
-                    })
+                # 9. Save state every loop now 
+                self.state.save_to_dynamo()
+                logger.info("Heartbeat", extra={
+                    "event_type": EventType.HEARTBEAT,
+                    "loop_count": self.loop_count,
+                    "markets_active": len(market_configs),
+                    "open_orders_count": len(self.state.open_orders),
+                    "daily_pnl": self.state.risk_state.daily_pnl,
+                    "rate_limiter": rate_limiter.get_stats(),
+                })
 
                 self.loop_count += 1
 

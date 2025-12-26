@@ -518,6 +518,26 @@ def render_active_markets_table(
         elif net_qty < 0:
             avg_cost = position.get('avg_sell_price', 0)
 
+        max_position_value = config.get('max_position')
+        if max_position_value is None:
+            max_yes = config.get('max_inventory_yes')
+            max_no = config.get('max_inventory_no')
+            if max_yes is not None and max_no is not None and max_yes != max_no:
+                max_position_value = f"{int(max_yes)}/{int(max_no)}"
+            else:
+                max_position_value = max_yes if max_yes is not None else max_no
+        if max_position_value is not None and not isinstance(max_position_value, str):
+            max_position_value = str(int(max_position_value))
+
+        created_at_value = config.get('created_at')
+        if created_at_value:
+            if isinstance(created_at_value, datetime):
+                created_at_display = created_at_value.astimezone().strftime('%Y-%m-%d %I:%M:%S %p')
+            else:
+                created_at_display = to_local_time(str(created_at_value))
+        else:
+            created_at_display = 'N/A'
+
         avg_cost_display = 'N/A'
         if avg_cost is not None:
             is_profitable_active = False
@@ -554,6 +574,9 @@ def render_active_markets_table(
             'Our Ask': our_ask,
             'Spread': spread_display,
             'Minimum Spread': min_spread_display,
+            'Max Position': max_position_value if max_position_value is not None else 'N/A',
+            'Event': config.get('event_ticker') or 'N/A',
+            'Config Created': created_at_display,
             'Net Position': net_qty,
             'Avg Cost': avg_cost_display,
             'Unrealized P&L': f"${unrealized_pnl:+.2f}" if unrealized_pnl is not None else 'N/A',
@@ -629,6 +652,9 @@ def render_active_markets_table(
         'Our Ask': '',
         'Spread': '',
         'Minimum Spread': '',
+        'Max Position': '',
+        'Event': '',
+        'Config Created': '',
         'Net Position': total_net_position,
         'Avg Cost': '',
         'Unrealized P&L': f"${total_unrealized_pnl:+.2f}" if total_unrealized_pnl != 0 else '$0.00',
@@ -689,6 +715,9 @@ def render_active_markets_table(
             'Our Ask': st.column_config.TextColumn('Our Ask', width='medium'),
             'Spread': st.column_config.TextColumn('Spread', width='small'),
             'Minimum Spread': st.column_config.TextColumn('Min Spread', width='small'),
+            'Max Position': st.column_config.TextColumn('Max Pos', width='small'),
+            'Event': st.column_config.TextColumn('Event', width='medium'),
+            'Config Created': st.column_config.TextColumn('Created', width='medium'),
             'Net Position': st.column_config.NumberColumn('Net Position', width='small'),
             'Avg Cost': st.column_config.TextColumn('Avg Cost', width='small'),
             'Unrealized P&L': st.column_config.TextColumn('Unreal P&L', width='small'),

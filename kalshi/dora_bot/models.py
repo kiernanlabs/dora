@@ -186,6 +186,8 @@ class MarketConfig:
     inventory_skew_factor: float = 0.5  # How aggressively to skew quotes based on inventory
     fair_value: Optional[float] = None  # Override mid-price with custom fair value
     toxicity_score: Optional[float] = None
+    event_ticker: Optional[str] = None  # Event this market belongs to
+    created_at: Optional[datetime] = None  # When the config was first created
     updated_at: datetime = field(default_factory=utc_now)
 
 

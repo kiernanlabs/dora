@@ -322,6 +322,15 @@ class MarketMaker:
         latest_price = None
 
         for trade in trades:
+            quantity_raw = trade.get("quantity")
+            if quantity_raw is not None:
+                try:
+                    quantity = float(quantity_raw)
+                except (TypeError, ValueError):
+                    quantity = None
+                if quantity == 1:
+                    continue
+
             price = self._extract_trade_price(trade)
             if price is None:
                 continue
@@ -359,8 +368,10 @@ class MarketMaker:
         except (TypeError, ValueError):
             return None
 
-        if price > 1:
-            price = price / 100.0
+        # logger.info(f"extracting price: {price}")
+
+        # price returned from API in whole cents
+        price = price / 100.0
         return price
 
     def _parse_trade_timestamp(self, timestamp: Optional[str]) -> Optional[datetime]:
