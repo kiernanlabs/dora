@@ -134,7 +134,7 @@ class DoraBot:
 
         # Config refresh counter
         self.loop_count = 0
-        self.config_refresh_interval = 10  # Reload configs every N loops
+        self.config_refresh_interval = 5  # Reload configs every N loops
 
         logger.info("Bot initialized", extra={
             "event_type": EventType.STARTUP,

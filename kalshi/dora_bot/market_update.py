@@ -13,34 +13,51 @@ This script analyzes market performance and generates recommended config updates
    - Positive P&L in last 24hrs AND median fill size = current quote size
    For expand markets: double quote_size, max_inventory_yes, max_inventory_no
 
+3. Sibling market ACTIVATION (when expanding):
+   - For markets being expanded, fetch all sibling markets from the same event
+   - Activate any sibling markets not already in config with default settings
+   - Uses OpenAI to generate fair value estimates for new sibling markets
+
 Usage:
     python -m dora_bot.market_update --env prod
     python -m dora_bot.market_update --env demo --dry-run
 """
 
 import argparse
-import base64
 import csv
+import json
 import os
 import statistics
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import boto3
+import requests
 from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
-from cryptography.hazmat.primitives import serialization
 from dotenv import load_dotenv
+from openai import OpenAI
 
 from dora_bot.dynamo import DynamoDBClient
-from dora_bot.exchange_client import KalshiExchangeClient
-from dora_bot.kalshi_client import KalshiHttpClient, Environment
 from dora_bot.models import MarketConfig, Position
+
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+# Public API endpoint (no auth required for market data)
+KALSHI_API_BASE = "https://api.elections.kalshi.com"
+
+# Default settings for newly activated sibling markets
+DEFAULT_QUOTE_SIZE = 10
+DEFAULT_MAX_INVENTORY_YES = 20
+DEFAULT_MAX_INVENTORY_NO = 20
+DEFAULT_MIN_SPREAD = 0.03
 
 
 @dataclass
@@ -67,7 +84,7 @@ class RecommendedAction:
     """A recommended action for a market."""
     market_id: str
     event_ticker: Optional[str]  # Event this market belongs to
-    action: str  # 'exit' or 'expand' or 'skip_event_active'
+    action: str  # 'exit', 'expand', 'skip_event_active', or 'activate_sibling'
     reason: str
     new_enabled: Optional[bool]
     new_min_spread: Optional[float]
@@ -80,6 +97,9 @@ class RecommendedAction:
     fill_count_48h: int
     has_position: bool
     position_qty: int
+    # Fair value assessment (for activate_sibling actions)
+    fair_value: Optional[float] = None
+    fair_value_rationale: Optional[str] = None
 
 
 def get_fills_for_date_range(
@@ -146,14 +166,138 @@ def _serialize_decimal(obj):
     return obj
 
 
-def fetch_event_tickers(
-    exchange: KalshiExchangeClient,
-    market_ids: List[str]
-) -> Dict[str, Optional[str]]:
-    """Fetch event_ticker for each market from the exchange.
+def assess_fair_value(
+    market_title: str,
+    market_subtitle: Optional[str] = None,
+    rules: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Assess the fair value (likelihood of resolving YES) for a market.
+
+    Uses OpenAI API to evaluate the probability without referencing prediction markets.
 
     Args:
-        exchange: Exchange client
+        market_title: The title of the market
+        market_subtitle: Optional subtitle providing additional context
+        rules: Optional resolution rules for the market
+
+    Returns:
+        Dictionary containing:
+        - probability: Likelihood percentage (0-100)
+        - rationale: 2-3 sentence explanation
+        - error: Error message if API call fails
+    """
+    try:
+        # Get OpenAI API key from environment
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            return {
+                "probability": None,
+                "rationale": "OpenAI API key not configured",
+                "error": "Missing OPENAI_API_KEY in environment variables",
+            }
+
+        # Initialize OpenAI client
+        client = OpenAI(api_key=api_key)
+
+        # Build context for the prompt
+        context = f"The question is: {market_title}"
+        if market_subtitle:
+            context += f"\n{market_subtitle}"
+        if rules:
+            context += f"\n\nResolution criteria: {rules[:500]}"  # Limit rules length
+
+        # Create the prompt
+        prompt = f"""You are an expert analyst tasked with estimating probabilities for real-world events. Your job is to estimate the likelihood that the following event will resolve to YES.
+
+Do NOT reference prediction markets, betting odds, or market prices. Base your estimate solely on your knowledge of the subject matter, historical precedents, and logical reasoning.
+
+Today is {datetime.now().strftime("%Y-%m-%d")}
+
+{context}
+
+Please return your assessment in the form of a likelihood percentage (number from 0-100%) and 2-3 sentence rationale explaining your reasoning.
+
+Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
+
+        response = client.responses.create(
+            model="gpt-5-mini",
+            reasoning={"effort": "medium"},
+            tools=[{"type": "web_search"}],
+            input=prompt,
+        )
+
+        # Parse the response (Responses API uses output_text)
+        response_text = getattr(response, "output_text", None)
+        if response_text is None:
+            return {
+                "probability": None,
+                "rationale": "No output_text in response",
+                "error": "Empty API response",
+            }
+        response_text = response_text.strip()
+
+        # Try to extract JSON if wrapped in markdown code blocks
+        if response_text.startswith("```"):
+            # Remove markdown code blocks
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+            response_text = response_text.strip()
+
+        result = json.loads(response_text)
+
+        return {
+            "probability": result.get("probability", "N/A"),
+            "rationale": result.get("rationale", "No rationale provided"),
+            "error": None,
+        }
+
+    except json.JSONDecodeError as e:
+        return {
+            "probability": None,
+            "rationale": f"Failed to parse API response: {str(e)}",
+            "error": "JSON parsing error",
+        }
+    except Exception as e:
+        return {
+            "probability": None,
+            "rationale": f"Error calling OpenAI API: {str(e)}",
+            "error": str(e),
+        }
+
+
+def fetch_event_markets(event_ticker: str) -> List[Dict[str, Any]]:
+    """Fetch all markets for an event from the Kalshi API.
+
+    Args:
+        event_ticker: Event ticker to fetch markets for
+
+    Returns:
+        List of market dictionaries from the API
+    """
+    try:
+        url = f"{KALSHI_API_BASE}/trade-api/v2/events/{event_ticker}"
+        print(f"    Fetching: {url}")
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        # The API returns 'markets' at the top level, alongside 'event'
+        markets = data.get('markets', [])
+        print(f"    Response: found {len(markets)} markets in event {event_ticker}")
+        return markets
+    except requests.exceptions.HTTPError as e:
+        print(f"    HTTP Error fetching {event_ticker}: {e.response.status_code} - {e.response.text[:200]}")
+        return []
+    except Exception as e:
+        print(f"    Error fetching {event_ticker}: {type(e).__name__}: {e}")
+        return []
+
+
+def fetch_event_tickers(market_ids: List[str]) -> Dict[str, Optional[str]]:
+    """Fetch event_ticker for each market from the public Kalshi API.
+
+    Args:
         market_ids: List of market IDs to fetch
 
     Returns:
@@ -163,9 +307,12 @@ def fetch_event_tickers(
 
     for market_id in market_ids:
         try:
-            market_info = exchange.get_market_info(market_id)
+            url = f"{KALSHI_API_BASE}/trade-api/v2/markets/{market_id}"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
             # The API returns market info with 'market' key containing the data
-            market_data = market_info.get('market', market_info)
+            market_data = data.get('market', data)
             event_ticker = market_data.get('event_ticker')
             event_tickers[market_id] = event_ticker
         except Exception as e:
@@ -177,14 +324,12 @@ def fetch_event_tickers(
 
 def analyze_markets(
     dynamo: DynamoDBClient,
-    exchange: KalshiExchangeClient,
     environment: str
 ) -> Dict[str, MarketAnalysis]:
     """Analyze all markets based on fills and positions.
 
     Args:
         dynamo: DynamoDB client
-        exchange: Exchange client for fetching market info
         environment: 'demo' or 'prod'
 
     Returns:
@@ -197,9 +342,9 @@ def analyze_markets(
     # Get all market configs (including disabled ones)
     configs = dynamo.get_all_market_configs(enabled_only=False)
 
-    # Fetch event_tickers for all markets
+    # Fetch event_tickers for all markets from public API
     print(f"Fetching event info for {len(configs)} markets...")
-    event_tickers = fetch_event_tickers(exchange, list(configs.keys()))
+    event_tickers = fetch_event_tickers(list(configs.keys()))
 
     # Get current positions
     positions = dynamo.get_positions()
@@ -307,12 +452,14 @@ def analyze_markets(
 
 
 def generate_recommendations(
-    analyses: Dict[str, MarketAnalysis]
+    analyses: Dict[str, MarketAnalysis],
+    existing_configs: Dict[str, MarketConfig]
 ) -> List[RecommendedAction]:
     """Generate recommended actions based on market analysis.
 
     Args:
         analyses: Dictionary of market analyses
+        existing_configs: Dictionary of existing market configs in DynamoDB
 
     Returns:
         List of recommended actions
@@ -324,6 +471,9 @@ def generate_recommendations(
     # exit_candidates: markets that meet exit criteria
     all_markets_by_event: Dict[str, List[str]] = defaultdict(list)
     exit_candidates: Dict[str, str] = {}  # market_id -> exit_reason
+
+    # Track events that have expand candidates (for sibling activation)
+    expand_events: set = set()
 
     # First pass: identify exit candidates and build event map
     for market_id, analysis in analyses.items():
@@ -348,6 +498,14 @@ def generate_recommendations(
 
         if exit_reason:
             exit_candidates[market_id] = exit_reason
+
+        # Check EXPAND conditions (for tracking events with expanding markets)
+        if (analysis.current_enabled and
+            analysis.pnl_24h > 0 and
+            analysis.median_fill_size is not None and
+            analysis.median_fill_size == analysis.current_quote_size and
+            analysis.event_ticker):
+            expand_events.add(analysis.event_ticker)
 
     # Second pass: generate recommendations, checking event siblings
     for market_id, analysis in analyses.items():
@@ -446,6 +604,126 @@ def generate_recommendations(
                 position_qty=analysis.position_qty,
             ))
 
+    # Third pass: For expand events, activate sibling markets that are not already active
+    if expand_events:
+        print(f"\nFetching sibling markets for {len(expand_events)} expanding events...")
+        sibling_recommendations = generate_sibling_activations(
+            expand_events, existing_configs, all_markets_by_event
+        )
+        recommendations.extend(sibling_recommendations)
+
+    return recommendations
+
+
+def generate_sibling_activations(
+    expand_events: set,
+    existing_configs: Dict[str, MarketConfig],
+    active_markets_by_event: Dict[str, List[str]]
+) -> List[RecommendedAction]:
+    """Generate recommendations to activate sibling markets for expanding events.
+
+    Args:
+        expand_events: Set of event tickers with expanding markets
+        existing_configs: Dictionary of existing market configs in DynamoDB
+        active_markets_by_event: Dictionary of currently active markets by event
+
+    Returns:
+        List of activate_sibling recommendations
+    """
+    recommendations = []
+    existing_market_ids = set(existing_configs.keys())
+
+    for event_ticker in expand_events:
+        # Fetch all markets for this event from Kalshi API
+        event_markets = fetch_event_markets(event_ticker)
+
+        if not event_markets:
+            print(f"  {event_ticker}: No markets found")
+            continue
+
+        # Find markets that are not already in our config
+        active_markets = set(active_markets_by_event.get(event_ticker, []))
+        new_markets = []
+
+        for market in event_markets:
+            market_id = market.get('ticker')
+            if not market_id:
+                continue
+
+            # Skip if already active or already in config (even if disabled)
+            if market_id in active_markets or market_id in existing_market_ids:
+                continue
+
+            # Skip closed/settled markets
+            status = market.get('status', '')
+            if status in ('closed', 'settled'):
+                continue
+
+            # Skip markets with low volume (< 10 in last 24hrs)
+            volume_24h = market.get('volume_24h', 0) or 0
+            if volume_24h < 10:
+                continue
+
+            new_markets.append(market)
+
+        if not new_markets:
+            print(f"  {event_ticker}: No new sibling markets to activate")
+            continue
+
+        # Sort by 24hr volume (descending) and take top 5
+        new_markets.sort(key=lambda m: m.get('volume_24h', 0) or 0, reverse=True)
+        top_markets = new_markets[:5]
+
+        print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, activating top {len(top_markets)} by volume...")
+
+        # Assess fair value for each top market (in parallel for efficiency)
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {}
+            for market in top_markets:
+                market_id = market.get('ticker')
+                future = executor.submit(
+                    assess_fair_value,
+                    market.get('title', ''),
+                    market.get('subtitle', ''),
+                    market.get('rules_primary', '')
+                )
+                futures[future] = (market_id, market)
+
+            for future in as_completed(futures):
+                market_id, market = futures[future]
+                fv_result = future.result()
+
+                # Parse probability from result
+                prob_str = fv_result.get("probability", "N/A")
+                fair_value = None
+                if prob_str and prob_str != "N/A":
+                    try:
+                        fair_value = float(str(prob_str).replace("%", "").strip())
+                    except (ValueError, AttributeError):
+                        pass
+
+                volume_24h = market.get('volume_24h', 0) or 0
+                print(f"    {market_id}: volume_24h={volume_24h}, fair_value={fair_value}")
+
+                recommendations.append(RecommendedAction(
+                    market_id=market_id,
+                    event_ticker=event_ticker,
+                    action='activate_sibling',
+                    reason=f"Sibling of expanding market in event {event_ticker}",
+                    new_enabled=True,
+                    new_min_spread=DEFAULT_MIN_SPREAD,
+                    new_quote_size=DEFAULT_QUOTE_SIZE,
+                    new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
+                    new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                    pnl_24h=0.0,
+                    fill_count_24h=0,
+                    fill_count_48h=0,
+                    has_position=False,
+                    position_qty=0,
+                    fair_value=fair_value,
+                    fair_value_rationale=fv_result.get("rationale"),
+                ))
+
     return recommendations
 
 
@@ -474,6 +752,8 @@ def write_recommendations_csv(
         'fill_count_48h',
         'has_position',
         'position_qty',
+        'fair_value',
+        'fair_value_rationale',
         'approve'  # User can set to 'yes' or 'no'
     ]
 
@@ -493,14 +773,16 @@ def write_recommendations_csv(
                 'reason': rec.reason,
                 'new_enabled': rec.new_enabled if rec.new_enabled is not None else '',
                 'new_min_spread': rec.new_min_spread if rec.new_min_spread is not None else '',
-                'new_quote_size': rec.new_quote_size if rec.new_quote_size is not None else '',
-                'new_max_inventory_yes': rec.new_max_inventory_yes if rec.new_max_inventory_yes is not None else '',
-                'new_max_inventory_no': rec.new_max_inventory_no if rec.new_max_inventory_no is not None else '',
+                'new_quote_size': int(rec.new_quote_size) if rec.new_quote_size is not None else '',
+                'new_max_inventory_yes': int(rec.new_max_inventory_yes) if rec.new_max_inventory_yes is not None else '',
+                'new_max_inventory_no': int(rec.new_max_inventory_no) if rec.new_max_inventory_no is not None else '',
                 'pnl_24h': f'{rec.pnl_24h:.2f}',
                 'fill_count_24h': rec.fill_count_24h,
                 'fill_count_48h': rec.fill_count_48h,
                 'has_position': rec.has_position,
-                'position_qty': rec.position_qty,
+                'position_qty': int(rec.position_qty) if rec.position_qty else 0,
+                'fair_value': f'{rec.fair_value:.1f}' if rec.fair_value is not None else '',
+                'fair_value_rationale': rec.fair_value_rationale or '',
                 'approve': default_approve,
             })
 
@@ -545,113 +827,81 @@ def execute_updates(
 
     for rec in approved:
         market_id = rec['market_id']
+        action = rec.get('action', '')
 
-        # Get current config
+        # Get current config or create new one for activate_sibling
         config = dynamo.get_market_config(market_id)
+
         if config is None:
-            print(f"Warning: Market config not found for {market_id}, skipping")
-            failure += 1
-            continue
+            if action == 'activate_sibling':
+                # Create new config for sibling market
+                config = MarketConfig(
+                    market_id=market_id,
+                    enabled=True,
+                    max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
+                    max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                    min_spread=DEFAULT_MIN_SPREAD,
+                    quote_size=DEFAULT_QUOTE_SIZE,
+                    inventory_skew_factor=0.5,
+                )
+                # Parse fair_value if present and set it
+                if rec.get('fair_value'):
+                    try:
+                        config.fair_value = float(rec['fair_value']) / 100.0  # Convert from % to decimal
+                    except (ValueError, TypeError):
+                        pass
+            else:
+                print(f"Warning: Market config not found for {market_id}, skipping")
+                failure += 1
+                continue
+        else:
+            # Apply updates to existing config
+            if rec.get('new_enabled'):
+                enabled_str = rec['new_enabled'].lower()
+                if enabled_str in ('true', 'yes', '1'):
+                    config.enabled = True
+                elif enabled_str in ('false', 'no', '0'):
+                    config.enabled = False
 
-        # Apply updates
-        if rec.get('new_enabled'):
-            enabled_str = rec['new_enabled'].lower()
-            if enabled_str in ('true', 'yes', '1'):
-                config.enabled = True
-            elif enabled_str in ('false', 'no', '0'):
-                config.enabled = False
+            if rec.get('new_min_spread'):
+                try:
+                    config.min_spread = float(rec['new_min_spread'])
+                except ValueError:
+                    pass
 
-        if rec.get('new_min_spread'):
-            try:
-                config.min_spread = float(rec['new_min_spread'])
-            except ValueError:
-                pass
+            if rec.get('new_quote_size'):
+                try:
+                    # Handle float strings like "20.0" from CSV
+                    config.quote_size = int(float(rec['new_quote_size']))
+                except (ValueError, TypeError):
+                    pass
 
-        if rec.get('new_quote_size'):
-            try:
-                config.quote_size = int(rec['new_quote_size'])
-            except ValueError:
-                pass
+            if rec.get('new_max_inventory_yes'):
+                try:
+                    # Handle float strings like "40.0" from CSV
+                    config.max_inventory_yes = int(float(rec['new_max_inventory_yes']))
+                except (ValueError, TypeError):
+                    pass
 
-        if rec.get('new_max_inventory_yes'):
-            try:
-                config.max_inventory_yes = int(rec['new_max_inventory_yes'])
-            except ValueError:
-                pass
+            if rec.get('new_max_inventory_no'):
+                try:
+                    # Handle float strings like "40.0" from CSV
+                    config.max_inventory_no = int(float(rec['new_max_inventory_no']))
+                except (ValueError, TypeError):
+                    pass
 
-        if rec.get('new_max_inventory_no'):
-            try:
-                config.max_inventory_no = int(rec['new_max_inventory_no'])
-            except ValueError:
-                pass
-
-        # Save updated config
+        # Save updated/new config
         if dynamo.put_market_config(config):
-            print(f"✓ Updated {market_id}: {rec['action']}")
+            if action == 'activate_sibling':
+                print(f"✓ Created {market_id}: {action} (fair_value={rec.get('fair_value', 'N/A')})")
+            else:
+                print(f"✓ Updated {market_id}: {action}")
             success += 1
         else:
             print(f"✗ Failed to update {market_id}")
             failure += 1
 
     return success, failure
-
-
-def create_exchange_client(environment: str) -> KalshiExchangeClient:
-    """Create an exchange client for the given environment.
-
-    Args:
-        environment: 'demo' or 'prod'
-
-    Returns:
-        Configured KalshiExchangeClient
-    """
-    use_demo = environment == 'demo'
-
-    # Check for container mode (base64 encoded keys)
-    if os.getenv('KALSHI_KEY_ID') and os.getenv('KALSHI_PRIVATE_KEY'):
-        keyid = os.getenv('KALSHI_KEY_ID')
-        private_key_b64 = os.getenv('KALSHI_PRIVATE_KEY')
-
-        private_key_pem = base64.b64decode(private_key_b64)
-        private_key = serialization.load_pem_private_key(
-            private_key_pem,
-            password=None
-        )
-    else:
-        # Local mode: load credentials from .env file
-        kalshi_dir = os.path.join(os.path.dirname(__file__), '..')
-        load_dotenv(os.path.join(kalshi_dir, '.env'))
-
-        keyid = os.getenv('DEMO_KEYID') if use_demo else os.getenv('PROD_KEYID')
-        keyfile = os.getenv('DEMO_KEYFILE') if use_demo else os.getenv('PROD_KEYFILE')
-
-        if not keyid or not keyfile:
-            raise ValueError(f"Missing API credentials in .env file for {environment}")
-
-        # Resolve keyfile path relative to kalshi directory
-        keyfile_path = os.path.join(kalshi_dir, keyfile)
-
-        if not os.path.exists(keyfile_path):
-            raise FileNotFoundError(f"Private key file not found: {keyfile_path}")
-
-        with open(keyfile_path, "rb") as key_file:
-            private_key = serialization.load_pem_private_key(
-                key_file.read(),
-                password=None
-            )
-
-    env = Environment.DEMO if use_demo else Environment.PROD
-
-    kalshi_client = KalshiHttpClient(
-        key_id=keyid,
-        private_key=private_key,
-        environment=env
-    )
-
-    return KalshiExchangeClient(
-        kalshi_client,
-        environment=environment,
-    )
 
 
 def main():
@@ -708,16 +958,16 @@ def main():
         print(f"\nCompleted: {success} succeeded, {failure} failed")
         sys.exit(0 if failure == 0 else 1)
 
-    # Analysis mode - create exchange client for fetching market info
-    print(f"Initializing exchange client for {args.env}...")
-    exchange = create_exchange_client(args.env)
-
+    # Analysis mode
     print(f"Analyzing markets in {args.env} environment...")
-    analyses = analyze_markets(dynamo, exchange, args.env)
+    analyses = analyze_markets(dynamo, args.env)
     print(f"Analyzed {len(analyses)} markets")
 
+    # Get all existing configs (for sibling activation check)
+    existing_configs = dynamo.get_all_market_configs(enabled_only=False)
+
     # Generate recommendations
-    recommendations = generate_recommendations(analyses)
+    recommendations = generate_recommendations(analyses, existing_configs)
 
     if not recommendations:
         print("\nNo recommended actions at this time.")
@@ -727,7 +977,8 @@ def main():
     exits = [r for r in recommendations if r.action == 'exit']
     expands = [r for r in recommendations if r.action == 'expand']
     skipped = [r for r in recommendations if r.action == 'skip_event_active']
-    print(f"\nRecommendations: {len(exits)} exits, {len(expands)} expansions, {len(skipped)} skipped (event active)")
+    siblings = [r for r in recommendations if r.action == 'activate_sibling']
+    print(f"\nRecommendations: {len(exits)} exits, {len(expands)} expansions, {len(siblings)} sibling activations, {len(skipped)} skipped (event active)")
 
     # Write CSV
     if args.output:

@@ -17,7 +17,8 @@
       "Bash(env)",
       "Bash(aws sts get-caller-identity:*)",
       "Bash(head:*)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(pip show:*)"
     ],
     "deny": [],
     "ask": []

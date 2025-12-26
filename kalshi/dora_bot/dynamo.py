@@ -183,10 +183,10 @@ class DynamoDBClient:
             item = {
                 'market_id': config.market_id,
                 'enabled': config.enabled,
-                'max_inventory_yes': config.max_inventory_yes,
-                'max_inventory_no': config.max_inventory_no,
+                'max_inventory_yes': int(config.max_inventory_yes),
+                'max_inventory_no': int(config.max_inventory_no),
                 'min_spread': self._to_dynamo_item(config.min_spread),
-                'quote_size': config.quote_size,
+                'quote_size': int(config.quote_size),
                 'inventory_skew_factor': self._to_dynamo_item(config.inventory_skew_factor),
                 'updated_at': datetime.now(timezone.utc).isoformat()
             }
