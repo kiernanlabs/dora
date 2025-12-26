@@ -103,45 +103,49 @@ def render_exposure_chart(positions: Dict, market_configs: List[Dict]):
         st.info("No positions found")
         return
 
-    enabled_market_ids = {
-        config.get('market_id')
-        for config in market_configs
-        if config.get('market_id') and config.get('enabled', True)
-    }
+    enabled_market_ids = set()
+    event_by_market: Dict[str, str] = {}
+    for config in market_configs:
+        market_id = config.get('market_id')
+        if not market_id:
+            continue
+        if config.get('enabled', True):
+            enabled_market_ids.add(market_id)
+        event_by_market[market_id] = config.get('event_ticker') or 'N/A'
 
     # Create DataFrame
     markets = []
     exposures = []
+    events = []
     for market_id, position in positions.items():
         if enabled_market_ids and market_id not in enabled_market_ids:
             continue
         markets.append(market_id)
         exposures.append(abs(position.get('net_yes_qty', 0)))
+        events.append(event_by_market.get(market_id, 'N/A'))
 
-    df = pd.DataFrame({'market': markets, 'exposure': exposures})
+    df = pd.DataFrame({'event': events, 'market': markets, 'exposure': exposures})
     df = df[df['exposure'] > 0]
     if df.empty:
         st.info("No exposure found in enabled markets")
         return
 
-    df = df.sort_values('exposure', ascending=False)
+    df = df.sort_values(['event', 'exposure'], ascending=[True, False])
 
-    # Create vertical stacked bar chart
-    fig = go.Figure()
-    for _, row in df.iterrows():
-        fig.add_trace(go.Bar(
-            x=['Exposure'],
-            y=[row['exposure']],
-            name=row['market'],
-        ))
+    # Create vertical clustered bar chart by event (multi-category axis)
+    fig = go.Figure(go.Bar(
+        x=[df['event'], df['market']],
+        y=df['exposure'],
+        marker=dict(color='#636EFA'),
+        hovertemplate="Event: %{x[0]}<br>Market: %{x[1]}<br>Exposure: %{y}<extra></extra>",
+    ))
 
     fig.update_layout(
-        barmode='stack',
-        height=350,
+        height=400,
         margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="",
+        xaxis_title="Event / Market",
         yaxis_title="Exposure (contracts)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0)
+        showlegend=False,
     )
 
     st.plotly_chart(fig, width='stretch')
@@ -422,6 +426,7 @@ def render_active_markets_table(
     for config in market_configs:
         market_id = config.get('market_id')
         position = positions.get(market_id, {})
+        event_tag = config.get('event_ticker') or 'N/A'
 
         # Get most recent decision for order book snapshot (from pre-fetched data)
         market_decisions = decisions_by_market.get(market_id, [])
@@ -534,6 +539,7 @@ def render_active_markets_table(
         elif net_qty < 0:
             avg_cost = position.get('avg_sell_price', 0)
 
+        net_qty_display = int(round(net_qty))
         max_position_value = config.get('max_position')
         if max_position_value is None:
             max_yes = config.get('max_inventory_yes')
@@ -583,6 +589,7 @@ def render_active_markets_table(
         min_spread_display = f"${min_spread_value:.3f}" if min_spread_value is not None else 'N/A'
 
         table_data.append({
+            'Event': event_tag,
             'Market': market_id,
             'Best Bid': f"${order_book.get('best_bid', 0.0):.3f}" if order_book.get('best_bid') else 'N/A',
             'Best Ask': f"${order_book.get('best_ask', 0.0):.3f}" if order_book.get('best_ask') else 'N/A',
@@ -591,9 +598,8 @@ def render_active_markets_table(
             'Spread': spread_display,
             'Minimum Spread': min_spread_display,
             'Max Position': max_position_value if max_position_value is not None else 'N/A',
-            'Event': config.get('event_ticker') or 'N/A',
             'Config Created': created_at_display,
-            'Net Position': net_qty,
+            'Net Position': net_qty_display,
             'Avg Cost': avg_cost_display,
             'Unrealized P&L': f"${unrealized_pnl:+.2f}" if unrealized_pnl is not None else 'N/A',
             'Position 24h Δ': f"{pos_change_24h:+.0f}",
@@ -608,6 +614,17 @@ def render_active_markets_table(
         with st.expander("View Mismatch Details", expanded=True):
             for mismatch in markets_with_mismatch:
                 st.markdown(f"**{mismatch['market_id']}**: {', '.join(mismatch['details'])}")
+
+    def _event_sort_key(event_value: str) -> tuple[bool, str]:
+        return (event_value == 'N/A', event_value or '')
+
+    table_data.sort(
+        key=lambda row: (
+            _event_sort_key(row.get('Event', 'N/A')),
+            -abs(row.get('Net Position', 0)),
+            row.get('Market', ''),
+        )
+    )
 
     # Calculate totals for the summary row
     total_net_position = sum(row['Net Position'] for row in table_data)
@@ -661,6 +678,7 @@ def render_active_markets_table(
 
     # Add total row
     total_row = {
+        'Event': '',
         'Market': '**TOTAL**',
         'Best Bid': '',
         'Best Ask': '',
@@ -669,7 +687,6 @@ def render_active_markets_table(
         'Spread': '',
         'Minimum Spread': '',
         'Max Position': '',
-        'Event': '',
         'Config Created': '',
         'Net Position': total_net_position,
         'Avg Cost': '',
@@ -711,19 +728,27 @@ def render_active_markets_table(
         min_spread_val = _parse_money_value(row.get('Minimum Spread', ''))
         if spread_val is None or min_spread_val is None:
             return [''] * len(row)
-        color = '#D4EDDA' if spread_val >= min_spread_val else '#F8D7DA'
+        if spread_val < min_spread_val:
+            color = '#F8D7DA'
+        elif spread_val <= (min_spread_val + 0.01):
+            color = '#E2E3E5'
+        else:
+            color = '#D4EDDA'
         styles = [''] * len(row)
         styles[row.index.get_loc('Spread')] = f'background-color: {color}'
         return styles
 
     styled_df = df.style.apply(highlight_spread, axis=1)
+    column_order = ['Event', 'Market'] + [col for col in df.columns if col not in ('Event', 'Market')]
 
     # Style the dataframe
     st.dataframe(
         styled_df,
         width='stretch',
         hide_index=True,
+        column_order=column_order,
         column_config={
+            'Event': st.column_config.TextColumn('Event', width='medium'),
             'Market': st.column_config.TextColumn('Market', width='medium'),
             'Best Bid': st.column_config.TextColumn('Best Bid', width='small'),
             'Best Ask': st.column_config.TextColumn('Best Ask', width='small'),
@@ -732,7 +757,6 @@ def render_active_markets_table(
             'Spread': st.column_config.TextColumn('Spread', width='small'),
             'Minimum Spread': st.column_config.TextColumn('Min Spread', width='small'),
             'Max Position': st.column_config.TextColumn('Max Pos', width='small'),
-            'Event': st.column_config.TextColumn('Event', width='medium'),
             'Config Created': st.column_config.TextColumn('Created', width='medium'),
             'Net Position': st.column_config.NumberColumn('Net Position', width='small'),
             'Avg Cost': st.column_config.TextColumn('Avg Cost', width='small'),
