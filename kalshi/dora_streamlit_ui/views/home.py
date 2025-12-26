@@ -139,22 +139,30 @@ def render_exposure_chart(positions: Dict, market_configs: List[Dict]):
     df['event'] = pd.Categorical(df['event'], categories=event_order, ordered=True)
     df = df.sort_values(['event', 'exposure'], ascending=[True, False])
 
-    # Create vertical bar chart, clustered by event via ordering
+    # Create horizontal bar chart, clustered by event via ordering
     fig = go.Figure(go.Bar(
-        x=df['market'],
-        y=df['exposure'],
+        x=df['exposure'],
+        y=df['market'],
+        orientation='h',
         customdata=df['event'],
         marker=dict(color='#636EFA'),
-        hovertemplate="Event: %{customdata}<br>Market: %{x}<br>Exposure: %{y}<extra></extra>",
+        width=0.45,
+        hovertemplate="Event: %{customdata}<br>Market: %{y}<br>Exposure: %{x}<extra></extra>",
     ))
 
     fig.update_layout(
         height=400,
         margin=dict(l=20, r=20, t=20, b=20),
-        xaxis=dict(categoryorder="array", categoryarray=df['market'].tolist()),
-        xaxis_title="Market",
-        yaxis_title="Exposure (contracts)",
+        xaxis_title="Exposure (contracts)",
+        yaxis_title="Market",
+        bargap=0.45,
         showlegend=False,
+        yaxis=dict(
+            categoryorder="array",
+            categoryarray=df['market'].tolist()[::-1],
+            tickfont=dict(size=9),
+            automargin=True,
+        ),
     )
 
     st.plotly_chart(fig, width='stretch')
@@ -877,8 +885,14 @@ def render(environment: str, region: str):
             )
 
     # Layout: Top row - Charts
-    render_pnl_chart(pnl_data, positions)
-    render_exposure_chart(positions, market_configs)
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        render_pnl_chart(pnl_data, positions)
+
+    with col2:
+        render_exposure_chart(positions, market_configs)
+
     st.markdown("---")
 
     # Middle row - Recent logs
