@@ -766,6 +766,7 @@ def render_active_markets_table(
         return styles
 
     styled_df = df.style.apply(highlight_spread, axis=1)
+    table_height = max(400, int((len(df) + 1) * 32))
     column_order = [
         'Event',
         'Market',
@@ -793,10 +794,11 @@ def render_active_markets_table(
         styled_df,
         width='stretch',
         hide_index=True,
+        height=table_height,
         column_order=column_order,
         column_config={
-            'Event': st.column_config.TextColumn('Event', width='medium'),
-            'Market': st.column_config.TextColumn('Market', width='medium'),
+            'Event': st.column_config.TextColumn('Event', width='medium', pinned=True),
+            'Market': st.column_config.TextColumn('Market', width='medium', pinned=True),
             'Best Bid': st.column_config.TextColumn('Best Bid', width='small'),
             'Best Ask': st.column_config.TextColumn('Best Ask', width='small'),
             'Our Bid': st.column_config.TextColumn('Our Bid', width='medium'),
