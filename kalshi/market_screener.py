@@ -858,13 +858,13 @@ def _check_side_volume_single(
 
 def filter_by_side_volume(
     markets: List[Dict[str, Any]],
-    max_workers: int = DEFAULT_THREADS,
+    max_workers: int = 3,  # Lower default to avoid rate limiting
 ) -> List[Dict[str, Any]]:
     """Filter markets by requiring minimum volume on both buy and sell sides.
 
     Args:
         markets: List of market dictionaries
-        max_workers: Maximum number of parallel threads
+        max_workers: Maximum number of parallel threads (default 3 to avoid rate limits)
 
     Returns:
         List of markets with sufficient volume on both sides
