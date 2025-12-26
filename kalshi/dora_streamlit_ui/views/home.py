@@ -760,18 +760,35 @@ def render_active_markets_table(
             check_mark = " ✅" if is_profitable_active else ""
             avg_cost_display = f"${avg_cost:.3f}{check_mark}"
 
-        # Calculate unrealized P&L
+        # Calculate unrealized P&L (worst case - exit at market best)
         # For long positions (net_qty > 0): we'd sell at best_bid, so unrealized = (best_bid - avg_buy_price) * qty
         # For short positions (net_qty < 0): we'd buy at best_ask, so unrealized = (avg_sell_price - best_ask) * abs(qty)
-        unrealized_pnl = None
+        unrealized_pnl_worst = None
         if net_qty > 0 and avg_cost is not None:
             best_bid = order_book.get('best_bid')
             if best_bid:
-                unrealized_pnl = (best_bid - avg_cost) * net_qty
+                unrealized_pnl_worst = (best_bid - avg_cost) * net_qty
         elif net_qty < 0 and avg_cost is not None:
             best_ask = order_book.get('best_ask')
             if best_ask:
-                unrealized_pnl = (avg_cost - best_ask) * abs(net_qty)
+                unrealized_pnl_worst = (avg_cost - best_ask) * abs(net_qty)
+
+        # Calculate unrealized P&L (best case - exit at our active orders if competitive)
+        unrealized_pnl_best = None
+        if net_qty > 0 and avg_cost is not None:  # Long position - need to sell
+            if our_ask_price and is_ask_active:
+                # Can exit at our ask
+                unrealized_pnl_best = (our_ask_price - avg_cost) * net_qty
+            elif order_book.get('best_bid'):
+                # Our ask isn't competitive, have to hit the bid
+                unrealized_pnl_best = (order_book.get('best_bid') - avg_cost) * net_qty
+        elif net_qty < 0 and avg_cost is not None:  # Short position - need to buy
+            if our_bid_price and is_bid_active:
+                # Can exit at our bid
+                unrealized_pnl_best = (avg_cost - our_bid_price) * abs(net_qty)
+            elif order_book.get('best_ask'):
+                # Our bid isn't competitive, have to hit the ask
+                unrealized_pnl_best = (avg_cost - order_book.get('best_ask')) * abs(net_qty)
 
         spread_value = order_book.get('spread')
         spread_display = f"${spread_value:.3f}" if spread_value else 'N/A'
@@ -791,7 +808,8 @@ def render_active_markets_table(
             'Config Created': created_at_display,
             'Net Position': net_qty_display,
             'Avg Cost': avg_cost_display,
-            'Unrealized P&L': f"${unrealized_pnl:+.2f}" if unrealized_pnl is not None else 'N/A',
+            'Unrealized P&L (Worst)': f"${unrealized_pnl_worst:+.2f}" if unrealized_pnl_worst is not None else 'N/A',
+            'Unrealized P&L (Best)': f"${unrealized_pnl_best:+.2f}" if unrealized_pnl_best is not None else 'N/A',
             'Position 24h Δ': f"{pos_change_24h:+.0f}",
             'Filled 24h': f"{filled_24h} ({fill_time_ago})",
             'Realized P&L': f"${position.get('realized_pnl', 0.0):.2f}",
@@ -819,14 +837,25 @@ def render_active_markets_table(
     # Calculate totals for the summary row
     total_net_position = sum(row['Net Position'] for row in table_data)
 
-    # Sum unrealized P&L (parse from formatted string)
-    total_unrealized_pnl = 0.0
+    # Sum unrealized P&L (worst) (parse from formatted string)
+    total_unrealized_pnl_worst = 0.0
     for row in table_data:
-        if row['Unrealized P&L'] != 'N/A':
+        if row['Unrealized P&L (Worst)'] != 'N/A':
             # Parse "$+1.23" or "$-1.23" format
-            val_str = row['Unrealized P&L'].replace('$', '').replace('+', '')
+            val_str = row['Unrealized P&L (Worst)'].replace('$', '').replace('+', '')
             try:
-                total_unrealized_pnl += float(val_str)
+                total_unrealized_pnl_worst += float(val_str)
+            except ValueError:
+                pass
+
+    # Sum unrealized P&L (best) (parse from formatted string)
+    total_unrealized_pnl_best = 0.0
+    for row in table_data:
+        if row['Unrealized P&L (Best)'] != 'N/A':
+            # Parse "$+1.23" or "$-1.23" format
+            val_str = row['Unrealized P&L (Best)'].replace('$', '').replace('+', '')
+            try:
+                total_unrealized_pnl_best += float(val_str)
             except ValueError:
                 pass
 
@@ -880,7 +909,8 @@ def render_active_markets_table(
         'Config Created': '',
         'Net Position': total_net_position,
         'Avg Cost': '',
-        'Unrealized P&L': f"${total_unrealized_pnl:+.2f}" if total_unrealized_pnl != 0 else '$0.00',
+        'Unrealized P&L (Worst)': f"${total_unrealized_pnl_worst:+.2f}" if total_unrealized_pnl_worst != 0 else '$0.00',
+        'Unrealized P&L (Best)': f"${total_unrealized_pnl_best:+.2f}" if total_unrealized_pnl_best != 0 else '$0.00',
         'Position 24h Δ': f"{total_pos_change:+.0f}",
         'Filled 24h': f"{total_filled}",
         'Realized P&L': f"${total_realized_pnl:.2f}",
@@ -892,7 +922,8 @@ def render_active_markets_table(
         st.write("Rows before total:", len(table_data) - 1)
         st.write("Totals computed:", {
             "net_position": total_net_position,
-            "unrealized_pnl": total_unrealized_pnl,
+            "unrealized_pnl_worst": total_unrealized_pnl_worst,
+            "unrealized_pnl_best": total_unrealized_pnl_best,
             "position_change_24h": total_pos_change,
             "filled_24h": total_filled,
             "realized_pnl": total_realized_pnl,
@@ -945,7 +976,8 @@ def render_active_markets_table(
         'Spread',
         'Minimum Spread',
         'Filled 24h',
-        'Unrealized P&L',
+        'Unrealized P&L (Worst)',
+        'Unrealized P&L (Best)',
         'Config Created',
     ]
     for col in df.columns:
@@ -972,7 +1004,8 @@ def render_active_markets_table(
             'Config Created': st.column_config.TextColumn('Created', width='medium'),
             'Net Position': st.column_config.NumberColumn('Net Position', width='small'),
             'Avg Cost': st.column_config.TextColumn('Avg Cost', width='small'),
-            'Unrealized P&L': st.column_config.TextColumn('Unreal P&L', width='small'),
+            'Unrealized P&L (Worst)': st.column_config.TextColumn('Unreal (W)', width='small'),
+            'Unrealized P&L (Best)': st.column_config.TextColumn('Unreal (B)', width='small'),
             'Position 24h Δ': st.column_config.TextColumn('Pos Δ 24h', width='small'),
             'Filled 24h': st.column_config.TextColumn('Filled 24h', width='medium'),
             'Realized P&L': st.column_config.TextColumn('P&L', width='small'),
