@@ -1,5 +1,6 @@
 """Exchange client for interacting with Kalshi API."""
 
+import math
 import secrets
 import time
 from typing import Optional, List, Dict, Any
@@ -41,6 +42,25 @@ def parse_kalshi_timestamp(timestamp_str: str) -> datetime:
         timestamp_str = f"{date_part}.{microseconds}+{timezone}"
 
     return datetime.fromisoformat(timestamp_str)
+
+
+def calculate_fill_fee(price: float, count: int) -> float:
+    """Calculate the fee for a fill using Kalshi's fee formula.
+
+    Formula: ceil(0.0175 × C × P × (1-P))
+    where P = price in dollars (0.50 for 50 cents)
+          C = number of contracts
+
+    Args:
+        price: Price per contract in dollars (e.g., 0.50 for 50 cents)
+        count: Number of contracts traded
+
+    Returns:
+        Fee amount in dollars, rounded up to the nearest cent
+    """
+    raw_fee = 0.0175 * count * price * (1 - price)
+    # Round up to nearest cent
+    return math.ceil(raw_fee * 100) / 100
 
 
 class KalshiExchangeClient:
@@ -375,15 +395,17 @@ class KalshiExchangeClient:
             fills_data = response.get('fills', [])
 
             for fill_data in fills_data:
+                price = fill_data.get('yes_price', 0) / 100.0
+                count = fill_data.get('count', 0)
                 all_fills.append(Fill(
                     fill_id=fill_data.get('trade_id'),
                     order_id=fill_data.get('order_id'),
                     market_id=fill_data.get('ticker'),
                     side=fill_data.get('side'),
-                    price=fill_data.get('yes_price', 0) / 100.0,
-                    size=fill_data.get('count', 0),
+                    price=price,
+                    size=count,
                     timestamp=parse_kalshi_timestamp(fill_data.get('created_time', '')),
-                    fees=fill_data.get('fees', 0) / 100.0
+                    fees=calculate_fill_fee(price, count)
                 ))
 
             # Check for next page

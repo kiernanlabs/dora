@@ -130,6 +130,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                 side = trade.get('side', '')
                 price = trade.get('price', 0.0)
                 size = trade.get('size', 0)
+                fees = trade.get('fees', 0.0) or 0.0
                 date_str = trade.get('date', '')
                 timestamp = trade.get('fill_timestamp') or trade.get('timestamp', '')
 
@@ -138,6 +139,9 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                 qty_before = pos['net_yes_qty']
                 avg_buy_before = pos['avg_buy_price']
                 avg_sell_before = pos['avg_sell_price']
+
+                # Subtract fees from realized P&L on every fill (same as Position.update_from_fill)
+                pos['realized_pnl'] -= fees
 
                 # Update position using same logic as Position.update_from_fill()
                 if side in ['buy', 'yes']:
@@ -205,11 +209,16 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                     avg_buy_after_str = 'N/A'
                     avg_sell_after_str = 'N/A'
 
+                # Convert side to bid/ask terminology
+                side_display = 'bid' if side in ['buy', 'yes'] else 'ask'
+
                 trade_details.append({
                     'Date': date_str,
                     'Timestamp': timestamp,
                     'Market': market_id,
-                    'Side': side,
+                    'Side': side_display,
+                    'P&L Change': f"${pnl_change:+.2f}",
+                    'Cumulative P&L': f"${global_cumulative_pnl:.2f}",
                     'Price': f"${price:.3f}",
                     'Size': size,
                     'Qty Before': qty_before,
@@ -218,11 +227,12 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                     'Avg Sell Before': avg_sell_before_str,
                     'Avg Buy After': avg_buy_after_str,
                     'Avg Sell After': avg_sell_after_str,
-                    'P&L Change': f"${pnl_change:+.2f}",
-                    'Cumulative P&L (All Markets)': f"${global_cumulative_pnl:.2f}",
                 })
 
-            st.caption(f"Showing {len(trade_details)} trades sorted chronologically")
+            # Reverse to show newest first
+            trade_details = trade_details[::-1]
+
+            st.caption(f"Showing {len(trade_details)} trades (newest first)")
 
             if trade_details:
                 # Display as dataframe
@@ -500,6 +510,10 @@ def calculate_24h_change(trades: List[Dict], market_id: str, metric: str, curren
             side = trade.get('side', '')
             price = trade.get('price', 0.0)
             size = trade.get('size', 0)
+            fees = trade.get('fees', 0.0) or 0.0
+
+            # Subtract fees from realized P&L on every fill (same as Position.update_from_fill)
+            realized_pnl -= fees
 
             # Update position using same logic as Position.update_from_fill()
             if side in ['buy', 'yes']:

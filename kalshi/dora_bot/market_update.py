@@ -428,11 +428,9 @@ def analyze_markets(
         pnl_lookback = 0.0
         fill_sizes = []
         for fill in fills_pnl:
-            # P&L is calculated as: (sell_price - buy_price) * size - fees
-            # For individual fills, we use pnl_realized if available
+            # pnl_realized already includes fees (subtracted in Position.update_from_fill)
             pnl = fill.get('pnl_realized', 0.0) or 0.0
-            fees = fill.get('fees', 0.0) or 0.0
-            pnl_lookback += pnl - fees
+            pnl_lookback += pnl
 
             # Track fill sizes for median calculation
             size = fill.get('size') or fill.get('fill_size', 0)

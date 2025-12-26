@@ -388,9 +388,9 @@ class StateManager:
             old_realized_pnl = position.realized_pnl
             position.update_from_fill(fill)
 
-            # Update daily PnL
+            # Update daily PnL (fees already subtracted in update_from_fill)
             pnl_delta = position.realized_pnl - old_realized_pnl
-            self.risk_state.daily_pnl += pnl_delta - fill.fees
+            self.risk_state.daily_pnl += pnl_delta
 
             # Update last fill timestamp
             if self.risk_state.last_fill_timestamp is None or fill.timestamp > self.risk_state.last_fill_timestamp:

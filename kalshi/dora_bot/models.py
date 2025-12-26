@@ -136,6 +136,9 @@ class Position:
         Args:
             fill: Fill object with side='yes' (bid fill) or side='no' (ask fill)
         """
+        # Subtract fees from realized P&L on every fill
+        self.realized_pnl -= fill.fees
+
         if fill.side == "yes":
             # Bid fill - buying YES contracts
             if self.net_yes_qty >= 0:
