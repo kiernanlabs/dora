@@ -559,8 +559,15 @@ class DynamoDBClient:
             True if successful
         """
         try:
-            date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            timestamp = datetime.now(timezone.utc).isoformat()
+            # Use fill_timestamp if available, otherwise fall back to now
+            fill_timestamp_str = trade_data.get('fill_timestamp')
+            if fill_timestamp_str:
+                fill_dt = datetime.fromisoformat(fill_timestamp_str)
+                date = fill_dt.strftime('%Y-%m-%d')
+                timestamp = fill_timestamp_str
+            else:
+                date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+                timestamp = datetime.now(timezone.utc).isoformat()
             order_id = trade_data.get('order_id', 'unknown')
             fill_id = trade_data.get('fill_id', 'unknown')
 
