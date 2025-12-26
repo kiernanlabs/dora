@@ -266,6 +266,27 @@ class KalshiExchangeClient:
 
         return self._retry_request(_fetch)
 
+    def get_trades(
+        self,
+        market_id: str,
+        limit: int = 10,
+        cursor: Optional[str] = None,
+        max_ts: Optional[int] = None,
+        min_ts: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch recent trades for a market."""
+        def _fetch():
+            return self.client.get_trades(
+                ticker=market_id,
+                limit=limit,
+                cursor=cursor,
+                max_ts=max_ts,
+                min_ts=min_ts,
+            )
+
+        response = self._retry_request(_fetch)
+        return response.get('trades', [])
+
     def get_open_orders(self, market_id: Optional[str] = None) -> List[Order]:
         """Fetch all open orders with pagination.
 

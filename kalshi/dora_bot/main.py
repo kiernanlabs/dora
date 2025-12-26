@@ -442,8 +442,21 @@ class DoraBot:
             # 2. Get current position
             position = self.state.get_inventory(market_id)
 
+            # 2b. Fetch recent trades for fair value
+            trades = []
+            try:
+                trades = self.exchange.get_trades(market_id, limit=10)
+            except Exception as e:
+                logger.warning("Failed to fetch trades - falling back to mid price", extra={
+                    "event_type": EventType.LOG,
+                    "market": market_id,
+                    "decision_id": decision_id,
+                    "error_type": type(e).__name__,
+                    "error_msg": str(e),
+                })
+
             # 3. Compute target quotes
-            target_orders, price_calc = self.strategy.compute_quotes(order_book, position, config)
+            target_orders, price_calc = self.strategy.compute_quotes(order_book, position, config, trades)
 
             # Handle None or empty target_orders
             if target_orders is None:
@@ -949,9 +962,23 @@ class DoraBot:
                 # Get position
                 position = self.state.get_inventory(market_id)
 
+                # Fetch recent trades for fair value
+                trades = []
+                try:
+                    rate_limiter.acquire(1, endpoint=f"get_trades:{market_id}")
+                    trades = self.exchange.get_trades(market_id, limit=10)
+                except Exception as e:
+                    logger.warning("Failed to fetch trades - falling back to mid price", extra={
+                        "event_type": EventType.LOG,
+                        "market": market_id,
+                        "decision_id": decision_id,
+                        "error_type": type(e).__name__,
+                        "error_msg": str(e),
+                    })
+
                 # Compute quotes (pure strategy computation)
                 target_orders, price_calc = self.strategy.compute_quotes(
-                    order_book, position, config
+                    order_book, position, config, trades
                 )
 
                 all_targets[market_id] = target_orders or []
@@ -1122,7 +1149,7 @@ class DoraBot:
             for order_id in result.succeeded:
                 self.state.remove_order(order_id)
 
-            # Log individual failures
+            # Log individual failures and handle "not found" specially
             for order_id, error_msg in result.failed:
                 order = next((o for o in batch if o.order_id == order_id), None)
                 logger.warning("Cancel failed", extra={
@@ -1134,6 +1161,10 @@ class DoraBot:
                     "batch_number": batch_num,
                 })
                 all_failures.append((order_id, error_msg))
+
+                # If order "not found", it was already filled/cancelled - remove from local state
+                if "not found" in error_msg.lower() or "not_found" in error_msg.lower():
+                    self.state.remove_order(order_id)
 
         # Log summary
         logger.info("Batch cancel complete", extra={

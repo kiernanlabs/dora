@@ -3,6 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 import math
+from datetime import datetime
 
 from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
 
@@ -18,7 +19,8 @@ class MarketMaker:
         self,
         order_book: OrderBook,
         position: Position,
-        config: MarketConfig
+        config: MarketConfig,
+        trades: Optional[List[Dict[str, Any]]] = None,
     ) -> tuple[List[TargetOrder], Optional[Dict[str, Any]]]:
         """Compute target quotes for a market.
 
@@ -26,6 +28,7 @@ class MarketMaker:
             order_book: Current order book state
             position: Current position in the market
             config: Market configuration
+            trades: Recent trades from the API
 
         Returns:
             List of target orders to place and pricing metadata (if calculated).
@@ -52,13 +55,15 @@ class MarketMaker:
             min_spread = True
             # return [], None
 
-        # Calculate fair value - use config override if set, otherwise mid price
-        if config.fair_value is not None:
-            fair_value = config.fair_value
-            using_config_fv = True
+        trades = trades or []
+        last_trade_price, last_trade_time = self._get_last_trade_info(trades)
+        if last_trade_price is not None:
+            fair_value = last_trade_price
+            fv_source = "last_trade"
         else:
             fair_value = order_book.mid_price
-            using_config_fv = False
+            fv_source = "mid"
+        using_config_fv = False
 
         # Calculate inventory skew
         net_position = position.net_position
@@ -102,9 +107,9 @@ class MarketMaker:
         
 
         # Log consolidated quote calculation with flattened fields for CloudWatch
-        fv_source = "config" if using_config_fv else "mid"
         logic_msg = (
-            "Quote calculation: fv_source={fv_source} fv={fv} min_spread={min_spread} "
+            "Quote calculation: fv_source={fv_source} fv={fv} last_trade={last_trade} "
+            "trades_count={trades_count} min_spread={min_spread} "
             "skew={skew} net_yes={net_yes} max_yes={max_yes} max_no={max_no} "
             "target_bid={target_bid} target_ask={target_ask} "
             "bid_size={bid_size} ask_size={ask_size} "
@@ -112,6 +117,8 @@ class MarketMaker:
         ).format(
             fv_source=fv_source,
             fv=fair_value,
+            last_trade=last_trade_price,
+            trades_count=len(trades),
             min_spread=config.min_spread,
             skew=skew,
             net_yes=position.net_yes_qty,
@@ -134,6 +141,9 @@ class MarketMaker:
             "fair_value": fair_value,
             "using_config_fv": using_config_fv,
             "fv_source": fv_source,
+            "last_trade_price": last_trade_price,
+            "last_trade_time": last_trade_time,
+            "trades_count": len(trades),
             "min_spread": config.min_spread,
             "skew": skew,
             "max_inventory_yes": config.max_inventory_yes,
@@ -217,7 +227,7 @@ class MarketMaker:
         would violate minimum spread requirements.
 
         Args:
-            fair_value: Fair value (mid price or config override)
+            fair_value: Fair value (last trade or mid price fallback)
             min_spread: Minimum required spread
             skew: Inventory skew adjustment
             best_bid: Current best bid
@@ -236,29 +246,25 @@ class MarketMaker:
         market_bid = max(inside_bid - skew, best_bid)
         market_ask = min(inside_ask - skew, best_ask)
 
-        # More aggressive fair value levels to allow us to flex up/down to market
-        fair_value_bid = (fair_value - skew) + 0.1
-        fair_value_ask = (fair_value - skew) - 0.1
+        # Hard cap at fair value so we never cross it
+        fair_value_bid = fair_value - 0.01
+        fair_value_ask = fair_value + 0.01
 
-        if skew < 0: fair_value_bid = market_bid # if we need to buy, then just bid at market
-        if skew > 0: fair_value_ask = market_ask # if we need to sell, then just ask at market
-
-        # If the market is telling us better prices than fair value levels, use those
         target_bid = min(market_bid, fair_value_bid)
         target_ask = max(market_ask, fair_value_ask)
 
         if market_bid <= fair_value_bid:
             bid_logic = "market"
         else:
-            bid_logic = "fair value"
+            bid_logic = "fair value cap"
 
         if market_ask >= fair_value_ask:
             ask_logic = "market"
         else:
-            ask_logic = "fair value"
+            ask_logic = "fair value cap"
 
-        if bid_logic == "fair value" and ask_logic == "fair value":
-            logic = "fair value"
+        if bid_logic == "fair value cap" and ask_logic == "fair value cap":
+            logic = "fair value cap"
         else:
             logic = "market"
 
@@ -268,11 +274,11 @@ class MarketMaker:
             # Fall back to single-sided quoting based on inventory skew.
             logic = "minimum spread fallback"
             if skew < 0:
-                target_bid = inside_bid
+                target_bid = min(inside_bid, fair_value)
                 target_ask = None
             elif skew > 0:
                 target_bid = None
-                target_ask = inside_ask
+                target_ask = max(inside_ask, fair_value)
             else:
                 target_bid = None
                 target_ask = None
@@ -280,8 +286,8 @@ class MarketMaker:
         # Safety: ensure bid doesn't exceed ask
         if target_bid is not None and target_ask is not None and target_bid >= target_ask:
             half_spread = min_spread / 2.0
-            target_bid = fair_value - half_spread - skew
-            target_ask = fair_value + half_spread - skew
+            target_bid = fair_value - half_spread
+            target_ask = fair_value + half_spread
             logic = "minimum spread fallback"
 
         if target_bid is not None:
@@ -297,10 +303,79 @@ class MarketMaker:
             "best_ask": best_ask,
             "market_ask": market_ask,
             "fair_value_ask": fair_value_ask,
+            "fair_value": fair_value,
             "logic": logic,
         }
 
         return target_bid, target_ask, price_calc
+
+    def _get_last_trade_info(
+        self,
+        trades: List[Dict[str, Any]],
+    ) -> tuple[Optional[float], Optional[str]]:
+        if not trades:
+            return None, None
+
+        latest_trade = None
+        latest_timestamp = None
+        latest_timestamp_raw = None
+        latest_price = None
+
+        for trade in trades:
+            price = self._extract_trade_price(trade)
+            if price is None:
+                continue
+
+            timestamp_raw = trade.get("created_time") or trade.get("created_at") or trade.get("timestamp")
+            timestamp = self._parse_trade_timestamp(timestamp_raw) if timestamp_raw else None
+
+            if timestamp is None:
+                if latest_trade is None:
+                    latest_trade = trade
+                    latest_timestamp_raw = timestamp_raw
+                    latest_price = price
+                continue
+
+            if latest_timestamp is None or timestamp > latest_timestamp:
+                latest_trade = trade
+                latest_timestamp = timestamp
+                latest_timestamp_raw = timestamp_raw
+                latest_price = price
+
+        if latest_trade is None or latest_price is None:
+            return None, None
+
+        return latest_price, latest_timestamp_raw
+
+    def _extract_trade_price(self, trade: Dict[str, Any]) -> Optional[float]:
+        raw_price = trade.get("yes_price")
+        if raw_price is None:
+            raw_price = trade.get("price")
+        if raw_price is None:
+            return None
+
+        try:
+            price = float(raw_price)
+        except (TypeError, ValueError):
+            return None
+
+        if price > 1:
+            price = price / 100.0
+        return price
+
+    def _parse_trade_timestamp(self, timestamp: Optional[str]) -> Optional[datetime]:
+        if not timestamp:
+            return None
+        try:
+            timestamp = timestamp.replace("Z", "+00:00")
+            if "." in timestamp and "+" in timestamp:
+                date_part, rest = timestamp.split(".")
+                microseconds, timezone = rest.split("+")
+                microseconds = microseconds.ljust(6, "0")[:6]
+                timestamp = f"{date_part}.{microseconds}+{timezone}"
+            return datetime.fromisoformat(timestamp)
+        except ValueError:
+            return None
 
     def _calculate_size(
         self,
