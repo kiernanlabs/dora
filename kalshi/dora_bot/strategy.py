@@ -41,14 +41,16 @@ class MarketMaker:
             })
             return [], None
 
+        min_spread = False
         # Check if spread is wide enough
         if order_book.spread < config.min_spread:
-            logger.info("Spread too narrow - no quote", extra={
+            logger.info("Spread too narrow - proceeding, but should single-side quote if skewed", extra={
                 "market": config.market_id,
                 "spread": order_book.spread,
                 "min_spread": config.min_spread
             })
-            return [], None
+            min_spread = True
+            # return [], None
 
         # Calculate fair value - use config override if set, otherwise mid price
         if config.fair_value is not None:
@@ -72,19 +74,32 @@ class MarketMaker:
         )
 
         # Determine sizes based on inventory
-        bid_size = self._calculate_size(
-            base_size=config.quote_size,
-            position_qty=position.net_yes_qty,
-            max_inventory=config.max_inventory_yes,
-            side="bid"
-        )
+        bid_size = 0
+        ask_size = 0
 
-        ask_size = self._calculate_size(
-            base_size=config.quote_size,
-            position_qty=position.net_yes_qty,
-            max_inventory=config.max_inventory_yes,
-            side="ask"
-        )
+        # if we are below min spread threshold, exit market by selling position
+        if min_spread:
+            if net_position > 0:
+                bid_size = 0
+                ask_size = net_position
+            else:
+                bid_size = -net_position
+                ask_size = 0
+        else:
+            bid_size = self._calculate_size(
+                base_size=config.quote_size,
+                position_qty=position.net_yes_qty,
+                max_inventory=config.max_inventory_yes,
+                side="bid"
+            )
+
+            ask_size = self._calculate_size(
+                base_size=config.quote_size,
+                position_qty=position.net_yes_qty,
+                max_inventory=config.max_inventory_yes,
+                side="ask"
+            )                
+        
 
         # Log consolidated quote calculation with flattened fields for CloudWatch
         fv_source = "config" if using_config_fv else "mid"

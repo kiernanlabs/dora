@@ -95,9 +95,6 @@ class StateManager:
             True if successful
         """
         try:
-            # Clean up zero positions before saving
-            self.cleanup_zero_positions()
-
             # Save positions
             if not self.dynamo.save_positions(self.positions):
                 logger.error("Failed to save positions", extra={
@@ -564,31 +561,6 @@ class StateManager:
                 del self.api_errors[market_id]
         else:
             self.api_errors = {}
-
-    def cleanup_zero_positions(self) -> int:
-        """Remove positions with zero quantity from state.
-
-        This prevents old inactive markets from accumulating in the positions dict.
-
-        Returns:
-            Number of positions removed
-        """
-        zero_positions = [
-            market_id for market_id, pos in self.positions.items()
-            if pos.net_yes_qty == 0
-        ]
-
-        for market_id in zero_positions:
-            del self.positions[market_id]
-
-        if zero_positions:
-            logger.info("Cleaned up zero positions", extra={
-                "event_type": EventType.LOG,
-                "removed_markets": zero_positions,
-                "removed_count": len(zero_positions),
-            })
-
-        return len(zero_positions)
 
     def reset_daily_pnl(self) -> None:
         """Reset daily PnL (call at start of new trading day)."""
