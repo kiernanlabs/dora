@@ -95,7 +95,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict):
         st.metric("Total Exposure", f"{total_exposure} contracts")
 
 
-def render_exposure_chart(positions: Dict):
+def render_exposure_chart(positions: Dict, market_configs: List[Dict]):
     """Render exposure by market chart."""
     st.subheader("Exposure by Market")
 
@@ -103,29 +103,45 @@ def render_exposure_chart(positions: Dict):
         st.info("No positions found")
         return
 
+    enabled_market_ids = {
+        config.get('market_id')
+        for config in market_configs
+        if config.get('market_id') and config.get('enabled', True)
+    }
+
     # Create DataFrame
     markets = []
     exposures = []
     for market_id, position in positions.items():
+        if enabled_market_ids and market_id not in enabled_market_ids:
+            continue
         markets.append(market_id)
         exposures.append(abs(position.get('net_yes_qty', 0)))
 
     df = pd.DataFrame({'market': markets, 'exposure': exposures})
-    df = df.sort_values('exposure', ascending=True)
+    df = df[df['exposure'] > 0]
+    if df.empty:
+        st.info("No exposure found in enabled markets")
+        return
 
-    # Create horizontal bar chart
-    fig = go.Figure(go.Bar(
-        x=df['exposure'],
-        y=df['market'],
-        orientation='h',
-        marker=dict(color='#636EFA')
-    ))
+    df = df.sort_values('exposure', ascending=False)
+
+    # Create vertical stacked bar chart
+    fig = go.Figure()
+    for _, row in df.iterrows():
+        fig.add_trace(go.Bar(
+            x=['Exposure'],
+            y=[row['exposure']],
+            name=row['market'],
+        ))
 
     fig.update_layout(
-        height=max(300, len(df) * 30),
+        barmode='stack',
+        height=350,
         margin=dict(l=20, r=20, t=20, b=20),
-        xaxis_title="Exposure (contracts)",
-        yaxis_title="Market"
+        xaxis_title="",
+        yaxis_title="Exposure (contracts)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0)
     )
 
     st.plotly_chart(fig, width='stretch')
@@ -798,14 +814,8 @@ def render(environment: str, region: str):
             )
 
     # Layout: Top row - Charts
-    col1, col2 = st.columns([2, 1])
-
-    with col1:
-        render_pnl_chart(pnl_data, positions)
-
-    with col2:
-        render_exposure_chart(positions)
-
+    render_pnl_chart(pnl_data, positions)
+    render_exposure_chart(positions, market_configs)
     st.markdown("---")
 
     # Middle row - Recent logs

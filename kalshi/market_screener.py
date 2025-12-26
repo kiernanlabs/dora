@@ -22,12 +22,15 @@ Additional analysis:
     - Fair value assessment (AI estimate of YES probability without market reference)
 """
 import argparse
+import csv
 import json
 import os
+import sys
 import requests
 import pandas as pd
+import boto3
 from typing import Any, Dict, List, Optional, Set, Tuple
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -44,6 +47,12 @@ MAX_INFO_RISK = 25  # percent - maximum acceptable information risk
 MAX_MIDPOINT_CHANGE = 20  # percent - maximum 24hr midpoint change allowed
 MIN_DAYS_UNTIL_CLOSE = 7  # minimum days until market closes
 DEFAULT_THREADS = 10  # default number of parallel threads for API calls
+MIN_SIDE_VOLUME = 20  # minimum volume on each side (buy/sell) from trade history
+
+# Default market config values
+DEFAULT_QUOTE_SIZE = 5
+DEFAULT_MAX_INVENTORY = 5
+DEFAULT_MIN_SPREAD = 0.04  # 4 cents
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
@@ -386,7 +395,6 @@ Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rat
         response = client.responses.create(
                 model="gpt-5-mini",
                 reasoning={"effort": "medium"},
-                tools=[{"type": "web_search"}],
                 input=prompt,
             )
 
@@ -486,7 +494,6 @@ Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rat
         response = client.responses.create(
                 model="gpt-5-mini",
                 reasoning={"effort": "medium"},
-                tools=[{"type": "web_search"}],
                 input=prompt,
             )
 
@@ -730,6 +737,278 @@ def assess_fair_value_for_markets(
     return markets
 
 
+def fetch_trade_history(market_id: str, limit: int = 100) -> List[Dict[str, Any]]:
+    """Fetch trade history for a market from Kalshi API.
+
+    Args:
+        market_id: Market ticker
+        limit: Maximum number of trades to fetch
+
+    Returns:
+        List of trade dictionaries
+    """
+    try:
+        url = f"{KALSHI_API_BASE}/trade-api/v2/markets/{market_id}/trades"
+        params = {"limit": limit}
+        response = requests.get(url, params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("trades", [])
+    except Exception as e:
+        print(f"  Warning: Could not fetch trades for {market_id}: {e}")
+        return []
+
+
+def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int]:
+    """Calculate total volume on buy and sell sides from trade history.
+
+    Args:
+        trades: List of trade dictionaries
+
+    Returns:
+        Tuple of (buy_volume, sell_volume) - volume of YES buying and YES selling
+    """
+    buy_volume = 0
+    sell_volume = 0
+
+    for trade in trades:
+        # Kalshi trades have 'taker_side' which is 'yes' or 'no'
+        # 'yes' means the taker bought YES, 'no' means the taker sold YES (bought NO)
+        count = trade.get("count", 0) or 0
+        taker_side = trade.get("taker_side", "")
+
+        if taker_side == "yes":
+            buy_volume += count
+        elif taker_side == "no":
+            sell_volume += count
+
+    return buy_volume, sell_volume
+
+
+def _check_side_volume_single(
+    market: Dict[str, Any],
+    index: int,
+    total: int,
+) -> Tuple[Dict[str, Any], bool, str]:
+    """Check side volume for a single market (worker function for threading).
+
+    Args:
+        market: Market dictionary
+        index: Market index (1-based)
+        total: Total number of markets
+
+    Returns:
+        Tuple of (market with results, passed_filter, status_message)
+    """
+    ticker = market.get("ticker", "N/A")
+
+    # Fetch trade history
+    trades = fetch_trade_history(ticker)
+
+    if not trades:
+        market["buy_volume"] = 0
+        market["sell_volume"] = 0
+        return market, False, f"[{index}/{total}] {ticker}: No trades found - FILTERED OUT"
+
+    # Calculate side volumes
+    buy_volume, sell_volume = calculate_side_volumes(trades)
+    market["buy_volume"] = buy_volume
+    market["sell_volume"] = sell_volume
+
+    # Check if both sides have minimum volume
+    if buy_volume >= MIN_SIDE_VOLUME and sell_volume >= MIN_SIDE_VOLUME:
+        return market, True, f"[{index}/{total}] {ticker}: buy={buy_volume}, sell={sell_volume} - PASS"
+    else:
+        return market, False, f"[{index}/{total}] {ticker}: buy={buy_volume}, sell={sell_volume} - FILTERED OUT (need {MIN_SIDE_VOLUME} on each side)"
+
+
+def filter_by_side_volume(
+    markets: List[Dict[str, Any]],
+    max_workers: int = DEFAULT_THREADS,
+) -> List[Dict[str, Any]]:
+    """Filter markets by requiring minimum volume on both buy and sell sides.
+
+    Args:
+        markets: List of market dictionaries
+        max_workers: Maximum number of parallel threads
+
+    Returns:
+        List of markets with sufficient volume on both sides
+    """
+    filtered = []
+    total = len(markets)
+
+    print(f"\nChecking trade history for {total} markets ({max_workers} threads)...")
+    print(f"  (Filtering out markets with <{MIN_SIDE_VOLUME} volume on either side)\n")
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all tasks
+        futures = {
+            executor.submit(_check_side_volume_single, market, i, total): i
+            for i, market in enumerate(markets, 1)
+        }
+
+        # Process results as they complete
+        for future in as_completed(futures):
+            market, passed, message = future.result()
+            print(f"  {message}")
+            if passed:
+                filtered.append(market)
+
+    print(f"\nMarkets after side volume filter: {len(filtered)}/{total}")
+    return filtered
+
+
+def write_candidates_csv(
+    markets: List[Dict[str, Any]],
+    output_path: str,
+) -> None:
+    """Write candidate markets to a CSV file for review.
+
+    Args:
+        markets: List of market dictionaries
+        output_path: Path to write CSV file
+    """
+    fieldnames = [
+        'market_id',
+        'event_ticker',
+        'title',
+        'volume_24h',
+        'buy_volume',
+        'sell_volume',
+        'yes_bid',
+        'yes_ask',
+        'fair_value',
+        'fair_value_rationale',
+        'info_risk_probability',
+        'new_quote_size',
+        'new_max_inventory_yes',
+        'new_max_inventory_no',
+        'new_min_spread',
+        'approve'
+    ]
+
+    with open(output_path, 'w', newline='') as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for market in markets:
+            writer.writerow({
+                'market_id': market.get('ticker', ''),
+                'event_ticker': market.get('event_ticker', ''),
+                'title': market.get('title', ''),
+                'volume_24h': market.get('volume_24h', 0),
+                'buy_volume': market.get('buy_volume', 0),
+                'sell_volume': market.get('sell_volume', 0),
+                'yes_bid': market.get('yes_bid', 0),
+                'yes_ask': market.get('yes_ask', 0),
+                'fair_value': f"{market.get('fair_value', 0):.1f}" if market.get('fair_value') else '',
+                'fair_value_rationale': market.get('fair_value_rationale', ''),
+                'info_risk_probability': f"{market.get('info_risk_probability', 0):.0f}" if market.get('info_risk_probability') else '',
+                'new_quote_size': DEFAULT_QUOTE_SIZE,
+                'new_max_inventory_yes': DEFAULT_MAX_INVENTORY,
+                'new_max_inventory_no': DEFAULT_MAX_INVENTORY,
+                'new_min_spread': DEFAULT_MIN_SPREAD,
+                'approve': 'yes',  # Default to yes
+            })
+
+    print(f"Wrote {len(markets)} candidates to {output_path}")
+
+
+def read_approved_markets(csv_path: str) -> List[Dict]:
+    """Read and filter approved markets from CSV.
+
+    Args:
+        csv_path: Path to CSV file
+
+    Returns:
+        List of approved market dictionaries
+    """
+    approved = []
+
+    with open(csv_path, 'r', newline='') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            if row.get('approve', '').lower() in ('yes', 'y', 'true', '1'):
+                approved.append(row)
+
+    return approved
+
+
+def upload_to_market_config(
+    approved: List[Dict],
+    environment: str = "prod",
+    region: str = "us-east-1",
+) -> Tuple[int, int]:
+    """Upload approved markets to DynamoDB market_config table.
+
+    Args:
+        approved: List of approved market dictionaries
+        environment: 'demo' or 'prod'
+        region: AWS region
+
+    Returns:
+        Tuple of (success_count, failure_count)
+    """
+    from decimal import Decimal
+
+    suffix = '_demo' if environment == 'demo' else '_prod'
+    table_name = f"dora_market_config{suffix}"
+
+    dynamodb = boto3.resource('dynamodb', region_name=region)
+    table = dynamodb.Table(table_name)
+
+    success = 0
+    failure = 0
+
+    for market in approved:
+        market_id = market['market_id']
+
+        try:
+            # Parse values from CSV
+            quote_size = int(float(market.get('new_quote_size', DEFAULT_QUOTE_SIZE)))
+            max_inv_yes = int(float(market.get('new_max_inventory_yes', DEFAULT_MAX_INVENTORY)))
+            max_inv_no = int(float(market.get('new_max_inventory_no', DEFAULT_MAX_INVENTORY)))
+            min_spread = float(market.get('new_min_spread', DEFAULT_MIN_SPREAD))
+
+            # Parse fair value if present
+            fair_value = None
+            if market.get('fair_value'):
+                try:
+                    fair_value = Decimal(str(float(market['fair_value']) / 100.0))  # Convert % to decimal
+                except (ValueError, TypeError):
+                    pass
+
+            item = {
+                'market_id': market_id,
+                'enabled': True,
+                'max_inventory_yes': max_inv_yes,
+                'max_inventory_no': max_inv_no,
+                'min_spread': Decimal(str(min_spread)),
+                'quote_size': quote_size,
+                'inventory_skew_factor': Decimal('0.5'),
+                'event_ticker': market.get('event_ticker') or None,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'updated_at': datetime.now(timezone.utc).isoformat(),
+            }
+
+            if fair_value is not None:
+                item['fair_value'] = fair_value
+
+            # Remove None values
+            item = {k: v for k, v in item.items() if v is not None}
+
+            table.put_item(Item=item)
+            print(f"✓ Created {market_id}")
+            success += 1
+
+        except Exception as e:
+            print(f"✗ Failed to create {market_id}: {e}")
+            failure += 1
+
+    return success, failure
+
+
 def print_top_markets(markets: List[Dict[str, Any]], n: int = 5) -> None:
     """Print top N markets by 24hr volume.
 
@@ -778,12 +1057,12 @@ def print_top_markets(markets: List[Dict[str, Any]], n: int = 5) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch all Kalshi markets and output to CSV.")
+    parser = argparse.ArgumentParser(description="Screen Kalshi markets and add to market_config.")
     parser.add_argument(
         "--output",
         type=str,
-        default="markets.csv",
-        help="Output CSV file path (default: markets.csv)",
+        default=None,
+        help="Output CSV file path (default: screener_candidates_TIMESTAMP.csv)",
     )
     parser.add_argument(
         "--status",
@@ -833,7 +1112,47 @@ def main():
         default=DEFAULT_THREADS,
         help=f"Number of parallel threads for API calls (default: {DEFAULT_THREADS})",
     )
+    parser.add_argument(
+        "--top-n",
+        type=int,
+        default=10,
+        help="Number of top markets to output (default: 10)",
+    )
+    parser.add_argument(
+        "--env",
+        type=str,
+        default="prod",
+        choices=["demo", "prod"],
+        help="Environment for uploading to DynamoDB (default: prod)",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Generate CSV but do not prompt for upload",
+    )
+    parser.add_argument(
+        "--execute",
+        type=str,
+        default=None,
+        help="Skip screening and execute from an existing CSV file",
+    )
     args = parser.parse_args()
+
+    # Execute mode: upload from existing CSV
+    if args.execute:
+        if not os.path.exists(args.execute):
+            print(f"Error: CSV file not found: {args.execute}")
+            sys.exit(1)
+
+        approved = read_approved_markets(args.execute)
+        if not approved:
+            print("No approved markets found in CSV")
+            sys.exit(0)
+
+        print(f"\nFound {len(approved)} approved markets to upload...")
+        success, failure = upload_to_market_config(approved, environment=args.env)
+        print(f"\nCompleted: {success} succeeded, {failure} failed")
+        sys.exit(0 if failure == 0 else 1)
 
     start_time = datetime.now()
     print(f"Market Screener started at {start_time.isoformat()}")
@@ -887,26 +1206,84 @@ def main():
     # Re-sort after filtering (in case order changed)
     filtered_markets.sort(key=lambda x: x.get("volume_24h", 0) or 0, reverse=True)
 
-    # Assess fair value for remaining markets using OpenAI
+    # Filter by trade history - require volume on both sides
+    filtered_markets = filter_by_side_volume(filtered_markets, max_workers=args.threads)
+
+    if not filtered_markets:
+        print("No markets passed side volume filter.")
+        return
+
+    # Re-sort after filtering
+    filtered_markets.sort(key=lambda x: x.get("volume_24h", 0) or 0, reverse=True)
+
+    # Take top N markets
+    top_markets = filtered_markets[:args.top_n]
+    print(f"\nSelected top {len(top_markets)} markets by 24hr volume")
+
+    # Assess fair value for top markets using OpenAI
     if not args.skip_fair_value:
-        filtered_markets = assess_fair_value_for_markets(
-            filtered_markets, max_workers=args.threads
+        top_markets = assess_fair_value_for_markets(
+            top_markets, max_workers=args.threads
         )
 
-    # Print top 5 candidates
-    print_top_markets(filtered_markets, n=5)
+    # Print top candidates
+    print_top_markets(top_markets, n=len(top_markets))
 
-    # Convert to DataFrame
-    df = markets_to_dataframe(filtered_markets)
+    # Generate output filename
+    if args.output:
+        output_path = args.output
+    else:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_path = f"screener_candidates_{timestamp}.csv"
 
-    # Save to CSV
-    df.to_csv(args.output, index=False)
-    print(f"Saved {len(df)} filtered markets to {args.output}")
+    # Write candidates CSV
+    write_candidates_csv(top_markets, output_path)
 
     # Print summary
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
-    print(f"\nCompleted in {duration:.1f} seconds")
+    print(f"\nScreening completed in {duration:.1f} seconds")
+
+    if args.dry_run:
+        print("\nDry run mode: Exiting without uploading.")
+        print(f"Review the CSV at: {output_path}")
+        sys.exit(0)
+
+    # Interactive approval flow
+    print("\n" + "="*60)
+    print("Please review and edit the CSV file if needed.")
+    print(f"File: {output_path}")
+    print("\nSet 'approve' column to 'yes' or 'no' for each row.")
+    print("="*60)
+
+    while True:
+        response = input("\nPress Enter when ready to upload approved markets (or 'q' to quit): ")
+        if response.lower() in ('q', 'quit', 'exit'):
+            print("Aborted.")
+            sys.exit(0)
+
+        # Re-read the CSV to get user edits
+        approved = read_approved_markets(output_path)
+
+        if not approved:
+            print("No approved markets found. Edit the CSV and try again.")
+            continue
+
+        print(f"\nReady to upload {len(approved)} markets to {args.env}:")
+        for market in approved:
+            print(f"  - {market['market_id']}")
+
+        confirm = input("\nConfirm? (y/n): ")
+        if confirm.lower() in ('y', 'yes'):
+            break
+        else:
+            print("Edit the CSV and press Enter when ready.")
+
+    # Upload to DynamoDB
+    print("\nUploading to market_config...")
+    success, failure = upload_to_market_config(approved, environment=args.env)
+    print(f"\nCompleted: {success} succeeded, {failure} failed")
+    sys.exit(0 if failure == 0 else 1)
 
 
 if __name__ == "__main__":
