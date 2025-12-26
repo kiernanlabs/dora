@@ -39,7 +39,8 @@ def get_kalshi_market_url(market_id: str) -> str:
     return f"https://kalshi.com/markets/{market_id}"
 
 
-def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] = None):
+def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] = None,
+                     unrealized_worst: float = 0.0, unrealized_best: float = 0.0):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -81,8 +82,8 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
     st.plotly_chart(fig, width='stretch')
 
-    # Display summary metrics
-    col1, col2, col3 = st.columns(3)
+    # Display summary metrics - 5 columns now
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         total_pnl = df['cumulative_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Total Realized P&L", f"${total_pnl:.2f}")
@@ -90,6 +91,12 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
         daily_pnl = df['daily_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Today's P&L", f"${daily_pnl:.2f}")
     with col3:
+        st.metric("Unrealized (Worst)", f"${unrealized_worst:+.2f}",
+                  help="If we exit all positions at current market best bid/ask")
+    with col4:
+        st.metric("Unrealized (Best)", f"${unrealized_best:+.2f}",
+                  help="If we exit all positions at our active orders (if competitive) or market best")
+    with col5:
         # Calculate total exposure
         total_exposure = sum(abs(p.get('net_yes_qty', 0)) for p in positions.values())
         st.metric("Total Exposure", f"{total_exposure} contracts")
@@ -103,6 +110,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Track position state per market
             positions_state = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price, realized_pnl}
             trade_details = []
+            global_cumulative_pnl = 0.0  # Track cumulative P&L across ALL markets
 
             for trade in trades_sorted:
                 market_id = trade.get('market_id')
@@ -165,8 +173,37 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                         if pos['net_yes_qty'] < 0:
                             pos['avg_sell_price'] = price
 
-                # Calculate P&L change
+                # Calculate P&L change and update global cumulative
                 pnl_change = pos['realized_pnl'] - pnl_before
+                global_cumulative_pnl += pnl_change
+
+                # Format cost basis based on position - only show relevant values
+                qty_after = pos['net_yes_qty']
+                if qty_before > 0:
+                    # Had long position - show avg buy
+                    avg_buy_before_str = f"${avg_buy_before:.3f}"
+                    avg_sell_before_str = 'N/A'
+                elif qty_before < 0:
+                    # Had short position - show avg sell
+                    avg_buy_before_str = 'N/A'
+                    avg_sell_before_str = f"${avg_sell_before:.3f}"
+                else:
+                    # Was flat
+                    avg_buy_before_str = 'N/A'
+                    avg_sell_before_str = 'N/A'
+
+                if qty_after > 0:
+                    # Now long - show avg buy
+                    avg_buy_after_str = f"${pos['avg_buy_price']:.3f}"
+                    avg_sell_after_str = 'N/A'
+                elif qty_after < 0:
+                    # Now short - show avg sell
+                    avg_buy_after_str = 'N/A'
+                    avg_sell_after_str = f"${pos['avg_sell_price']:.3f}"
+                else:
+                    # Now flat
+                    avg_buy_after_str = 'N/A'
+                    avg_sell_after_str = 'N/A'
 
                 trade_details.append({
                     'Date': date_str,
@@ -176,13 +213,13 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                     'Price': f"${price:.3f}",
                     'Size': size,
                     'Qty Before': qty_before,
-                    'Qty After': pos['net_yes_qty'],
-                    'Avg Buy Before': f"${avg_buy_before:.3f}" if avg_buy_before else 'N/A',
-                    'Avg Sell Before': f"${avg_sell_before:.3f}" if avg_sell_before else 'N/A',
-                    'Avg Buy After': f"${pos['avg_buy_price']:.3f}" if pos['avg_buy_price'] else 'N/A',
-                    'Avg Sell After': f"${pos['avg_sell_price']:.3f}" if pos['avg_sell_price'] else 'N/A',
+                    'Qty After': qty_after,
+                    'Avg Buy Before': avg_buy_before_str,
+                    'Avg Sell Before': avg_sell_before_str,
+                    'Avg Buy After': avg_buy_after_str,
+                    'Avg Sell After': avg_sell_after_str,
                     'P&L Change': f"${pnl_change:+.2f}",
-                    'Cumulative P&L': f"${pos['realized_pnl']:.2f}",
+                    'Cumulative P&L (All Markets)': f"${global_cumulative_pnl:.2f}",
                 })
 
             st.caption(f"Showing {len(trade_details)} trades sorted chronologically")
@@ -1012,11 +1049,102 @@ def render(environment: str, region: str):
                 width='stretch',
             )
 
+    # Calculate unrealized P&L metrics (worst case and best case)
+    total_unrealized_worst = 0.0
+    total_unrealized_best = 0.0
+
+    # Pre-index decisions by market_id
+    decisions_by_market: Dict[str, List[Dict]] = {}
+    for d in decisions:
+        mid = d.get('market_id')
+        if mid:
+            if mid not in decisions_by_market:
+                decisions_by_market[mid] = []
+            decisions_by_market[mid].append(d)
+
+    for config in market_configs:
+        market_id = config.get('market_id')
+        position = positions.get(market_id, {})
+        net_qty = position.get('net_yes_qty', 0)
+
+        if net_qty == 0:
+            continue  # No position, no unrealized P&L
+
+        # Get order book from most recent decision
+        market_decisions = decisions_by_market.get(market_id, [])
+        decision = market_decisions[0] if market_decisions else None
+        order_book = decision.get('order_book_snapshot', {}) if decision else {}
+
+        market_best_bid = order_book.get('best_bid', 0)
+        market_best_ask = order_book.get('best_ask', 0)
+
+        # Get our live orders
+        market_orders = open_orders_by_market.get(market_id, [])
+        live_bids = [o for o in market_orders if o.get('side') == 'yes']
+        live_asks = [o for o in market_orders if o.get('side') == 'no']
+        live_bids.sort(key=lambda x: x.get('price', 0) or 0, reverse=True)
+        live_asks.sort(key=lambda x: x.get('price', 0) or 0)
+
+        our_bid_price = live_bids[0].get('price', 0) if live_bids else None
+        our_ask_price = live_asks[0].get('price', 0) if live_asks else None
+
+        # Check if our orders are competitive
+        is_bid_active = False
+        is_ask_active = False
+        if our_bid_price and market_best_bid:
+            is_bid_active = our_bid_price >= (market_best_bid - 0.0001)
+        elif our_bid_price:
+            is_bid_active = True
+        if our_ask_price and market_best_ask:
+            is_ask_active = our_ask_price <= (market_best_ask + 0.0001)
+        elif our_ask_price:
+            is_ask_active = True
+
+        # Get average cost
+        avg_cost = None
+        if net_qty > 0:
+            avg_cost = position.get('avg_buy_price', 0)
+        elif net_qty < 0:
+            avg_cost = position.get('avg_sell_price', 0)
+
+        if avg_cost is None:
+            continue
+
+        # Calculate worst case unrealized P&L (exit at market best)
+        if net_qty > 0:  # Long position
+            if market_best_bid:
+                unrealized_worst = (market_best_bid - avg_cost) * net_qty
+                total_unrealized_worst += unrealized_worst
+        else:  # Short position (net_qty < 0)
+            if market_best_ask:
+                unrealized_worst = (avg_cost - market_best_ask) * abs(net_qty)
+                total_unrealized_worst += unrealized_worst
+
+        # Calculate best case unrealized P&L (exit at our active orders if competitive)
+        if net_qty > 0:  # Long position - need to sell
+            if our_ask_price and is_ask_active:
+                # Can exit at our ask
+                unrealized_best = (our_ask_price - avg_cost) * net_qty
+                total_unrealized_best += unrealized_best
+            elif market_best_bid:
+                # Our ask isn't competitive, have to hit the bid
+                unrealized_best = (market_best_bid - avg_cost) * net_qty
+                total_unrealized_best += unrealized_best
+        else:  # Short position (net_qty < 0) - need to buy
+            if our_bid_price and is_bid_active:
+                # Can exit at our bid
+                unrealized_best = (avg_cost - our_bid_price) * abs(net_qty)
+                total_unrealized_best += unrealized_best
+            elif market_best_ask:
+                # Our bid isn't competitive, have to hit the ask
+                unrealized_best = (avg_cost - market_best_ask) * abs(net_qty)
+                total_unrealized_best += unrealized_best
+
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        render_pnl_chart(pnl_data, positions, trades)
+        render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best)
 
     with col2:
         render_exposure_chart(positions, market_configs)
