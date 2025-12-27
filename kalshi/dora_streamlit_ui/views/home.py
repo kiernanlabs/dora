@@ -124,13 +124,13 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
         total_exposure = sum(abs(p.get('net_yes_qty', 0)) for p in positions.values())
         st.metric("Total Exposure", f"{total_exposure} contracts")
     with col2:
-        st.metric("Active Bids", f"{active_bids_count} markets ({active_bids_qty} contracts)",
+        st.metric(f"Active Bids ({active_bids_qty} cts)", f"{active_bids_count} markets",
                   help="Markets where our bid is at or above market best bid")
     with col3:
-        st.metric("Active Asks", f"{active_asks_count} markets ({active_asks_qty} contracts)",
+        st.metric(f"Active Asks ({active_asks_qty} cts)", f"{active_asks_count} markets",
                   help="Markets where our ask is at or below market best ask")
     with col4:
-        st.metric("Total Active Orders", f"{active_bids_count + active_asks_count} markets ({active_bids_qty + active_asks_qty} contracts)")
+        st.metric(f"Total Active ({active_bids_qty + active_asks_qty} cts)", f"{active_bids_count + active_asks_count} markets")
 
     # Debug expander showing trade-by-trade P&L breakdown
     if trades:
@@ -212,6 +212,10 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                 pnl_change = pos['realized_pnl'] - pnl_before
                 global_cumulative_pnl += pnl_change
 
+                # Check if P&L change is fee-only (no position was closed)
+                # This happens when pnl_change equals -fees (within floating point tolerance)
+                is_fee_only = abs(pnl_change - (-fees)) < 0.0001 and fees > 0
+
                 # Format cost basis based on position - only show relevant values
                 qty_after = pos['net_yes_qty']
                 if qty_before > 0:
@@ -243,12 +247,15 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                 # Convert side to bid/ask terminology
                 side_display = 'bid' if side in ['buy', 'yes'] else 'ask'
 
+                # Add asterisk if P&L change is fee-only
+                pnl_change_str = f"${pnl_change:+.2f}{'*' if is_fee_only else ''}"
+
                 trade_details.append({
                     'Date': date_str,
                     'Timestamp': timestamp,
                     'Market': market_id,
                     'Side': side_display,
-                    'P&L Change': f"${pnl_change:+.2f}",
+                    'P&L Change': pnl_change_str,
                     'Cumulative P&L': f"${global_cumulative_pnl:.2f}",
                     'Price': f"${price:.3f}",
                     'Size': size,
@@ -263,7 +270,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Reverse to show newest first
             trade_details = trade_details[::-1]
 
-            st.caption(f"Showing {len(trade_details)} trades (newest first)")
+            st.caption(f"Showing {len(trade_details)} trades (newest first). * = fee-only (no position closed)")
 
             if trade_details:
                 # Display as dataframe
@@ -280,7 +287,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                 daily_breakdown = {}
                 for detail in trade_details:
                     date = detail['Date']
-                    pnl_str = detail['P&L Change'].replace('$', '').replace('+', '')
+                    pnl_str = detail['P&L Change'].replace('$', '').replace('+', '').replace('*', '')
                     try:
                         pnl_val = float(pnl_str)
                         if date not in daily_breakdown:
