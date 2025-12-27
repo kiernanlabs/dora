@@ -16,7 +16,7 @@ This script analyzes market performance and generates recommended config updates
 3. Sibling market ACTIVATION (when expanding):
    - For markets being expanded, fetch all sibling markets from the same event
    - Activate any sibling markets not already in config with default settings
-   - Uses OpenAI to generate fair value estimates for new sibling markets
+   - Uses OpenAI to assess information risk for new sibling markets
 
 Usage:
     python -m dora_bot.market_update --env prod
@@ -67,6 +67,16 @@ MAX_INVENTORY = 25
 # Scale down threshold - if quote_size is at or below this, exit instead of scaling down
 MIN_QUOTE_SIZE_FOR_SCALE_DOWN = 5
 
+# Information risk threshold - markets with >25% info risk should be scaled down
+MAX_INFO_RISK = 25
+
+# Thresholds for "highly active" markets that get web search
+HIGH_ACTIVITY_FILL_COUNT = 5  # fills in volume lookback period
+HIGH_ACTIVITY_VOLUME_24H = 1000  # 24hr volume for potential siblings
+
+# New market protection period - don't recommend exit for markets added within this period
+NEW_MARKET_PROTECTION_HOURS = 48
+
 
 @dataclass
 class MarketAnalysis:
@@ -85,6 +95,7 @@ class MarketAnalysis:
     current_enabled: bool
     has_position: bool
     position_qty: int
+    created_at: Optional[datetime] = None  # When the market config was created
 
 
 @dataclass
@@ -92,7 +103,7 @@ class RecommendedAction:
     """A recommended action for a market."""
     market_id: str
     event_ticker: Optional[str]  # Event this market belongs to
-    action: str  # 'exit', 'scale_down', 'expand', or 'activate_sibling'
+    action: str  # 'exit', 'scale_down', 'expand', 'activate_sibling', or 'reset_defaults'
     reason: str
     new_enabled: Optional[bool]
     new_min_spread: Optional[float]
@@ -105,9 +116,9 @@ class RecommendedAction:
     fill_count_48h: int
     has_position: bool
     position_qty: int
-    # Fair value assessment (for activate_sibling actions)
-    fair_value: Optional[float] = None
-    fair_value_rationale: Optional[str] = None
+    # Information risk assessment (for activate_sibling actions)
+    info_risk_probability: Optional[float] = None
+    info_risk_rationale: Optional[str] = None
 
 
 def get_fills_for_date_range(
@@ -174,19 +185,23 @@ def _serialize_decimal(obj):
     return obj
 
 
-def assess_fair_value(
+def assess_information_risk(
     market_title: str,
+    current_price: float,
     market_subtitle: Optional[str] = None,
     rules: Optional[str] = None,
+    use_web_search: bool = False,
 ) -> Dict[str, Any]:
-    """Assess the fair value (likelihood of resolving YES) for a market.
+    """Assess the likelihood of market-moving information being released in the next 7 days.
 
-    Uses OpenAI API to evaluate the probability without referencing prediction markets.
+    Uses OpenAI API to evaluate information risk for a prediction market.
 
     Args:
         market_title: The title of the market
+        current_price: Current market price (0-100)
         market_subtitle: Optional subtitle providing additional context
         rules: Optional resolution rules for the market
+        use_web_search: If True, enable web search tool for highly active markets
 
     Returns:
         Dictionary containing:
@@ -208,31 +223,36 @@ def assess_fair_value(
         client = OpenAI(api_key=api_key)
 
         # Build context for the prompt
-        context = f"The question is: {market_title}"
+        context = f"The market is: {market_title}"
         if market_subtitle:
             context += f"\n{market_subtitle}"
         if rules:
-            context += f"\n\nResolution criteria: {rules[:500]}"  # Limit rules length
+            context += f"\n\nResolution rules: {rules[:500]}"  # Limit rules length
+        context += f"\n\nThe current price is ~{current_price:.0f}%"
 
         # Create the prompt
-        prompt = f"""You are an expert analyst tasked with estimating probabilities for real-world events. Your job is to estimate the likelihood that the following event will resolve to YES.
+        prompt = f"""You are a market risk assessment expert for prediction markets on Kalshi. Your job is to evaluate the likelihood that market moving information will be released in the next 7 days that would move the current pricing more than 20ppts in either direction (e.g. 5% --> 25% or 45% --> 25%).
 
-Do NOT reference prediction markets, betting odds, or market prices. Base your estimate solely on your knowledge of the subject matter, historical precedents, and logical reasoning.
+If the outcome of the market will be decided within the next 7 days, please return a 100% chance of market moving news.  Today is {datetime.now().strftime("%Y-%m-%d")}
 
-Today is {datetime.now().strftime("%Y-%m-%d")}
+Please return your assessment in the form of a likelihood percentage (number from 0-100%) and 2-3 sentence rationale.
 
 {context}
 
-Please return your assessment in the form of a likelihood percentage (number from 0-100%) and 2-3 sentence rationale explaining your reasoning.
-
 Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
 
-        response = client.responses.create(
-            model="gpt-5-mini",
-            reasoning={"effort": "medium"},
-            tools=[{"type": "web_search"}],
-            input=prompt,
-        )
+        # Build API call kwargs
+        api_kwargs = {
+            "model": "gpt-5-mini",
+            "reasoning": {"effort": "medium"},
+            "input": prompt,
+        }
+
+        # Add web search tool for highly active markets
+        if use_web_search:
+            api_kwargs["tools"] = [{"type": "web_search"}]
+
+        response = client.responses.create(**api_kwargs)
 
         # Parse the response (Responses API uses output_text)
         response_text = getattr(response, "output_text", None)
@@ -328,6 +348,44 @@ def fetch_event_tickers(market_ids: List[str]) -> Dict[str, Optional[str]]:
             event_tickers[market_id] = None
 
     return event_tickers
+
+
+def fetch_market_details(market_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+    """Fetch market details (title, subtitle, rules, price) for each market from the public Kalshi API.
+
+    Args:
+        market_ids: List of market IDs to fetch
+
+    Returns:
+        Dictionary mapping market_id to market details dict
+    """
+    market_details = {}
+
+    for market_id in market_ids:
+        try:
+            url = f"{KALSHI_API_BASE}/trade-api/v2/markets/{market_id}"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            market_data = data.get('market', data)
+
+            # Get mid-price for current price estimate
+            yes_bid = market_data.get('yes_bid', 0) or 0
+            yes_ask = market_data.get('yes_ask', 100) or 100
+            current_price = (yes_bid + yes_ask) / 2
+
+            market_details[market_id] = {
+                'title': market_data.get('title', ''),
+                'subtitle': market_data.get('subtitle', ''),
+                'rules_primary': market_data.get('rules_primary', ''),
+                'current_price': current_price,
+                'event_ticker': market_data.get('event_ticker'),
+            }
+        except Exception as e:
+            print(f"Warning: Could not fetch details for {market_id}: {e}")
+            market_details[market_id] = None
+
+    return market_details
 
 
 def analyze_markets(
@@ -460,9 +518,80 @@ def analyze_markets(
             current_enabled=config.enabled,
             has_position=has_position,
             position_qty=position_qty,
+            created_at=config.created_at,
         )
 
     return analyses
+
+
+def assess_info_risk_for_markets(
+    market_ids: List[str],
+    analyses: Dict[str, MarketAnalysis],
+) -> Dict[str, Dict[str, Any]]:
+    """Assess information risk for a list of active markets.
+
+    Args:
+        market_ids: List of market IDs to assess
+        analyses: Dictionary of market analyses (for fill counts)
+
+    Returns:
+        Dictionary mapping market_id to info risk assessment result
+    """
+    if not market_ids:
+        return {}
+
+    print(f"\nFetching market details for {len(market_ids)} active markets...")
+    market_details = fetch_market_details(market_ids)
+
+    print(f"Assessing information risk for {len(market_ids)} active markets...")
+    results = {}
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {}
+        for market_id in market_ids:
+            details = market_details.get(market_id)
+            if not details:
+                continue
+
+            # Check if this is a highly active market (>50 fills in volume lookback)
+            analysis = analyses.get(market_id)
+            is_highly_active = analysis and analysis.fill_count_48h >= HIGH_ACTIVITY_FILL_COUNT
+
+            future = executor.submit(
+                assess_information_risk,
+                details.get('title', ''),
+                details.get('current_price', 50),
+                details.get('subtitle', ''),
+                details.get('rules_primary', ''),
+                is_highly_active,  # use_web_search
+            )
+            futures[future] = market_id
+
+        for future in as_completed(futures):
+            market_id = futures[future]
+            ir_result = future.result()
+
+            # Parse probability from result
+            prob_str = ir_result.get("probability", "N/A")
+            info_risk = None
+            if prob_str and prob_str != "N/A":
+                try:
+                    info_risk = float(str(prob_str).replace("%", "").strip())
+                except (ValueError, AttributeError):
+                    pass
+
+            analysis = analyses.get(market_id)
+            is_highly_active = analysis and analysis.fill_count_48h >= HIGH_ACTIVITY_FILL_COUNT
+            web_search_str = " (web_search)" if is_highly_active else ""
+            print(f"  {market_id}: info_risk={info_risk}%{web_search_str}")
+
+            results[market_id] = {
+                'info_risk_probability': info_risk,
+                'info_risk_rationale': ir_result.get('rationale'),
+                'error': ir_result.get('error'),
+            }
+
+    return results
 
 
 def generate_recommendations(
@@ -487,6 +616,15 @@ def generate_recommendations(
     # Track events that have expand candidates (for sibling activation)
     expand_events: set = set()
 
+    # Collect all active market IDs for info risk assessment
+    active_market_ids = []
+    for market_id, analysis in analyses.items():
+        if analysis.current_enabled:
+            active_market_ids.append(market_id)
+
+    # Assess information risk for all active markets
+    info_risk_results = assess_info_risk_for_markets(active_market_ids, analyses)
+
     # First pass: identify poor performance candidates and build event map
     for market_id, analysis in analyses.items():
         # Skip disabled markets without positions (already exited)
@@ -508,15 +646,28 @@ def generate_recommendations(
         elif analysis.current_enabled and analysis.fill_count_48h == 0:
             poor_reason = "No fills in lookback period"
 
+        # (C) High information risk (>25%) for enabled markets
+        elif analysis.current_enabled:
+            ir_result = info_risk_results.get(market_id, {})
+            ir_prob = ir_result.get('info_risk_probability')
+            if ir_prob is not None and ir_prob > MAX_INFO_RISK:
+                poor_reason = f"High info risk ({ir_prob:.0f}% > {MAX_INFO_RISK}%)"
+
         if poor_reason:
             poor_performance_candidates[market_id] = poor_reason
 
         # Check EXPAND conditions (for tracking events with expanding markets)
+        # Only allow expansion if info risk is <= MAX_INFO_RISK
+        ir_result = info_risk_results.get(market_id, {})
+        ir_prob = ir_result.get('info_risk_probability')
+        info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
+
         if (analysis.current_enabled and
             analysis.pnl_24h > 0 and
             analysis.median_fill_size is not None and
             analysis.median_fill_size == analysis.current_quote_size and
-            analysis.event_ticker):
+            analysis.event_ticker and
+            info_risk_ok):
             expand_events.add(analysis.event_ticker)
 
     # Second pass: generate recommendations
@@ -525,14 +676,57 @@ def generate_recommendations(
         if not analysis.current_enabled and not analysis.has_position:
             continue
 
+        # Get info risk data for this market
+        ir_result = info_risk_results.get(market_id, {})
+        ir_prob = ir_result.get('info_risk_probability')
+        ir_rationale = ir_result.get('info_risk_rationale')
+
         poor_reason = poor_performance_candidates.get(market_id)
 
         if poor_reason:
             event_ticker = analysis.event_ticker
 
+            # Check if market is within protection period (recently created)
+            is_protected = False
+            if analysis.created_at:
+                now = datetime.now(timezone.utc)
+                market_age = now - analysis.created_at
+                is_protected = market_age < timedelta(hours=NEW_MARKET_PROTECTION_HOURS)
+
+            # Check if a sibling market in the same event is expanding
+            has_expanding_sibling = event_ticker and event_ticker in expand_events
+
             # Check if we can scale down or need to exit
             # If quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN, scale down instead of exit
-            if analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
+            # But if a sibling is expanding, reset to defaults instead
+            if has_expanding_sibling:
+                # Sibling is expanding: reset to defaults instead of scaling down/exiting
+                # Skip if already at defaults
+                if (analysis.current_quote_size == DEFAULT_QUOTE_SIZE and
+                    analysis.current_max_inventory_yes == DEFAULT_MAX_INVENTORY_YES and
+                    analysis.current_max_inventory_no == DEFAULT_MAX_INVENTORY_NO and
+                    analysis.current_min_spread == DEFAULT_MIN_SPREAD):
+                    print(f"  Skipping {market_id}: {poor_reason} - sibling expanding, already at defaults")
+                else:
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=event_ticker,
+                        action='reset_defaults',
+                        reason=f"{poor_reason} (sibling expanding in {event_ticker}, resetting to defaults)",
+                        new_enabled=True,
+                        new_min_spread=DEFAULT_MIN_SPREAD,
+                        new_quote_size=DEFAULT_QUOTE_SIZE,
+                        new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
+                        new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
+            elif analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
                 # Scale down: cut quote_size and max_inventory by 50%, double min_spread
                 new_quote_size = max(1, analysis.current_quote_size // 2)
                 new_max_inv_yes = max(1, analysis.current_max_inventory_yes // 2)
@@ -554,7 +748,36 @@ def generate_recommendations(
                     fill_count_48h=analysis.fill_count_48h,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
+                    info_risk_probability=ir_prob,
+                    info_risk_rationale=ir_rationale,
                 ))
+            elif is_protected:
+                # Protected market at minimum: reset to defaults instead of exiting
+                # Skip if already at defaults
+                if (analysis.current_quote_size == DEFAULT_QUOTE_SIZE and
+                    analysis.current_max_inventory_yes == DEFAULT_MAX_INVENTORY_YES and
+                    analysis.current_max_inventory_no == DEFAULT_MAX_INVENTORY_NO and
+                    analysis.current_min_spread == DEFAULT_MIN_SPREAD):
+                    print(f"  Skipping {market_id}: {poor_reason} - within {NEW_MARKET_PROTECTION_HOURS}h protection, already at defaults")
+                else:
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=event_ticker,
+                        action='reset_defaults',
+                        reason=f"{poor_reason} (within {NEW_MARKET_PROTECTION_HOURS}h protection, resetting to defaults)",
+                        new_enabled=True,
+                        new_min_spread=DEFAULT_MIN_SPREAD,
+                        new_quote_size=DEFAULT_QUOTE_SIZE,
+                        new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
+                        new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
             elif analysis.has_position:
                 # Quote size at minimum and has position: set min_spread to 0.50 to exit
                 recommendations.append(RecommendedAction(
@@ -572,6 +795,8 @@ def generate_recommendations(
                     fill_count_48h=analysis.fill_count_48h,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
+                    info_risk_probability=ir_prob,
+                    info_risk_rationale=ir_rationale,
                 ))
             else:
                 # Quote size at minimum and no position: disable the market
@@ -590,24 +815,32 @@ def generate_recommendations(
                     fill_count_48h=analysis.fill_count_48h,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
+                    info_risk_probability=ir_prob,
+                    info_risk_rationale=ir_rationale,
                 ))
             continue
 
-        # Check EXPAND conditions (only for enabled markets with fills)
+        # Check EXPAND conditions (only for enabled markets with fills and acceptable info risk)
+        info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
         if (analysis.current_enabled and
             analysis.pnl_24h > 0 and
             analysis.median_fill_size is not None and
-            analysis.median_fill_size == analysis.current_quote_size):
+            analysis.median_fill_size == analysis.current_quote_size and
+            info_risk_ok):
 
             # Cap expansion at MAX_QUOTE_SIZE and MAX_INVENTORY
             new_quote_size = min(MAX_QUOTE_SIZE, analysis.current_quote_size * 2)
             new_max_inv_yes = min(MAX_INVENTORY, analysis.current_max_inventory_yes * 2)
             new_max_inv_no = min(MAX_INVENTORY, analysis.current_max_inventory_no * 2)
 
-            # Skip if already at max
+            # Reduce min_spread by $0.01, but not below 0.04
+            new_min_spread = max(0.04, analysis.current_min_spread - 0.01)
+
+            # Skip if already at max for size/inventory and min_spread can't be reduced
             if (new_quote_size == analysis.current_quote_size and
                 new_max_inv_yes == analysis.current_max_inventory_yes and
-                new_max_inv_no == analysis.current_max_inventory_no):
+                new_max_inv_no == analysis.current_max_inventory_no and
+                new_min_spread == analysis.current_min_spread):
                 continue
 
             recommendations.append(RecommendedAction(
@@ -616,7 +849,7 @@ def generate_recommendations(
                 action='expand',
                 reason=f"Positive P&L (${analysis.pnl_24h:.2f}) and median fill = quote size ({analysis.current_quote_size})",
                 new_enabled=None,
-                new_min_spread=None,
+                new_min_spread=new_min_spread,
                 new_quote_size=new_quote_size,
                 new_max_inventory_yes=new_max_inv_yes,
                 new_max_inventory_no=new_max_inv_no,
@@ -625,6 +858,8 @@ def generate_recommendations(
                 fill_count_48h=analysis.fill_count_48h,
                 has_position=analysis.has_position,
                 position_qty=analysis.position_qty,
+                info_risk_probability=ir_prob,
+                info_risk_rationale=ir_rationale,
             ))
 
     # Third pass: For expand events, activate sibling markets that are not already active
@@ -697,36 +932,55 @@ def generate_sibling_activations(
         new_markets.sort(key=lambda m: m.get('volume_24h', 0) or 0, reverse=True)
         top_markets = new_markets[:5]
 
-        print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, activating top {len(top_markets)} by volume...")
+        print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, assessing top {len(top_markets)} by volume...")
 
-        # Assess fair value for each top market (in parallel for efficiency)
+        # Assess information risk for each top market (in parallel for efficiency)
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = {}
             for market in top_markets:
                 market_id = market.get('ticker')
+                # Get mid-price for current price estimate
+                yes_bid = market.get('yes_bid', 0) or 0
+                yes_ask = market.get('yes_ask', 100) or 100
+                current_price = (yes_bid + yes_ask) / 2
+
+                # Use web search for highly active sibling markets (>1000 volume)
+                volume_24h = market.get('volume_24h', 0) or 0
+                use_web_search = volume_24h >= HIGH_ACTIVITY_VOLUME_24H
+
                 future = executor.submit(
-                    assess_fair_value,
+                    assess_information_risk,
                     market.get('title', ''),
+                    current_price,
                     market.get('subtitle', ''),
-                    market.get('rules_primary', '')
+                    market.get('rules_primary', ''),
+                    use_web_search,
                 )
                 futures[future] = (market_id, market)
 
             for future in as_completed(futures):
                 market_id, market = futures[future]
-                fv_result = future.result()
+                ir_result = future.result()
 
                 # Parse probability from result
-                prob_str = fv_result.get("probability", "N/A")
-                fair_value = None
+                prob_str = ir_result.get("probability", "N/A")
+                info_risk = None
                 if prob_str and prob_str != "N/A":
                     try:
-                        fair_value = float(str(prob_str).replace("%", "").strip())
+                        info_risk = float(str(prob_str).replace("%", "").strip())
                     except (ValueError, AttributeError):
                         pass
 
                 volume_24h = market.get('volume_24h', 0) or 0
-                print(f"    {market_id}: volume_24h={volume_24h}, fair_value={fair_value}")
+                is_highly_active = volume_24h >= HIGH_ACTIVITY_VOLUME_24H
+                web_search_str = " (web_search)" if is_highly_active else ""
+
+                # Filter out siblings with high info risk (>25%)
+                if info_risk is not None and info_risk > MAX_INFO_RISK:
+                    print(f"    {market_id}: volume_24h={volume_24h}, info_risk={info_risk}%{web_search_str} - SKIPPED (>{MAX_INFO_RISK}%)")
+                    continue
+
+                print(f"    {market_id}: volume_24h={volume_24h}, info_risk={info_risk}%{web_search_str} - OK")
 
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
@@ -743,8 +997,8 @@ def generate_sibling_activations(
                     fill_count_48h=0,
                     has_position=False,
                     position_qty=0,
-                    fair_value=fair_value,
-                    fair_value_rationale=fv_result.get("rationale"),
+                    info_risk_probability=info_risk,
+                    info_risk_rationale=ir_result.get("rationale"),
                 ))
 
     return recommendations
@@ -775,8 +1029,8 @@ def write_recommendations_csv(
         'fill_count_48h',
         'has_position',
         'position_qty',
-        'fair_value',
-        'fair_value_rationale',
+        'info_risk_probability',
+        'info_risk_rationale',
         'approve'  # User can set to 'yes' or 'no'
     ]
 
@@ -804,8 +1058,8 @@ def write_recommendations_csv(
                 'fill_count_48h': rec.fill_count_48h,
                 'has_position': rec.has_position,
                 'position_qty': int(rec.position_qty) if rec.position_qty else 0,
-                'fair_value': f'{rec.fair_value:.1f}' if rec.fair_value is not None else '',
-                'fair_value_rationale': rec.fair_value_rationale or '',
+                'info_risk_probability': f'{rec.info_risk_probability:.0f}' if rec.info_risk_probability is not None else '',
+                'info_risk_rationale': rec.info_risk_rationale or '',
                 'approve': default_approve,
             })
 
@@ -869,12 +1123,6 @@ def execute_updates(
                     event_ticker=rec.get('event_ticker') or None,
                     created_at=datetime.now(timezone.utc),
                 )
-                # Parse fair_value if present and set it
-                if rec.get('fair_value'):
-                    try:
-                        config.fair_value = float(rec['fair_value']) / 100.0  # Convert from % to decimal
-                    except (ValueError, TypeError):
-                        pass
             else:
                 print(f"Warning: Market config not found for {market_id}, skipping")
                 failure += 1
@@ -918,7 +1166,7 @@ def execute_updates(
         # Save updated/new config
         if dynamo.put_market_config(config):
             if action == 'activate_sibling':
-                print(f"✓ Created {market_id}: {action} (fair_value={rec.get('fair_value', 'N/A')})")
+                print(f"✓ Created {market_id}: {action} (info_risk={rec.get('info_risk_probability', 'N/A')}%)")
             else:
                 print(f"✓ Updated {market_id}: {action}")
             success += 1
@@ -927,6 +1175,26 @@ def execute_updates(
             failure += 1
 
     return success, failure
+
+
+def save_execution_timestamp(dynamo: DynamoDBClient) -> bool:
+    """Save the timestamp of the last market_update execution to the state table.
+
+    Args:
+        dynamo: DynamoDB client
+
+    Returns:
+        True if successful
+    """
+    try:
+        dynamo.state_table.put_item(Item={
+            'key': 'market_update_last_run',
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+        })
+        return True
+    except Exception as e:
+        print(f"Warning: Failed to save execution timestamp: {e}")
+        return False
 
 
 def main():
@@ -993,6 +1261,11 @@ def main():
         print(f"\nFound {len(approved)} approved updates to apply...")
         success, failure = execute_updates(dynamo, approved)
         print(f"\nCompleted: {success} succeeded, {failure} failed")
+
+        # Save execution timestamp if any updates succeeded
+        if success > 0:
+            save_execution_timestamp(dynamo)
+
         sys.exit(0 if failure == 0 else 1)
 
     # Analysis mode
@@ -1071,6 +1344,11 @@ def main():
     print("\nApplying updates...")
     success, failure = execute_updates(dynamo, approved)
     print(f"\nCompleted: {success} succeeded, {failure} failed")
+
+    # Save execution timestamp if any updates succeeded
+    if success > 0:
+        save_execution_timestamp(dynamo)
+
     sys.exit(0 if failure == 0 else 1)
 
 

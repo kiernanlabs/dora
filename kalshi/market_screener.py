@@ -17,9 +17,6 @@ Filters applied:
     4. Event ticker prefix not in restricted_markets.csv
     5. 24hr midpoint change <= 20%
     6. Information risk < 25% (likelihood of market-moving news in next 7 days)
-
-Additional analysis:
-    - Fair value assessment (AI estimate of YES probability without market reference)
 """
 import argparse
 import csv
@@ -160,7 +157,7 @@ def calculate_midpoint_change(
 def filter_markets(
     markets: List[Dict[str, Any]],
     restricted_prefixes: Set[str],
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     """Filter markets based on volume, spread, and restricted tickers.
 
     Args:
@@ -168,18 +165,27 @@ def filter_markets(
         restricted_prefixes: Set of restricted event ticker prefixes
 
     Returns:
-        Filtered list of markets
+        Tuple of (filtered list of markets, filter stats)
     """
     filtered = []
+    stats = {
+        "volume_24h": 0,
+        "closing_soon": 0,
+        "spread": 0,
+        "restricted_prefix": 0,
+        "midpoint_change": 0,
+    }
 
     for market in markets:
         # Filter 1: 24hr volume > 100
         volume_24h = market.get("volume_24h", 0) or 0
         if volume_24h <= MIN_VOLUME_24H:
+            stats["volume_24h"] += 1
             continue
 
         # Filter 2: Market doesn't close within MIN_DAYS_UNTIL_CLOSE days
         if is_closing_soon(market.get("close_time")):
+            stats["closing_soon"] += 1
             continue
 
         # Filter 3: Current AND previous spread both > 5
@@ -193,12 +199,14 @@ def filter_markets(
         )
 
         if current_spread <= MIN_SPREAD or previous_spread <= MIN_SPREAD:
+            stats["spread"] += 1
             continue
 
         # Filter 4: Event ticker prefix not in restricted list
         event_ticker = market.get("event_ticker", "")
         prefix = event_ticker[:5] if event_ticker else ""
         if prefix in restricted_prefixes:
+            stats["restricted_prefix"] += 1
             continue
 
         # Filter 5: Midpoint change < 20% over 24hrs
@@ -209,6 +217,7 @@ def filter_markets(
             market.get("previous_yes_bid"),
         )
         if midpoint_change is not None and midpoint_change > MAX_MIDPOINT_CHANGE:
+            stats["midpoint_change"] += 1
             continue
 
         # Add computed fields for convenience
@@ -218,7 +227,7 @@ def filter_markets(
 
         filtered.append(market)
 
-    return filtered
+    return filtered, stats
 
 
 def fetch_all_markets(
@@ -326,8 +335,6 @@ def markets_to_dataframe(markets: List[Dict[str, Any]]) -> pd.DataFrame:
         "info_risk_probability",
         "info_risk_rationale",
         "info_risk_error",
-        "fair_value",
-        "fair_value_rationale",
     ]
 
     # Reorder columns: priority columns first, then the rest
@@ -389,105 +396,6 @@ If the outcome of the market will be decided within the next 7 days, please retu
 Please return your assessment in the form of a likelihood percentage (number from 0-100%) and 2-3 sentence rationale.
 
 {context}
-
-Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
-
-        response = client.responses.create(
-                model="gpt-5-mini",
-                reasoning={"effort": "medium"},
-                input=prompt,
-            )
-
-        # Parse the response (Responses API uses output_text)
-        response_text = getattr(response, "output_text", None)
-        if response_text is None:
-            return {
-                "probability": None,
-                "rationale": "No output_text in response",
-                "error": "Empty API response",
-            }
-        response_text = response_text.strip()
-
-        # Try to extract JSON if wrapped in markdown code blocks
-        if response_text.startswith("```"):
-            # Remove markdown code blocks
-            response_text = response_text.split("```")[1]
-            if response_text.startswith("json"):
-                response_text = response_text[4:]
-            response_text = response_text.strip()
-
-        result = json.loads(response_text)
-
-        return {
-            "probability": result.get("probability", "N/A"),
-            "rationale": result.get("rationale", "No rationale provided"),
-            "error": None,
-        }
-
-    except json.JSONDecodeError as e:
-        return {
-            "probability": None,
-            "rationale": f"Failed to parse API response: {str(e)}",
-            "error": "JSON parsing error",
-        }
-    except Exception as e:
-        return {
-            "probability": None,
-            "rationale": f"Error calling OpenAI API: {str(e)}",
-            "error": str(e),
-        }
-
-
-def assess_fair_value(
-    market_title: str,
-    market_subtitle: Optional[str] = None,
-    rules: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Assess the fair value (likelihood of resolving YES) for a market.
-
-    Uses OpenAI API to evaluate the probability without referencing prediction markets.
-
-    Args:
-        market_title: The title of the market
-        market_subtitle: Optional subtitle providing additional context
-        rules: Optional resolution rules for the market
-
-    Returns:
-        Dictionary containing:
-        - probability: Likelihood percentage (0-100)
-        - rationale: 2-3 sentence explanation
-        - error: Error message if API call fails
-    """
-    try:
-        # Get OpenAI API key from environment
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            return {
-                "probability": None,
-                "rationale": "OpenAI API key not configured",
-                "error": "Missing OPENAI_API_KEY in environment variables",
-            }
-
-        # Initialize OpenAI client
-        client = OpenAI(api_key=api_key)
-
-        # Build context for the prompt
-        context = f"The question is: {market_title}"
-        if market_subtitle:
-            context += f"\n{market_subtitle}"
-        if rules:
-            context += f"\n\nResolution criteria: {rules[:500]}"  # Limit rules length
-
-        # Create the prompt
-        prompt = f"""You are an expert analyst tasked with estimating probabilities for real-world events. Your job is to estimate the likelihood that the following event will resolve to YES.
-
-Do NOT reference prediction markets, betting odds, or market prices. Base your estimate solely on your knowledge of the subject matter, historical precedents, and logical reasoning.
-
-Today is {datetime.now().strftime("%Y-%m-%d")}
-
-{context}
-
-Please return your assessment in the form of a likelihood percentage (number from 0-100%) and 2-3 sentence rationale explaining your reasoning.
 
 Your response should be only a JSON dictionary e.g. {{"probability": "XX%", "rationale": "XXXX"}}"""
 
@@ -634,107 +542,6 @@ def assess_information_risk_for_markets(
 
     print(f"\nMarkets after information risk filter: {len(filtered)}/{total}")
     return filtered
-
-
-def _assess_fair_value_single(
-    market: Dict[str, Any],
-    index: int,
-    total: int,
-) -> Tuple[Dict[str, Any], str]:
-    """Assess fair value for a single market (worker function for threading).
-
-    Args:
-        market: Market dictionary
-        index: Market index (1-based)
-        total: Total number of markets
-
-    Returns:
-        Tuple of (market with results, status_message)
-    """
-    ticker = market.get("ticker", "N/A")
-    title = market.get("title", "")
-    subtitle = market.get("subtitle", "")
-    rules = market.get("rules_primary", "")
-
-    # Call OpenAI to assess fair value
-    result = assess_fair_value(
-        market_title=title,
-        market_subtitle=subtitle,
-        rules=rules,
-    )
-
-    # Parse probability from result
-    prob_str = result.get("probability", "N/A")
-    error = result.get("error")
-
-    if error:
-        market["fair_value"] = None
-        market["fair_value_rationale"] = result.get("rationale", "")
-        market["fair_value_error"] = error
-        return market, f"[{index}/{total}] {ticker}: ERROR - {error}"
-
-    # Parse percentage string to number
-    try:
-        prob_value = float(str(prob_str).replace("%", "").strip())
-    except (ValueError, AttributeError):
-        market["fair_value"] = None
-        market["fair_value_rationale"] = result.get("rationale", "")
-        market["fair_value_error"] = f"Could not parse probability: {prob_str}"
-        return market, f"[{index}/{total}] {ticker}: PARSE ERROR - '{prob_str}'"
-
-    market["fair_value"] = prob_value
-    market["fair_value_rationale"] = result.get("rationale", "")
-    market["fair_value_error"] = None
-
-    # Calculate edge vs current market price
-    yes_bid = market.get("yes_bid", 0) or 0
-    yes_ask = market.get("yes_ask", 100) or 100
-    market_mid = (yes_bid + yes_ask) / 2
-    edge = prob_value - market_mid
-
-    return market, f"[{index}/{total}] {ticker}: {prob_value:.0f}% (market: {market_mid:.0f}%, edge: {edge:+.0f}%)"
-
-
-def assess_fair_value_for_markets(
-    markets: List[Dict[str, Any]],
-    max_workers: int = DEFAULT_THREADS,
-) -> List[Dict[str, Any]]:
-    """Assess fair value for each market.
-
-    Args:
-        markets: List of market dictionaries
-        max_workers: Maximum number of parallel threads (default: 10)
-
-    Returns:
-        Same list of markets with fair_value fields added
-    """
-    total = len(markets)
-
-    print(f"\nAssessing fair value for {total} markets ({max_workers} threads)...")
-    print(f"  (Estimating YES probability without market reference)\n")
-
-    # We need to preserve market order, so collect results and rebuild list
-    results = {}
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        # Submit all tasks
-        futures = {
-            executor.submit(_assess_fair_value_single, market, i, total): i
-            for i, market in enumerate(markets, 1)
-        }
-
-        # Process results as they complete
-        for future in as_completed(futures):
-            index = futures[future]
-            market, message = future.result()
-            print(f"  {message}")
-            results[index] = market
-
-    # Rebuild list in original order
-    markets = [results[i] for i in range(1, total + 1)]
-
-    print(f"\nFair value assessment complete for {total} markets")
-    return markets
 
 
 def fetch_trade_history(
@@ -999,6 +806,22 @@ def upload_to_market_config(
         market_id = market['market_id']
 
         try:
+            existing = table.get_item(
+                Key={"market_id": market_id},
+                ConsistentRead=True,
+            ).get("Item")
+            if existing:
+                enabled_value = existing.get("enabled")
+                is_active = (
+                    enabled_value is True
+                    or enabled_value == 1
+                    or enabled_value == Decimal("1")
+                    or str(enabled_value).lower() == "true"
+                )
+                if is_active:
+                    print(f"↷ Skipped {market_id}: already active")
+                    continue
+
             # Parse values from CSV
             quote_size = int(float(market.get('new_quote_size', DEFAULT_QUOTE_SIZE)))
             max_inv_yes = int(float(market.get('new_max_inventory_yes', DEFAULT_MAX_INVENTORY)))
@@ -1136,11 +959,6 @@ def main():
         help="Skip information risk assessment (faster, but no AI filtering)",
     )
     parser.add_argument(
-        "--skip-fair-value",
-        action="store_true",
-        help="Skip fair value assessment",
-    )
-    parser.add_argument(
         "--threads",
         type=int,
         default=DEFAULT_THREADS,
@@ -1212,13 +1030,16 @@ def main():
     print(f"\nTotal markets fetched: {len(markets)}")
 
     # Apply filters
-    filtered_markets = filter_markets(markets, restricted_prefixes)
+    filtered_markets, filter_stats = filter_markets(markets, restricted_prefixes)
     print(f"Markets after filtering: {len(filtered_markets)}")
-    print(f"  - Volume > {MIN_VOLUME_24H}")
-    print(f"  - Close time > {MIN_DAYS_UNTIL_CLOSE} days away")
-    print(f"  - Current & previous spread > {MIN_SPREAD}")
-    print(f"  - Excluded {len(restricted_prefixes)} restricted prefixes")
-    print(f"  - 24hr midpoint change <= {MAX_MIDPOINT_CHANGE}%")
+    print(f"  - Volume > {MIN_VOLUME_24H} (filtered out {filter_stats['volume_24h']})")
+    print(f"  - Close time > {MIN_DAYS_UNTIL_CLOSE} days away (filtered out {filter_stats['closing_soon']})")
+    print(f"  - Current & previous spread > {MIN_SPREAD} (filtered out {filter_stats['spread']})")
+    print(
+        f"  - Excluded {len(restricted_prefixes)} restricted prefixes "
+        f"(filtered out {filter_stats['restricted_prefix']})"
+    )
+    print(f"  - 24hr midpoint change <= {MAX_MIDPOINT_CHANGE}% (filtered out {filter_stats['midpoint_change']})")
 
     if not filtered_markets:
         print("No markets passed filters.")
@@ -1253,12 +1074,6 @@ def main():
     # Take top N markets
     top_markets = filtered_markets[:args.top_n]
     print(f"\nSelected top {len(top_markets)} markets by 24hr volume")
-
-    # Assess fair value for top markets using OpenAI
-    if not args.skip_fair_value:
-        top_markets = assess_fair_value_for_markets(
-            top_markets, max_workers=args.threads
-        )
 
     # Print top candidates
     print_top_markets(top_markets, n=len(top_markets))
