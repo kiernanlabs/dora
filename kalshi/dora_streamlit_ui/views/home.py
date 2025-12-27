@@ -1,6 +1,7 @@
 """
 Home Page - Dashboard Overview
 """
+import math
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
@@ -16,6 +17,24 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from db_client import ReadOnlyDynamoDBClient
 
 logger = logging.getLogger(__name__)
+
+
+def calculate_fill_fee(price: float, count: int) -> float:
+    """Calculate the fee for a fill using Kalshi's fee formula.
+
+    Formula: ceil(0.0175 × C × P × (1-P))
+    where P = price in dollars (0.50 for 50 cents)
+          C = number of contracts
+
+    Args:
+        price: Price per contract in dollars (e.g., 0.50 for 50 cents)
+        count: Number of contracts traded
+
+    Returns:
+        Fee amount in dollars, rounded up to the nearest cent
+    """
+    raw_fee = 0.0175 * count * price * (1 - price)
+    return math.ceil(raw_fee * 100) / 100
 
 
 def to_local_time(timestamp_str: str) -> str:
@@ -40,7 +59,9 @@ def get_kalshi_market_url(market_id: str) -> str:
 
 
 def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] = None,
-                     unrealized_worst: float = 0.0, unrealized_best: float = 0.0):
+                     unrealized_worst: float = 0.0, unrealized_best: float = 0.0,
+                     active_bids_count: int = 0, active_bids_qty: int = 0,
+                     active_asks_count: int = 0, active_asks_qty: int = 0):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -82,8 +103,8 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
     st.plotly_chart(fig, width='stretch')
 
-    # Display summary metrics - 5 columns now
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Display summary metrics - Row 1: P&L metrics
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
         total_pnl = df['cumulative_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Total Realized P&L", f"${total_pnl:.2f}")
@@ -96,10 +117,20 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
     with col4:
         st.metric("Unrealized (Best)", f"${unrealized_best:+.2f}",
                   help="If we exit all positions at our active orders (if competitive) or market best")
-    with col5:
-        # Calculate total exposure
+
+    # Row 2: Exposure metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
         total_exposure = sum(abs(p.get('net_yes_qty', 0)) for p in positions.values())
         st.metric("Total Exposure", f"{total_exposure} contracts")
+    with col2:
+        st.metric("Active Bids", f"{active_bids_count} markets ({active_bids_qty} contracts)",
+                  help="Markets where our bid is at or above market best bid")
+    with col3:
+        st.metric("Active Asks", f"{active_asks_count} markets ({active_asks_qty} contracts)",
+                  help="Markets where our ask is at or below market best ask")
+    with col4:
+        st.metric("Total Active Orders", f"{active_bids_count + active_asks_count} markets ({active_bids_qty + active_asks_qty} contracts)")
 
     # Debug expander showing trade-by-trade P&L breakdown
     if trades:
@@ -774,35 +805,41 @@ def render_active_markets_table(
             check_mark = " ✅" if is_profitable_active else ""
             avg_cost_display = f"${avg_cost:.3f}{check_mark}"
 
-        # Calculate unrealized P&L (worst case - exit at market best)
-        # For long positions (net_qty > 0): we'd sell at best_bid, so unrealized = (best_bid - avg_buy_price) * qty
-        # For short positions (net_qty < 0): we'd buy at best_ask, so unrealized = (avg_sell_price - best_ask) * abs(qty)
+        # Calculate unrealized P&L (worst case - exit at market best, minus exit fees)
+        # For long positions (net_qty > 0): we'd sell at best_bid, so unrealized = (best_bid - avg_buy_price) * qty - fee
+        # For short positions (net_qty < 0): we'd buy at best_ask, so unrealized = (avg_sell_price - best_ask) * abs(qty) - fee
         unrealized_pnl_worst = None
         if net_qty > 0 and avg_cost is not None:
             best_bid = order_book.get('best_bid')
             if best_bid:
-                unrealized_pnl_worst = (best_bid - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(best_bid, net_qty)
+                unrealized_pnl_worst = (best_bid - avg_cost) * net_qty - exit_fee
         elif net_qty < 0 and avg_cost is not None:
             best_ask = order_book.get('best_ask')
             if best_ask:
-                unrealized_pnl_worst = (avg_cost - best_ask) * abs(net_qty)
+                exit_fee = calculate_fill_fee(best_ask, abs(net_qty))
+                unrealized_pnl_worst = (avg_cost - best_ask) * abs(net_qty) - exit_fee
 
-        # Calculate unrealized P&L (best case - exit at our active orders if competitive)
+        # Calculate unrealized P&L (best case - exit at our active orders if competitive, minus exit fees)
         unrealized_pnl_best = None
         if net_qty > 0 and avg_cost is not None:  # Long position - need to sell
             if our_ask_price and is_ask_active:
                 # Can exit at our ask
-                unrealized_pnl_best = (our_ask_price - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(our_ask_price, net_qty)
+                unrealized_pnl_best = (our_ask_price - avg_cost) * net_qty - exit_fee
             elif order_book.get('best_bid'):
                 # Our ask isn't competitive, have to hit the bid
-                unrealized_pnl_best = (order_book.get('best_bid') - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(order_book.get('best_bid'), net_qty)
+                unrealized_pnl_best = (order_book.get('best_bid') - avg_cost) * net_qty - exit_fee
         elif net_qty < 0 and avg_cost is not None:  # Short position - need to buy
             if our_bid_price and is_bid_active:
                 # Can exit at our bid
-                unrealized_pnl_best = (avg_cost - our_bid_price) * abs(net_qty)
+                exit_fee = calculate_fill_fee(our_bid_price, abs(net_qty))
+                unrealized_pnl_best = (avg_cost - our_bid_price) * abs(net_qty) - exit_fee
             elif order_book.get('best_ask'):
                 # Our bid isn't competitive, have to hit the ask
-                unrealized_pnl_best = (avg_cost - order_book.get('best_ask')) * abs(net_qty)
+                exit_fee = calculate_fill_fee(order_book.get('best_ask'), abs(net_qty))
+                unrealized_pnl_best = (avg_cost - order_book.get('best_ask')) * abs(net_qty) - exit_fee
 
         spread_value = order_book.get('spread')
         spread_display = f"${spread_value:.3f}" if spread_value else 'N/A'
@@ -1100,6 +1137,12 @@ def render(environment: str, region: str):
     total_unrealized_worst = 0.0
     total_unrealized_best = 0.0
 
+    # Track active bids/asks across all markets
+    active_bids_count = 0
+    active_bids_qty = 0
+    active_asks_count = 0
+    active_asks_qty = 0
+
     # Pre-index decisions by market_id
     decisions_by_market: Dict[str, List[Dict]] = {}
     for d in decisions:
@@ -1113,9 +1156,6 @@ def render(environment: str, region: str):
         market_id = config.get('market_id')
         position = positions.get(market_id, {})
         net_qty = position.get('net_yes_qty', 0)
-
-        if net_qty == 0:
-            continue  # No position, no unrealized P&L
 
         # Get order book from most recent decision
         market_decisions = decisions_by_market.get(market_id, [])
@@ -1147,6 +1187,18 @@ def render(environment: str, region: str):
         elif our_ask_price:
             is_ask_active = True
 
+        # Track active bids/asks for summary metrics
+        if is_bid_active and live_bids:
+            active_bids_count += 1
+            active_bids_qty += sum(o.get('size', 0) for o in live_bids)
+        if is_ask_active and live_asks:
+            active_asks_count += 1
+            active_asks_qty += sum(o.get('size', 0) for o in live_asks)
+
+        # Skip unrealized P&L calculation if no position
+        if net_qty == 0:
+            continue
+
         # Get average cost
         avg_cost = None
         if net_qty > 0:
@@ -1157,41 +1209,48 @@ def render(environment: str, region: str):
         if avg_cost is None:
             continue
 
-        # Calculate worst case unrealized P&L (exit at market best)
+        # Calculate worst case unrealized P&L (exit at market best, minus exit fees)
         if net_qty > 0:  # Long position
             if market_best_bid:
-                unrealized_worst = (market_best_bid - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(market_best_bid, net_qty)
+                unrealized_worst = (market_best_bid - avg_cost) * net_qty - exit_fee
                 total_unrealized_worst += unrealized_worst
         else:  # Short position (net_qty < 0)
             if market_best_ask:
-                unrealized_worst = (avg_cost - market_best_ask) * abs(net_qty)
+                exit_fee = calculate_fill_fee(market_best_ask, abs(net_qty))
+                unrealized_worst = (avg_cost - market_best_ask) * abs(net_qty) - exit_fee
                 total_unrealized_worst += unrealized_worst
 
-        # Calculate best case unrealized P&L (exit at our active orders if competitive)
+        # Calculate best case unrealized P&L (exit at our active orders if competitive, minus exit fees)
         if net_qty > 0:  # Long position - need to sell
             if our_ask_price and is_ask_active:
                 # Can exit at our ask
-                unrealized_best = (our_ask_price - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(our_ask_price, net_qty)
+                unrealized_best = (our_ask_price - avg_cost) * net_qty - exit_fee
                 total_unrealized_best += unrealized_best
             elif market_best_bid:
                 # Our ask isn't competitive, have to hit the bid
-                unrealized_best = (market_best_bid - avg_cost) * net_qty
+                exit_fee = calculate_fill_fee(market_best_bid, net_qty)
+                unrealized_best = (market_best_bid - avg_cost) * net_qty - exit_fee
                 total_unrealized_best += unrealized_best
         else:  # Short position (net_qty < 0) - need to buy
             if our_bid_price and is_bid_active:
                 # Can exit at our bid
-                unrealized_best = (avg_cost - our_bid_price) * abs(net_qty)
+                exit_fee = calculate_fill_fee(our_bid_price, abs(net_qty))
+                unrealized_best = (avg_cost - our_bid_price) * abs(net_qty) - exit_fee
                 total_unrealized_best += unrealized_best
             elif market_best_ask:
                 # Our bid isn't competitive, have to hit the ask
-                unrealized_best = (avg_cost - market_best_ask) * abs(net_qty)
+                exit_fee = calculate_fill_fee(market_best_ask, abs(net_qty))
+                unrealized_best = (avg_cost - market_best_ask) * abs(net_qty) - exit_fee
                 total_unrealized_best += unrealized_best
 
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best)
+        render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best,
+                         active_bids_count, active_bids_qty, active_asks_count, active_asks_qty)
 
     with col2:
         render_exposure_chart(positions, market_configs)

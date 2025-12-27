@@ -236,9 +236,13 @@ class MarketMaker:
         Returns:
             Tuple of (target_bid, target_ask, price_calc); either side may be None to skip quoting.
         """
-        # Start by placing one tick inside the current spread
+        # Start by placing one tick inside the current spread if spread is wide, if not, place at market
         inside_bid = best_bid + self.TICK_SIZE
         inside_ask = best_ask - self.TICK_SIZE
+
+        if (best_ask - best_bid) < 6:
+            inside_bid = best_bid
+            inside_ask = best_ask
 
         # Apply skew adjustment
         # Skew > 0 (long): lower bid, lower ask to encourage selling
