@@ -47,7 +47,7 @@ def parse_kalshi_timestamp(timestamp_str: str) -> datetime:
 def calculate_fill_fee(price: float, count: int) -> float:
     """Calculate the fee for a fill using Kalshi's fee formula.
 
-    Formula: ceil(0.0175 × C × P × (1-P))
+    Formula: 0.0175 × C × P × (1-P)
     where P = price in dollars (0.50 for 50 cents)
           C = number of contracts
 
@@ -56,11 +56,9 @@ def calculate_fill_fee(price: float, count: int) -> float:
         count: Number of contracts traded
 
     Returns:
-        Fee amount in dollars, rounded up to the nearest cent
+        Fee amount in dollars
     """
-    raw_fee = 0.0175 * count * price * (1 - price)
-    # Round up to nearest cent
-    return math.ceil(raw_fee * 100) / 100
+    return 0.0175 * count * price * (1 - price)
 
 
 class KalshiExchangeClient:

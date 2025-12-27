@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def calculate_fill_fee(price: float, count: int) -> float:
     """Calculate the fee for a fill using Kalshi's fee formula.
 
-    Formula: ceil(0.0175 × C × P × (1-P))
+    Formula: 0.0175 × C × P × (1-P)
     where P = price in dollars (0.50 for 50 cents)
           C = number of contracts
 
@@ -31,10 +31,9 @@ def calculate_fill_fee(price: float, count: int) -> float:
         count: Number of contracts traded
 
     Returns:
-        Fee amount in dollars, rounded up to the nearest cent
+        Fee amount in dollars
     """
-    raw_fee = 0.0175 * count * price * (1 - price)
-    return math.ceil(raw_fee * 100) / 100
+    return 0.0175 * count * price * (1 - price)
 
 
 def to_local_time(timestamp_str: str) -> str:
@@ -61,7 +60,8 @@ def get_kalshi_market_url(market_id: str) -> str:
 def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] = None,
                      unrealized_worst: float = 0.0, unrealized_best: float = 0.0,
                      active_bids_count: int = 0, active_bids_qty: int = 0,
-                     active_asks_count: int = 0, active_asks_qty: int = 0):
+                     active_asks_count: int = 0, active_asks_qty: int = 0,
+                     fees_today: float = 0.0):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -104,7 +104,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
     st.plotly_chart(fig, width='stretch')
 
     # Display summary metrics - Row 1: P&L metrics
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         total_pnl = df['cumulative_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Total Realized P&L", f"${total_pnl:.2f}")
@@ -112,9 +112,12 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
         daily_pnl = df['daily_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Today's P&L", f"${daily_pnl:.2f}")
     with col3:
+        st.metric("Fees Today", f"${fees_today:.2f}",
+                  help="Total fees paid on trades today")
+    with col4:
         st.metric("Unrealized (Worst)", f"${unrealized_worst:+.2f}",
                   help="If we exit all positions at current market best bid/ask")
-    with col4:
+    with col5:
         st.metric("Unrealized (Best)", f"${unrealized_best:+.2f}",
                   help="If we exit all positions at our active orders (if competitive) or market best")
 
@@ -284,22 +287,30 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
                 # Also show daily aggregation
                 st.markdown("#### Daily P&L Aggregation")
-                daily_breakdown = {}
+                daily_breakdown = {}  # date -> {'pnl': float, 'trade_count': int, 'contracts': int}
                 for detail in trade_details:
                     date = detail['Date']
                     pnl_str = detail['P&L Change'].replace('$', '').replace('+', '').replace('*', '')
+                    size = detail.get('Size', 0)
                     try:
                         pnl_val = float(pnl_str)
                         if date not in daily_breakdown:
-                            daily_breakdown[date] = 0.0
-                        daily_breakdown[date] += pnl_val
+                            daily_breakdown[date] = {'pnl': 0.0, 'trade_count': 0, 'contracts': 0}
+                        daily_breakdown[date]['pnl'] += pnl_val
+                        daily_breakdown[date]['trade_count'] += 1
+                        daily_breakdown[date]['contracts'] += size
                     except ValueError:
                         pass
 
                 if daily_breakdown:
                     daily_df = pd.DataFrame([
-                        {'Date': date, 'Daily P&L': f"${pnl:.2f}", 'Trade Count': sum(1 for d in trade_details if d['Date'] == date)}
-                        for date, pnl in sorted(daily_breakdown.items())
+                        {
+                            'Date': date,
+                            'Daily P&L': f"${data['pnl']:.2f}",
+                            'Trade Count': data['trade_count'],
+                            'Contracts': data['contracts']
+                        }
+                        for date, data in sorted(daily_breakdown.items())
                     ])
                     st.dataframe(daily_df, hide_index=True, width='stretch')
             else:
@@ -1150,6 +1161,13 @@ def render(environment: str, region: str):
     active_asks_count = 0
     active_asks_qty = 0
 
+    # Calculate total fees paid today
+    today_str = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    fees_today = 0.0
+    for trade in trades:
+        if trade.get('date') == today_str:
+            fees_today += trade.get('fees', 0.0) or 0.0
+
     # Pre-index decisions by market_id
     decisions_by_market: Dict[str, List[Dict]] = {}
     for d in decisions:
@@ -1257,7 +1275,8 @@ def render(environment: str, region: str):
 
     with col1:
         render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best,
-                         active_bids_count, active_bids_qty, active_asks_count, active_asks_qty)
+                         active_bids_count, active_bids_qty, active_asks_count, active_asks_qty,
+                         fees_today)
 
     with col2:
         render_exposure_chart(positions, market_configs)
