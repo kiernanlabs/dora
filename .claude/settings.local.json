@@ -20,7 +20,9 @@
       "Bash(tail:*)",
       "Bash(pip show:*)",
       "Bash(source .venv/bin/activate)",
-      "Bash(/usr/bin/python3:*)"
+      "Bash(/usr/bin/python3:*)",
+      "Bash(mkdir:*)",
+      "Bash(unzip:*)"
     ],
     "deny": [],
     "ask": []

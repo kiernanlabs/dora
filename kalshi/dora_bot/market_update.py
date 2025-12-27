@@ -53,6 +53,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 # Public API endpoint (no auth required for market data)
 KALSHI_API_BASE = "https://api.elections.kalshi.com"
+EVENTS_ENDPOINT = "/trade-api/v2/events"
 
 # Default settings for newly activated sibling markets
 DEFAULT_QUOTE_SIZE = 5
@@ -103,7 +104,8 @@ class RecommendedAction:
     """A recommended action for a market."""
     market_id: str
     event_ticker: Optional[str]  # Event this market belongs to
-    action: str  # 'exit', 'scale_down', 'expand', 'activate_sibling', or 'reset_defaults'
+    event_name: Optional[str]  # Plain text name of the event
+    action: str  # 'exit', 'scale_down', 'expand', 'activate_sibling', 'reset_defaults', or 'no_action'
     reason: str
     new_enabled: Optional[bool]
     new_min_spread: Optional[float]
@@ -388,6 +390,34 @@ def fetch_market_details(market_ids: List[str]) -> Dict[str, Dict[str, Any]]:
     return market_details
 
 
+def fetch_event_names(event_tickers: List[str]) -> Dict[str, str]:
+    """Fetch event names (titles) for a list of event tickers from the Kalshi API.
+
+    Args:
+        event_tickers: List of event ticker strings
+
+    Returns:
+        Dictionary mapping event_ticker to event title (name)
+    """
+    event_names = {}
+
+    for event_ticker in event_tickers:
+        if not event_ticker:
+            continue
+        try:
+            url = f"{KALSHI_API_BASE}{EVENTS_ENDPOINT}/{event_ticker}"
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            event_data = data.get('event', {})
+            event_names[event_ticker] = event_data.get('title', '')
+        except Exception as e:
+            print(f"  Warning: Could not fetch event name for {event_ticker}: {e}")
+            event_names[event_ticker] = ''
+
+    return event_names
+
+
 def analyze_markets(
     dynamo: DynamoDBClient,
     environment: str,
@@ -596,13 +626,15 @@ def assess_info_risk_for_markets(
 
 def generate_recommendations(
     analyses: Dict[str, MarketAnalysis],
-    existing_configs: Dict[str, MarketConfig]
+    existing_configs: Dict[str, MarketConfig],
+    event_names: Dict[str, str],
 ) -> List[RecommendedAction]:
     """Generate recommended actions based on market analysis.
 
     Args:
         analyses: Dictionary of market analyses
         existing_configs: Dictionary of existing market configs in DynamoDB
+        event_names: Dictionary mapping event_ticker to event name/title
 
     Returns:
         List of recommended actions
@@ -638,9 +670,9 @@ def generate_recommendations(
         # Check POOR PERFORMANCE conditions (scale down or exit)
         poor_reason = None
 
-        # (A) P&L < -$0.50 over lookback period
-        if analysis.pnl_24h < -0.50:
-            poor_reason = f"P&L < -$0.50 (${analysis.pnl_24h:.2f})"
+        # (A) P&L < $0 over lookback period
+        if analysis.pnl_24h < 0:
+            poor_reason = f"P&L < $0 (${analysis.pnl_24h:.2f})"
 
         # (B) No fills in lookback period (only for enabled markets)
         elif analysis.current_enabled and analysis.fill_count_48h == 0:
@@ -682,6 +714,7 @@ def generate_recommendations(
         ir_rationale = ir_result.get('info_risk_rationale')
 
         poor_reason = poor_performance_candidates.get(market_id)
+        action_taken = False  # Track if we added a recommendation
 
         if poor_reason:
             event_ticker = analysis.event_ticker
@@ -701,16 +734,35 @@ def generate_recommendations(
             # But if a sibling is expanding, reset to defaults instead
             if has_expanding_sibling:
                 # Sibling is expanding: reset to defaults instead of scaling down/exiting
-                # Skip if already at defaults
+                # If already at defaults, add no_action
                 if (analysis.current_quote_size == DEFAULT_QUOTE_SIZE and
                     analysis.current_max_inventory_yes == DEFAULT_MAX_INVENTORY_YES and
                     analysis.current_max_inventory_no == DEFAULT_MAX_INVENTORY_NO and
                     analysis.current_min_spread == DEFAULT_MIN_SPREAD):
-                    print(f"  Skipping {market_id}: {poor_reason} - sibling expanding, already at defaults")
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=event_ticker,
+                        event_name=event_names.get(event_ticker, ''),
+                        action='no_action',
+                        reason=f"{poor_reason} - sibling expanding, already at defaults",
+                        new_enabled=None,
+                        new_min_spread=None,
+                        new_quote_size=None,
+                        new_max_inventory_yes=None,
+                        new_max_inventory_no=None,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
                 else:
                     recommendations.append(RecommendedAction(
                         market_id=market_id,
                         event_ticker=event_ticker,
+                        event_name=event_names.get(event_ticker, ''),
                         action='reset_defaults',
                         reason=f"{poor_reason} (sibling expanding in {event_ticker}, resetting to defaults)",
                         new_enabled=True,
@@ -726,6 +778,7 @@ def generate_recommendations(
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                     ))
+                action_taken = True
             elif analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
                 # Scale down: cut quote_size and max_inventory by 50%, double min_spread
                 new_quote_size = max(1, analysis.current_quote_size // 2)
@@ -736,6 +789,7 @@ def generate_recommendations(
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
+                    event_name=event_names.get(event_ticker, ''),
                     action='scale_down',
                     reason=f"{poor_reason} - scaling down (quote {analysis.current_quote_size}->{new_quote_size})",
                     new_enabled=None,
@@ -751,18 +805,38 @@ def generate_recommendations(
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                 ))
+                action_taken = True
             elif is_protected:
                 # Protected market at minimum: reset to defaults instead of exiting
-                # Skip if already at defaults
+                # If already at defaults, add no_action
                 if (analysis.current_quote_size == DEFAULT_QUOTE_SIZE and
                     analysis.current_max_inventory_yes == DEFAULT_MAX_INVENTORY_YES and
                     analysis.current_max_inventory_no == DEFAULT_MAX_INVENTORY_NO and
                     analysis.current_min_spread == DEFAULT_MIN_SPREAD):
-                    print(f"  Skipping {market_id}: {poor_reason} - within {NEW_MARKET_PROTECTION_HOURS}h protection, already at defaults")
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=event_ticker,
+                        event_name=event_names.get(event_ticker, ''),
+                        action='no_action',
+                        reason=f"{poor_reason} - within {NEW_MARKET_PROTECTION_HOURS}h protection, already at defaults",
+                        new_enabled=None,
+                        new_min_spread=None,
+                        new_quote_size=None,
+                        new_max_inventory_yes=None,
+                        new_max_inventory_no=None,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
                 else:
                     recommendations.append(RecommendedAction(
                         market_id=market_id,
                         event_ticker=event_ticker,
+                        event_name=event_names.get(event_ticker, ''),
                         action='reset_defaults',
                         reason=f"{poor_reason} (within {NEW_MARKET_PROTECTION_HOURS}h protection, resetting to defaults)",
                         new_enabled=True,
@@ -778,11 +852,13 @@ def generate_recommendations(
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                     ))
+                action_taken = True
             elif analysis.has_position:
                 # Quote size at minimum and has position: set min_spread to 0.50 to exit
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
+                    event_name=event_names.get(event_ticker, ''),
                     action='exit',
                     reason=f"{poor_reason} (quote_size at minimum, has position)",
                     new_enabled=True,  # Keep enabled to allow position exit
@@ -798,11 +874,13 @@ def generate_recommendations(
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                 ))
+                action_taken = True
             else:
                 # Quote size at minimum and no position: disable the market
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
+                    event_name=event_names.get(event_ticker, ''),
                     action='exit',
                     reason=f"{poor_reason} (quote_size at minimum)",
                     new_enabled=False,
@@ -818,41 +896,92 @@ def generate_recommendations(
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                 ))
-            continue
+                action_taken = True
 
         # Check EXPAND conditions (only for enabled markets with fills and acceptable info risk)
-        info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
-        if (analysis.current_enabled and
-            analysis.pnl_24h > 0 and
-            analysis.median_fill_size is not None and
-            analysis.median_fill_size == analysis.current_quote_size and
-            info_risk_ok):
+        if not action_taken:
+            info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
+            if (analysis.current_enabled and
+                analysis.pnl_24h > 0 and
+                analysis.median_fill_size is not None and
+                analysis.median_fill_size == analysis.current_quote_size and
+                info_risk_ok):
 
-            # Cap expansion at MAX_QUOTE_SIZE and MAX_INVENTORY
-            new_quote_size = min(MAX_QUOTE_SIZE, analysis.current_quote_size * 2)
-            new_max_inv_yes = min(MAX_INVENTORY, analysis.current_max_inventory_yes * 2)
-            new_max_inv_no = min(MAX_INVENTORY, analysis.current_max_inventory_no * 2)
+                # Cap expansion at MAX_QUOTE_SIZE and MAX_INVENTORY
+                new_quote_size = min(MAX_QUOTE_SIZE, analysis.current_quote_size * 2)
+                new_max_inv_yes = min(MAX_INVENTORY, analysis.current_max_inventory_yes * 2)
+                new_max_inv_no = min(MAX_INVENTORY, analysis.current_max_inventory_no * 2)
 
-            # Reduce min_spread by $0.01, but not below 0.04
-            new_min_spread = max(0.04, analysis.current_min_spread - 0.01)
+                # Reduce min_spread by $0.01, but not below 0.04
+                new_min_spread = max(0.04, analysis.current_min_spread - 0.01)
 
-            # Skip if already at max for size/inventory and min_spread can't be reduced
-            if (new_quote_size == analysis.current_quote_size and
-                new_max_inv_yes == analysis.current_max_inventory_yes and
-                new_max_inv_no == analysis.current_max_inventory_no and
-                new_min_spread == analysis.current_min_spread):
-                continue
+                # If already at max for size/inventory and min_spread can't be reduced, no_action
+                if (new_quote_size == analysis.current_quote_size and
+                    new_max_inv_yes == analysis.current_max_inventory_yes and
+                    new_max_inv_no == analysis.current_max_inventory_no and
+                    new_min_spread == analysis.current_min_spread):
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=analysis.event_ticker,
+                        event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
+                        action='no_action',
+                        reason=f"Positive P&L (${analysis.pnl_24h:.2f}) but already at max settings",
+                        new_enabled=None,
+                        new_min_spread=None,
+                        new_quote_size=None,
+                        new_max_inventory_yes=None,
+                        new_max_inventory_no=None,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
+                else:
+                    recommendations.append(RecommendedAction(
+                        market_id=market_id,
+                        event_ticker=analysis.event_ticker,
+                        event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
+                        action='expand',
+                        reason=f"Positive P&L (${analysis.pnl_24h:.2f}) and median fill = quote size ({analysis.current_quote_size})",
+                        new_enabled=None,
+                        new_min_spread=new_min_spread,
+                        new_quote_size=new_quote_size,
+                        new_max_inventory_yes=new_max_inv_yes,
+                        new_max_inventory_no=new_max_inv_no,
+                        pnl_24h=analysis.pnl_24h,
+                        fill_count_24h=analysis.fill_count_24h,
+                        fill_count_48h=analysis.fill_count_48h,
+                        has_position=analysis.has_position,
+                        position_qty=analysis.position_qty,
+                        info_risk_probability=ir_prob,
+                        info_risk_rationale=ir_rationale,
+                    ))
+                action_taken = True
+
+        # If no action was taken, add a no_action recommendation
+        if not action_taken:
+            # Determine the reason for no action
+            if analysis.pnl_24h == 0:
+                no_action_reason = "Neutral P&L ($0.00)"
+            elif analysis.pnl_24h > 0:
+                no_action_reason = f"Positive P&L (${analysis.pnl_24h:.2f}) but median fill != quote size"
+            else:
+                no_action_reason = "No action criteria met"
 
             recommendations.append(RecommendedAction(
                 market_id=market_id,
                 event_ticker=analysis.event_ticker,
-                action='expand',
-                reason=f"Positive P&L (${analysis.pnl_24h:.2f}) and median fill = quote size ({analysis.current_quote_size})",
+                event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
+                action='no_action',
+                reason=no_action_reason,
                 new_enabled=None,
-                new_min_spread=new_min_spread,
-                new_quote_size=new_quote_size,
-                new_max_inventory_yes=new_max_inv_yes,
-                new_max_inventory_no=new_max_inv_no,
+                new_min_spread=None,
+                new_quote_size=None,
+                new_max_inventory_yes=None,
+                new_max_inventory_no=None,
                 pnl_24h=analysis.pnl_24h,
                 fill_count_24h=analysis.fill_count_24h,
                 fill_count_48h=analysis.fill_count_48h,
@@ -866,7 +995,7 @@ def generate_recommendations(
     if expand_events:
         print(f"\nFetching sibling markets for {len(expand_events)} expanding events...")
         sibling_recommendations = generate_sibling_activations(
-            expand_events, existing_configs, all_markets_by_event
+            expand_events, existing_configs, all_markets_by_event, event_names
         )
         recommendations.extend(sibling_recommendations)
 
@@ -876,7 +1005,8 @@ def generate_recommendations(
 def generate_sibling_activations(
     expand_events: set,
     existing_configs: Dict[str, MarketConfig],
-    active_markets_by_event: Dict[str, List[str]]
+    active_markets_by_event: Dict[str, List[str]],
+    event_names: Dict[str, str],
 ) -> List[RecommendedAction]:
     """Generate recommendations to activate sibling markets for expanding events.
 
@@ -884,6 +1014,7 @@ def generate_sibling_activations(
         expand_events: Set of event tickers with expanding markets
         existing_configs: Dictionary of existing market configs in DynamoDB
         active_markets_by_event: Dictionary of currently active markets by event
+        event_names: Dictionary mapping event_ticker to event name/title
 
     Returns:
         List of activate_sibling recommendations
@@ -985,6 +1116,7 @@ def generate_sibling_activations(
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
+                    event_name=event_names.get(event_ticker, ''),
                     action='activate_sibling',
                     reason=f"Sibling of expanding market in event {event_ticker}",
                     new_enabled=True,
@@ -1017,6 +1149,7 @@ def write_recommendations_csv(
     fieldnames = [
         'market_id',
         'event_ticker',
+        'event_name',
         'action',
         'reason',
         'new_enabled',
@@ -1046,6 +1179,7 @@ def write_recommendations_csv(
             writer.writerow({
                 'market_id': rec.market_id,
                 'event_ticker': rec.event_ticker or '',
+                'event_name': rec.event_name or '',
                 'action': rec.action,
                 'reason': rec.reason,
                 'new_enabled': rec.new_enabled if rec.new_enabled is not None else '',
@@ -1282,8 +1416,15 @@ def main():
     # Get all existing configs (for sibling activation check)
     existing_configs = dynamo.get_all_market_configs(enabled_only=False)
 
+    # Fetch event names for all analyzed markets
+    unique_event_tickers = list(set(
+        a.event_ticker for a in analyses.values() if a.event_ticker
+    ))
+    print(f"\nFetching event names for {len(unique_event_tickers)} events...")
+    event_names = fetch_event_names(unique_event_tickers)
+
     # Generate recommendations
-    recommendations = generate_recommendations(analyses, existing_configs)
+    recommendations = generate_recommendations(analyses, existing_configs, event_names)
 
     if not recommendations:
         print("\nNo recommended actions at this time.")

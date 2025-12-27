@@ -1,9 +1,0 @@
-market_id,event_ticker,title,volume_24h,buy_volume,sell_volume,yes_bid,yes_ask,fair_value,fair_value_rationale,info_risk_probability,new_quote_size,new_max_inventory_yes,new_max_inventory_no,new_min_spread,approve
-KXFOMCDISSENTCOUNT-26JAN-4,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,2804,30,3218,3,12,,,20,5,5,5,0.04,yes
-KXFEATUREDRAKE-27-SEX,KXFEATUREDRAKE,Who will feature on Drake's  album 'Iceman'?,1626,2174,480,47,57,,,20,5,5,5,0.04,yes
-KXLEADERNFLRYDS-26JAN05-JSNJ,KXLEADERNFLRYDS-26JAN05,Will Jaxon Smith-Njigba lead American Pro Football League in Most Receiving Yards for the 2025-2026 Regular Season?,1503,1761,112,49,55,,,12,5,5,5,0.04,yes
-KXMRBEASTMENTION-26JAN31-SUBS,KXMRBEASTMENTION-26JAN31,What will MrBeast say during Next MrBeast Youtube Video?,1439,3549,545,69,79,,,12,5,5,5,0.04,yes
-KXFOMCDISSENTCOUNT-26JAN-3,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,857,75,1303,6,44,,,15,5,5,5,0.04,yes
-KXCPICOREYOY-25DEC-T2.5,KXCPICOREYOY-25DEC,Will the rate of core CPI inflation be above 2.5% for the year ending in December 2025?,849,22924,1151,75,84,,,10,5,5,5,0.04,yes
-KXBOND-30-IDRIS,KXBOND-30,Will Idris Elba be the next James Bond?,833,3226,163,0,9,,,5,5,5,5,0.04,yes
-KXCPICOREA-2025-3.3,KXCPICOREA-2025,Will ** coreinflation** in 2025 be above_below_between ?,796,8242,10634,0,7,,,8,5,5,5,0.04,yes

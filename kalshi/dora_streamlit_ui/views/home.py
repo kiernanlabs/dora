@@ -1101,7 +1101,7 @@ def render_active_markets_table(
 
 def render(environment: str, region: str):
     """Render the home page."""
-    st.title("🏠 Dora Bot Dashboard")
+    st.title("🧭 Dora Bot Dashboard")
     st.markdown(f"**Environment:** {environment.upper()} | **Region:** {region}")
     st.markdown("---")
 

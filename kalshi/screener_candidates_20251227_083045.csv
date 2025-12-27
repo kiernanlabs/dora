@@ -1,0 +1,21 @@
+market_id,event_ticker,event_name,title,volume_24h,buy_volume,sell_volume,yes_bid,yes_ask,fair_value,fair_value_rationale,info_risk_probability,new_quote_size,new_max_inventory_yes,new_max_inventory_no,new_min_spread,approve
+KXFOMCDISSENTCOUNT-26JAN-4,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,How many dissenting votes at the next Fed meeting?,2804,30,3218,3,14,,,7,5,5,5,0.04,yes
+KXRECOGSOMALI-29,KXRECOGSOMALI-29,Will Trump recognize Somaliland?,Will Trump recognize Somaliland?,2618,2666,1751,60,66,,,6,5,5,5,0.04,yes
+KXTRILLIONAIRE-30-EM,KXTRILLIONAIRE-30,Who will be the world's first trillionaire?,Will Elon Musk be the world's first trillionaire?,2118,2698,2443,80,86,,,8,5,5,5,0.04,yes
+KXFEATUREDRAKE-27-SEX,KXFEATUREDRAKE,Who will be featured on Drake's album 'Iceman'?,Who will feature on Drake's  album 'Iceman'?,1626,2174,480,49,57,,,15,5,5,5,0.04,yes
+KXFOMCDISSENTCOUNT-26JAN-3,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,How many dissenting votes at the next Fed meeting?,857,75,1303,11,40,,,12,5,5,5,0.04,yes
+KXCPICOREYOY-25DEC-T2.5,KXCPICOREYOY-25DEC,Core inflation in December 2025? (Core CPI YoY),Will the rate of core CPI inflation be above 2.5% for the year ending in December 2025?,849,22924,1151,76,83,,,8,5,5,5,0.04,yes
+KXBOND-30-IDRIS,KXBOND-30,Who will be the next James Bond?,Will Idris Elba be the next James Bond?,833,3226,163,2,8,,,8,5,5,5,0.04,yes
+KXPERFORMGRAMMYS-26-BAD,KXPERFORMGRAMMYS-26,Who will perform at the 68th Grammy Awards?,Who will perform at the 68th Grammy Awards?,777,5699,119,7,19,,,10,5,5,5,0.04,yes
+EVSHARE-30JAN-30,EVSHARE-30JAN,EV market share in 2030?,EV market share in 2030?,705,916,718,48,54,,,5,5,5,5,0.04,yes
+KXTXSENCOMBO-26NOV-CROPAX,KXTXSENCOMBO-26NOV,2026 Texas Senate matchup?,Will Dem Nominee be Jasmine Crockett AND GOP Nominee be Ken Paxton for Nov 2026?,644,2118,537,25,32,,,12,5,5,5,0.04,yes
+KXLEADERNFLPYDS-26JAN05-MSTA,KXLEADERNFLPYDS-26JAN05,Pro Football Passing Yards Leader,Will Matthew Stafford lead American Pro Football League in Most Passing Yards for the 2025-2026 Regular Season?,632,1355,455,26,36,,,20,5,5,5,0.04,yes
+KXTOPSONGSPOTIFY-26-FAT,KXTOPSONGSPOTIFY-26,Top Song on Spotify in 2026?,Will The Fate of Ophelia be the #1 most streamed Song on the  2026 Spotify Wrapped Top 10 Songs Globally chart on the date that the chart is released for 2026?,629,2075,191,10,16,,,10,5,5,5,0.04,yes
+KXIPO-26-ANTHROPIC,KXIPO-26,Which Companies will officially announce an IPO before 2027?,Who will IPO before 2027?,579,4159,1774,57,63,,,8,5,5,5,0.04,yes
+KXLEADERNFLPYDS-26JAN05-DPRE,KXLEADERNFLPYDS-26JAN05,Pro Football Passing Yards Leader,Will Dak Prescott lead American Pro Football League in Most Passing Yards for the 2025-2026 Regular Season?,570,887,241,68,74,,,12,5,5,5,0.04,yes
+KXCPICOREYOY-25DEC-T2.8,KXCPICOREYOY-25DEC,Core inflation in December 2025? (Core CPI YoY),Will the rate of core CPI inflation be above 2.8% for the year ending in December 2025?,557,23176,916,8,14,,,20,5,5,5,0.04,yes
+KXCABLEAVE-25-26APR,KXCABLEAVE-25,When will a member of Trump's Cabinet leave?,Will any member of Trump's Cabinet leave before Mar 2026?,550,1809,887,47,58,,,10,5,5,5,0.04,yes
+KXPLANETFITNESSSUBS-26JAN,KXPLANETFITNESSSUBS-26JAN,Will Planet Fitness report above 23 million members before Jan 2026?,Will Planet Fitness report above 23 million members before Jan 2026?,518,2380,880,2,8,,,7,5,5,5,0.04,yes
+KXRTPRIMATE-75,KXRTPRIMATE,"""Primate"" Rotten Tomatoes score?",Primate Rotten Tomatoes score?,450,20,829,86,92,,,12,5,5,5,0.04,yes
+KXLEADERSOUT-27JAN01-AKHAIRA,KXLEADERSOUT-27JAN01,World leaders out before 2027?,"Will Ali Khamenei leave Supreme Leader of Iran before Jan 1, 2027?",449,2413,528,26,32,,,6,5,5,5,0.04,yes
+KXNEXTCOACHOUTNFL-26-2-TB,KXNEXTCOACHOUTNFL-26-2,Who will be the next coach out in NFL?,Who will be the next coach out in NFL?,427,2064,624,3,10,,,8,5,5,5,0.04,yes
