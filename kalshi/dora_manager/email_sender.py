@@ -112,7 +112,7 @@ class EmailSender:
             markets_table_rows = f"""
             <tr>
                 <td colspan="8" style="padding: 16px; text-align: center; color: #666;">
-                    No trades in the last {summary.window_hours} hours
+                    No trades in the last {summary.window_hours} hours and no open positions
                 </td>
             </tr>
             """
@@ -254,7 +254,7 @@ class EmailSender:
                 </div>
 
                 <!-- Markets with Trades Detail Table -->
-                <h3 style="color: #333; margin-bottom: 12px;">Markets with Trades (Last {summary.window_hours} Hours)</h3>
+                <h3 style="color: #333; margin-bottom: 12px;">Active Markets (Trades in Last {summary.window_hours} Hours or Open Positions)</h3>
                 <div style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                         <thead>
@@ -331,11 +331,11 @@ class EmailSender:
             "",
         ])
 
-        # Markets with trades
+        # Markets with trades or open positions
         if summary.markets_with_window_trades:
             lines.extend([
                 "-" * 60,
-                f"MARKETS WITH TRADES (Last {summary.window_hours} Hours)",
+                f"ACTIVE MARKETS (Trades in Last {summary.window_hours} Hours or Open Positions)",
                 "-" * 60,
             ])
             for market in summary.markets_with_window_trades:
@@ -349,7 +349,7 @@ class EmailSender:
                 lines.append(f"  Unrealized (W/B): {self.format_currency(market.unrealized_pnl_worst, include_sign=True)} / {self.format_currency(market.unrealized_pnl_best, include_sign=True)}")
                 lines.append("")
         else:
-            lines.append(f"No trades in the last {summary.window_hours} hours.")
+            lines.append(f"No trades in the last {summary.window_hours} hours and no open positions.")
             lines.append("")
 
         lines.extend([
