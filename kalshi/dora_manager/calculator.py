@@ -458,6 +458,9 @@ class TradingCalculator:
             # Track markets with trades in window
             if market_summary.trade_count > 0:
                 summary.markets_with_trades += 1
+
+            # Include markets with trades OR open positions in the table
+            if market_summary.trade_count > 0 or market_summary.net_position != 0:
                 summary.markets_with_window_trades.append(market_summary)
 
             # Track flagged markets
