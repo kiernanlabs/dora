@@ -1,8 +1,11 @@
 streamlit
 plotly
 pandas
-requests
+requests>=2.31.0
 python-dateutil
-cryptography
-python-dotenv
+cryptography>=41.0.0
+python-dotenv>=1.0.0
 websockets
+boto3>=1.28.0
+botocore>=1.31.0
+awscli
