@@ -142,6 +142,9 @@ class TradingCalculator:
         self.window_hours = window_hours
         self.min_pnl_threshold = min_pnl_threshold
 
+        # Calculate cutoff time once to ensure consistency across all calculations
+        self.cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+
         # Index trades by market
         self.trades_by_market: Dict[str, List[Dict]] = {}
         for trade in all_trades:
@@ -244,7 +247,8 @@ class TradingCalculator:
             key=lambda t: t.get('fill_timestamp') or t.get('timestamp', '')
         )
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.window_hours)
+        # Use the cutoff time calculated in __init__ for consistency
+        cutoff = self.cutoff_time
 
         # Track position state
         pos = PositionState()
@@ -295,7 +299,8 @@ class TradingCalculator:
                         pos.avg_sell_price = price
 
             # Track P&L at cutoff
-            if ts <= cutoff:
+            # Use < instead of <= to match get_trades_in_window() which uses >= cutoff
+            if ts < cutoff:
                 realized_pnl_before_window = pos.realized_pnl
 
         return pos.realized_pnl - realized_pnl_before_window
