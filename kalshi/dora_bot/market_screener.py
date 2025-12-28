@@ -55,8 +55,9 @@ DEFAULT_QUOTE_SIZE = 5
 DEFAULT_MAX_INVENTORY = 5
 DEFAULT_MIN_SPREAD = 0.04  # 4 cents
 
-# Load environment variables from .env file
-load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
+
+# Load environment variables
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
 
 
 def load_restricted_prefixes(filepath: str) -> Set[str]:

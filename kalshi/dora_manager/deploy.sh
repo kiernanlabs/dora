@@ -3,6 +3,9 @@
 
 set -e
 
+# Disable AWS CLI v2 pager for non-interactive execution
+export AWS_PAGER=""
+
 FUNCTION_NAME="dora-manager"
 REGION="${AWS_REGION:-us-east-1}"
 RUNTIME="python3.12"
@@ -12,12 +15,7 @@ MEMORY=256
 
 # Detect AWS CLI path (prefer venv version)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-if [ -x "$REPO_ROOT/.venv/bin/aws" ]; then
-    AWS_CMD="$REPO_ROOT/.venv/bin/aws"
-else
-    AWS_CMD="aws"
-fi
+AWS_CMD="aws"
 
 echo "Using AWS CLI: $AWS_CMD"
 

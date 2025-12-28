@@ -174,6 +174,22 @@ class ReadOnlyDynamoDBClient:
             logger.error(f"Error grouping open orders by market: {e}")
             return {}
 
+    def get_balance(self) -> Optional[Dict]:
+        """Get account balance from state table.
+
+        Returns:
+            Dictionary with 'balance', 'payout', and 'total' fields, or None if not available.
+        """
+        try:
+            response = self.state_table.get_item(Key={'key': 'balance'})
+            item = response.get('Item')
+            if item:
+                return self._deserialize_decimal(item)
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching balance: {e}")
+            return None
+
     # ==================== Trade Log Methods ====================
 
     def get_recent_trades(self, days: int = 7, market_id: Optional[str] = None) -> List[Dict]:
