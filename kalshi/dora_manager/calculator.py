@@ -416,10 +416,6 @@ class TradingCalculator:
         total_all_time_pnl, _ = self.calculate_realized_pnl_from_trades(self.all_trades)
         summary.total_realized_pnl_all_time = total_all_time_pnl
 
-        # Calculate window P&L
-        total_window_pnl, _ = self.calculate_realized_pnl_from_trades(self.window_trades)
-        summary.total_realized_pnl_window = total_window_pnl
-
         # Aggregate window trade stats
         summary.total_trade_count = len(self.window_trades)
         summary.total_contracts_traded = sum(t.get('size', 0) for t in self.window_trades)
@@ -431,6 +427,11 @@ class TradingCalculator:
         for config in self.market_configs:
             market_summary = self.calculate_market_summary(config)
             summary.market_summaries.append(market_summary)
+
+            # Aggregate window P&L from individual market calculations
+            # This is the correct approach because calculate_window_pnl_for_market()
+            # uses all trades to establish proper cost basis before the window
+            summary.total_realized_pnl_window += market_summary.realized_pnl_window
 
             # Aggregate exposure
             summary.total_exposure += abs(market_summary.net_position)
