@@ -22,7 +22,17 @@
       "Bash(source .venv/bin/activate)",
       "Bash(/usr/bin/python3:*)",
       "Bash(mkdir:*)",
-      "Bash(unzip:*)"
+      "Bash(unzip:*)",
+      "Bash(aws:*)",
+      "Bash(AWS_PAGER=\"\" aws lambda get-function:*)",
+      "Bash(export AWS_PAGER=\"\")",
+      "Bash(AWS_CMD=\"aws\")",
+      "Bash(FUNCTION_NAME=\"dora-manager\")",
+      "Bash(REGION=\"us-east-1\")",
+      "Bash(if $AWS_CMD lambda get-function --function-name \"$FUNCTION_NAME\" --region \"$REGION\")",
+      "Bash(then echo \"FOUND\")",
+      "Bash(else echo \"NOT FOUND\")",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

@@ -17,6 +17,8 @@ Filters applied:
     4. Event ticker prefix not in restricted_markets.csv
     5. 24hr midpoint change <= 20%
     6. Information risk < 25% (likelihood of market-moving news in next 7 days)
+    7. Excludes markets already enabled in DynamoDB
+    8. For previously disabled markets, includes historical realized P&L
 """
 import argparse
 import csv
@@ -40,6 +42,7 @@ from dora_bot.models import MarketConfig
 KALSHI_API_BASE = "https://api.elections.kalshi.com"
 MARKETS_ENDPOINT = "/trade-api/v2/markets"
 EVENTS_ENDPOINT = "/trade-api/v2/events"
+ORDERBOOK_ENDPOINT = "/trade-api/v2/markets/{ticker}/orderbook"
 
 # Filter thresholds
 MIN_VOLUME_24H = 100
@@ -157,6 +160,105 @@ def calculate_midpoint_change(
         return None
 
     return abs(current_mid - previous_mid)
+
+
+def fetch_orderbook(market_id: str) -> Optional[Dict[str, Any]]:
+    """Fetch order book for a market from Kalshi API.
+
+    Args:
+        market_id: Market ticker
+
+    Returns:
+        Order book dictionary or None if fetch fails
+    """
+    try:
+        url = f"{KALSHI_API_BASE}/trade-api/v2/markets/{market_id}/orderbook"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        return data.get('orderbook', {})
+    except Exception as e:
+        print(f"  Warning: Could not fetch orderbook for {market_id}: {e}")
+        return None
+
+
+def calculate_orderbook_depth(
+    orderbook: Optional[Dict[str, Any]],
+    side: str,
+    best_price: Optional[int],
+    price_range_cents: int = 5,
+) -> int:
+    """Calculate total order depth within a price range of the best price.
+
+    Args:
+        orderbook: Order book dictionary from API
+        side: 'yes' or 'no' to indicate which side to calculate
+        best_price: Best bid or ask price in cents
+        price_range_cents: Price range in cents from best price (default: 5)
+
+    Returns:
+        Total size of orders within the price range
+    """
+    if not orderbook or best_price is None:
+        return 0
+
+    total_depth = 0
+
+    # Get the appropriate side of the order book
+    if side == 'yes':
+        # For yes side (bids), we want orders within price_range_cents below best bid
+        orders = orderbook.get('yes', [])
+        min_price = best_price - price_range_cents
+        for order in orders:
+            price = order.get('yes_price', 0)
+            size = order.get('size', 0)
+            # Include orders at or above min_price
+            if price >= min_price and price <= best_price:
+                total_depth += size
+    else:  # side == 'no'
+        # For no side (asks), we want orders within price_range_cents above best ask
+        orders = orderbook.get('no', [])
+        max_price = best_price + price_range_cents
+        for order in orders:
+            # NO orders have yes_price (the YES price at which NO is bought)
+            price = order.get('yes_price', 0)
+            size = order.get('size', 0)
+            # Include orders at or below max_price
+            if price >= best_price and price <= max_price:
+                total_depth += size
+
+    return total_depth
+
+
+def enrich_with_orderbook_depth(markets: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Enrich market data with order book depth information.
+
+    Args:
+        markets: List of market dictionaries
+
+    Returns:
+        List of markets enriched with bid_depth_5c and ask_depth_5c
+    """
+    print(f"\nFetching order book depth for {len(markets)} markets...")
+
+    for i, market in enumerate(markets, 1):
+        ticker = market.get('ticker', '')
+        orderbook = fetch_orderbook(ticker)
+
+        # Get best prices
+        yes_bid = market.get('yes_bid')  # Best bid for YES
+        yes_ask = market.get('yes_ask')  # Best ask for YES
+
+        # Calculate depth within $0.05 (5 cents) of best prices
+        bid_depth = calculate_orderbook_depth(orderbook, 'yes', yes_bid, price_range_cents=5)
+        ask_depth = calculate_orderbook_depth(orderbook, 'no', yes_ask, price_range_cents=5)
+
+        market['bid_depth_5c'] = bid_depth
+        market['ask_depth_5c'] = ask_depth
+
+        print(f"  [{i}/{len(markets)}] {ticker}: bid_depth={bid_depth}, ask_depth={ask_depth}")
+
+    return markets
 
 
 def fetch_event_names(event_tickers: List[str]) -> Dict[str, str]:
@@ -753,6 +855,8 @@ def write_candidates_csv(
         'volume_24h',
         'buy_volume',
         'sell_volume',
+        'bid_depth_5c',
+        'ask_depth_5c',
         'yes_bid',
         'yes_ask',
         'fair_value',
@@ -762,6 +866,7 @@ def write_candidates_csv(
         'new_max_inventory_yes',
         'new_max_inventory_no',
         'new_min_spread',
+        'historical_realized_pnl',
         'approve'
     ]
 
@@ -771,6 +876,17 @@ def write_candidates_csv(
 
         for market in markets:
             event_ticker = market.get('event_ticker', '')
+            realized_pnl = market.get('historical_realized_pnl', '')
+
+            # Format realized P&L if present
+            pnl_display = ''
+            if realized_pnl != '':
+                try:
+                    pnl_val = float(realized_pnl)
+                    pnl_display = f"${pnl_val:.2f}"
+                except (ValueError, TypeError):
+                    pnl_display = str(realized_pnl)
+
             writer.writerow({
                 'market_id': market.get('ticker', ''),
                 'event_ticker': event_ticker,
@@ -779,6 +895,8 @@ def write_candidates_csv(
                 'volume_24h': market.get('volume_24h', 0),
                 'buy_volume': market.get('buy_volume', 0),
                 'sell_volume': market.get('sell_volume', 0),
+                'bid_depth_5c': market.get('bid_depth_5c', 0),
+                'ask_depth_5c': market.get('ask_depth_5c', 0),
                 'yes_bid': market.get('yes_bid', 0),
                 'yes_ask': market.get('yes_ask', 0),
                 'fair_value': f"{market.get('fair_value', 0):.1f}" if market.get('fair_value') else '',
@@ -788,6 +906,7 @@ def write_candidates_csv(
                 'new_max_inventory_yes': DEFAULT_MAX_INVENTORY,
                 'new_max_inventory_no': DEFAULT_MAX_INVENTORY,
                 'new_min_spread': DEFAULT_MIN_SPREAD,
+                'historical_realized_pnl': pnl_display,
                 'approve': 'yes',  # Default to yes
             })
 
@@ -884,6 +1003,57 @@ def upload_to_market_config(
     return success, failure
 
 
+def check_existing_markets(
+    markets: List[Dict[str, Any]],
+    environment: str = "prod",
+    region: str = "us-east-1",
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Check which markets already exist in DynamoDB and enrich with P&L data.
+
+    Args:
+        markets: List of candidate market dictionaries
+        environment: 'demo' or 'prod'
+        region: AWS region
+
+    Returns:
+        Tuple of (enriched markets list with disabled markets only, count of skipped enabled markets)
+    """
+    dynamo = DynamoDBClient(region=region, environment=environment)
+
+    # Fetch all existing market configs (including disabled ones)
+    all_configs = dynamo.get_all_market_configs(enabled_only=False)
+
+    # Fetch all positions to get realized P&L
+    positions = dynamo.get_positions()
+
+    filtered_markets = []
+    skipped_enabled_count = 0
+
+    for market in markets:
+        ticker = market.get('ticker', '')
+
+        # Check if market already exists
+        if ticker in all_configs:
+            config = all_configs[ticker]
+
+            # Skip if already enabled
+            if config.enabled:
+                skipped_enabled_count += 1
+                continue
+
+            # Market exists but is disabled - add P&L info
+            if ticker in positions:
+                position = positions[ticker]
+                market['historical_realized_pnl'] = position.realized_pnl
+            else:
+                market['historical_realized_pnl'] = 0.0
+
+        # Market doesn't exist or is disabled - include it
+        filtered_markets.append(market)
+
+    return filtered_markets, skipped_enabled_count
+
+
 def print_top_markets(markets: List[Dict[str, Any]], n: int = 5) -> None:
     """Print top N markets by 24hr volume.
 
@@ -907,12 +1077,19 @@ def print_top_markets(markets: List[Dict[str, Any]], n: int = 5) -> None:
         info_rationale = market.get("info_risk_rationale", "")
         fair_value = market.get("fair_value")
         fair_value_rationale = market.get("fair_value_rationale", "")
+        bid_depth = market.get("bid_depth_5c", 0)
+        ask_depth = market.get("ask_depth_5c", 0)
+
+        historical_pnl = market.get("historical_realized_pnl")
 
         print(f"\n{i}. {ticker}")
         print(f"   Title: {title[:60]}{'...' if len(title) > 60 else ''}")
         print(f"   24hr Volume: {volume_24h:,} contracts")
         print(f"   Current Bid/Ask: {yes_bid}/{yes_ask} (spread: {current_spread})")
+        print(f"   Order Book Depth (±5¢): bid={bid_depth:,}, ask={ask_depth:,}")
         print(f"   Previous Spread: {previous_spread}")
+        if historical_pnl is not None:
+            print(f"   Historical Realized P&L: ${historical_pnl:.2f} (previously disabled)")
         if info_risk is not None:
             print(f"   Info Risk: {info_risk:.0f}%")
             if info_rationale:
@@ -1089,9 +1266,28 @@ def main():
     # Re-sort after filtering
     filtered_markets.sort(key=lambda x: x.get("volume_24h", 0) or 0, reverse=True)
 
+    # Check existing markets in DynamoDB - filter out enabled markets and enrich with P&L
+    print(f"\nChecking existing markets in DynamoDB ({args.env})...")
+    filtered_markets, skipped_count = check_existing_markets(
+        filtered_markets,
+        environment=args.env,
+        region="us-east-1",
+    )
+
+    if skipped_count > 0:
+        print(f"  Skipped {skipped_count} markets that are already enabled")
+    print(f"  {len(filtered_markets)} markets remaining after filtering enabled markets")
+
+    if not filtered_markets:
+        print("No new markets to add (all candidates are already enabled).")
+        return
+
     # Take top N markets
     top_markets = filtered_markets[:args.top_n]
     print(f"\nSelected top {len(top_markets)} markets by 24hr volume")
+
+    # Enrich with order book depth information
+    top_markets = enrich_with_orderbook_depth(top_markets)
 
     # Print top candidates
     print_top_markets(top_markets, n=len(top_markets))
