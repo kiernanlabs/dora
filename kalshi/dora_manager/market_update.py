@@ -1236,7 +1236,8 @@ def generate_sibling_activations(
         print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, assessing top {len(top_markets)} by volume...")
 
         # Assess information risk for each top market (in parallel for efficiency)
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        # Increased workers from 5 to 10 for faster execution
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {}
             for market in top_markets:
                 market_id = market.get('ticker')
