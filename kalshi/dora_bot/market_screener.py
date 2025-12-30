@@ -19,6 +19,11 @@ Filters applied:
     6. Information risk < 25% (likelihood of market-moving news in next 7 days)
     7. Excludes markets already enabled in DynamoDB
     8. For previously disabled markets, includes historical realized P&L
+
+Output:
+    - All markets passing filters are written to CSV
+    - Top 20 markets (by volume) have approve='yes' and include order book depth
+    - Remaining markets have approve='no' and are included for reference
 """
 import argparse
 import csv
@@ -907,7 +912,7 @@ def write_candidates_csv(
                 'new_max_inventory_no': DEFAULT_MAX_INVENTORY,
                 'new_min_spread': DEFAULT_MIN_SPREAD,
                 'historical_realized_pnl': pnl_display,
-                'approve': 'yes',  # Default to yes
+                'approve': market.get('approve', 'no'),  # Use approval status from market dict
             })
 
     print(f"Wrote {len(markets)} candidates to {output_path}")
@@ -1282,19 +1287,27 @@ def main():
         print("No new markets to add (all candidates are already enabled).")
         return
 
-    # Take top N markets
-    top_markets = filtered_markets[:args.top_n]
-    print(f"\nSelected top {len(top_markets)} markets by 24hr volume")
+    # Take top 20 markets for recommendation and order book enrichment
+    top_n_recommended = 20
+    top_markets = filtered_markets[:top_n_recommended]
+    print(f"\nSelected top {len(top_markets)} markets for recommendation (by 24hr volume)")
 
-    # Enrich with order book depth information
+    # Enrich only the top markets with order book depth information
     top_markets = enrich_with_orderbook_depth(top_markets)
 
     # Print top candidates
     print_top_markets(top_markets, n=len(top_markets))
 
-    # Fetch event names for the selected markets
+    # Mark top markets as approved, rest as not approved
+    for i, market in enumerate(filtered_markets):
+        if i < top_n_recommended:
+            market['approve'] = 'yes'
+        else:
+            market['approve'] = 'no'
+
+    # Fetch event names for ALL markets (not just top ones)
     unique_event_tickers = list(set(
-        m.get('event_ticker', '') for m in top_markets if m.get('event_ticker')
+        m.get('event_ticker', '') for m in filtered_markets if m.get('event_ticker')
     ))
     print(f"\nFetching event names for {len(unique_event_tickers)} events...")
     event_names = fetch_event_names(unique_event_tickers)
@@ -1306,8 +1319,13 @@ def main():
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_path = f"screener_candidates_{timestamp}.csv"
 
-    # Write candidates CSV
-    write_candidates_csv(top_markets, output_path, event_names)
+    # Write ALL filtered markets to CSV (with approval status)
+    write_candidates_csv(filtered_markets, output_path, event_names)
+
+    # Print summary of what was written
+    approved_count = sum(1 for m in filtered_markets if m.get('approve') == 'yes')
+    print(f"  - {approved_count} markets marked for approval (top {top_n_recommended})")
+    print(f"  - {len(filtered_markets) - approved_count} additional markets included for reference")
 
     # Print summary
     end_time = datetime.now()
