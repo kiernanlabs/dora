@@ -251,8 +251,8 @@ class MarketMaker:
         market_ask = min(inside_ask - skew, best_ask)
 
         # Hard cap at fair value so we never cross it
-        fair_value_bid = fair_value - 0.01
-        fair_value_ask = fair_value + 0.01
+        fair_value_bid = fair_value
+        fair_value_ask = fair_value
 
         target_bid = min(market_bid, fair_value_bid)
         target_ask = max(market_ask, fair_value_ask)
