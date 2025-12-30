@@ -10,3 +10,4 @@ ec2/DoraBot-RSA.pem
 market_summaries.csv
 markets analysis.xlsx
 markets.csv
+kalshi/dora_manager/package/*

@@ -1268,8 +1268,11 @@ def render(environment: str, region: str):
             elif market_best_bid:
                 # Our ask isn't competitive, have to hit the bid
                 exit_fee = calculate_fill_fee(market_best_bid, net_qty)
-                unrealized_best = (market_best_bid - avg_cost) * net_qty - exit_fee
-                total_unrealized_best += unrealized_best
+
+                # excluding downside calc for best case scenario
+                # unrealized_best = (market_best_bid - avg_cost) * net_qty - exit_fee
+                
+                total_unrealized_best += 0
         else:  # Short position (net_qty < 0) - need to buy
             if our_bid_price and is_bid_active:
                 # Can exit at our bid
@@ -1279,8 +1282,11 @@ def render(environment: str, region: str):
             elif market_best_ask:
                 # Our bid isn't competitive, have to hit the ask
                 exit_fee = calculate_fill_fee(market_best_ask, abs(net_qty))
-                unrealized_best = (avg_cost - market_best_ask) * abs(net_qty) - exit_fee
-                total_unrealized_best += unrealized_best
+                
+                # excluding downside calc for best case scenario
+                # unrealized_best = (avg_cost - market_best_ask) * abs(net_qty) - exit_fee
+                
+                total_unrealized_best += 0
 
     # Layout: Top row - Charts
     col1, col2 = st.columns([2, 1])

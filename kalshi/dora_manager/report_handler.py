@@ -11,9 +11,9 @@ import logging
 import os
 from typing import Dict, Any
 
-from .db_client import DynamoDBClient
-from .calculator import TradingCalculator
-from .email_sender import EmailSender
+from db_client import DynamoDBClient
+from calculator import TradingCalculator
+from email_sender import EmailSender
 
 logger = logging.getLogger()
 

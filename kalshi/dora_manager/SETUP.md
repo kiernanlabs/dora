@@ -67,6 +67,10 @@ This creates:
 
 **Save the API Gateway URL** output at the end - you'll need it for the Lambda environment variables.
 
+API Endpoint URLs:
+  - GET  https://4w7qvk8sqg.execute-api.us-east-1.amazonaws.com/prod/proposals/{proposal_id}?signature=XXX&expiry=XXX
+  - POST https://4w7qvk8sqg.execute-api.us-east-1.amazonaws.com/prod/proposals/{proposal_id}/execute
+
 ### Step 4: Update Lambda Environment Variables
 
 Add these environment variables to your Lambda function:

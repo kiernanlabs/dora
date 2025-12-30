@@ -32,7 +32,9 @@
       "Bash(if $AWS_CMD lambda get-function --function-name \"$FUNCTION_NAME\" --region \"$REGION\")",
       "Bash(then echo \"FOUND\")",
       "Bash(else echo \"NOT FOUND\")",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(bash:*)",
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")"
     ],
     "deny": [],
     "ask": []

@@ -55,7 +55,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if 'httpMethod' in event:
             # API Gateway proxy integration - execute proposals
             logger.info("Detected API Gateway invocation - execute_proposals mode")
-            from .execute_proposals_handler import handle_execute_proposals
+            from execute_proposals_handler import handle_execute_proposals
             return handle_execute_proposals(event, context)
 
         # EventBridge scheduled invocation
@@ -63,10 +63,10 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.info(f"Detected EventBridge invocation - mode: {mode}")
 
         if mode == 'report':
-            from .report_handler import handle_report
+            from report_handler import handle_report
             return handle_report(event, context)
         elif mode == 'market_management':
-            from .market_management_handler import handle_market_management
+            from market_management_handler import handle_market_management
             return handle_market_management(event, context)
         else:
             logger.error(f"Invalid mode: {mode}")

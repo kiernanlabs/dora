@@ -58,7 +58,6 @@ def create_proposals_table(
                     {'AttributeName': 'created_at', 'KeyType': 'RANGE'},
                 ],
                 'Projection': {'ProjectionType': 'ALL'},
-                'BillingMode': 'PAY_PER_REQUEST',
             },
         ],
         'BillingMode': 'PAY_PER_REQUEST',

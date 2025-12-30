@@ -9,9 +9,9 @@ export AWS_PAGER=""
 FUNCTION_NAME="dora-manager"
 REGION="${AWS_REGION:-us-east-1}"
 RUNTIME="python3.12"
-HANDLER="dora_manager.handler.lambda_handler"
-TIMEOUT=60
-MEMORY=256
+HANDLER="handler.lambda_handler"
+TIMEOUT=600
+MEMORY=512
 
 # Detect AWS CLI path (prefer venv version)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -23,17 +23,55 @@ echo "Using AWS CLI: $AWS_CMD"
 echo "Creating deployment package..."
 cd "$SCRIPT_DIR"
 
-# Create a temporary directory for the package with correct structure
+# Remove old package if it exists
+if [ -f "lambda_package.zip" ]; then
+    echo "Removing old lambda_package.zip..."
+    rm lambda_package.zip
+fi
+
+# Create a temporary directory for the package
 TEMP_DIR=$(mktemp -d)
 trap "rm -rf $TEMP_DIR" EXIT
 
-# Create dora_manager folder inside temp dir and copy code
-mkdir -p "$TEMP_DIR/dora_manager"
-cp *.py "$TEMP_DIR/dora_manager/"
+# Copy all Python files
+cp *.py "$TEMP_DIR/"
 
-# Create zip file with correct structure
+# Copy CSV data file
+cp restricted_markets.csv "$TEMP_DIR/"
+
+# Copy utils directory
+cp -r utils "$TEMP_DIR/"
+
+# Install Python dependencies for Lambda runtime (Linux x86_64, Python 3.12)
+echo "Installing Python dependencies for Lambda runtime..."
+python3 -m pip install --target "$TEMP_DIR" \
+    --platform manylinux2014_x86_64 \
+    --implementation cp \
+    --python-version 3.12 \
+    --only-binary=:all: \
+    --upgrade \
+    requests openai pandas pydantic pydantic-core
+
+echo "Verifying pydantic-core installation..."
+# Check for the compiled binary (the exact filename may vary)
+if ls "$TEMP_DIR/pydantic_core/_pydantic_core"*.so 1> /dev/null 2>&1; then
+    echo "✓ pydantic_core binary found:"
+    ls -lh "$TEMP_DIR/pydantic_core/_pydantic_core"*.so
+else
+    echo "ERROR: pydantic_core binary (.so file) not found!"
+    echo "Contents of pydantic_core directory:"
+    ls -la "$TEMP_DIR/pydantic_core/" || echo "pydantic_core directory not found!"
+    exit 1
+fi
+
+# Copy package directory (if it exists, for local execution support)
+if [ -d "package" ]; then
+    cp -r package "$TEMP_DIR/"
+fi
+
+# Create zip file
 cd "$TEMP_DIR"
-zip -r "$SCRIPT_DIR/lambda_package.zip" dora_manager -x "*.pyc" -x "__pycache__/*"
+zip -r "$SCRIPT_DIR/lambda_package.zip" . -x "*.pyc" -x "__pycache__/*" -x "*.git/*"
 
 cd "$SCRIPT_DIR"
 echo "Created lambda_package.zip"
