@@ -1,0 +1,21 @@
+market_id,event_ticker,event_name,title,volume_24h,buy_volume,sell_volume,yes_bid,yes_ask,fair_value,fair_value_rationale,info_risk_probability,new_quote_size,new_max_inventory_yes,new_max_inventory_no,new_min_spread,historical_realized_pnl,approve
+KXLEADERNFLRUSHTDS-26JAN05-DHEN,KXLEADERNFLRUSHTDS-26JAN05,Pro Football Rushing Touchdown Leader,Will Derrick Henry lead American Pro Football League in Most Rushing Touchdowns for the 2025-2026 Regular Season?,1750,3184,133,8,34,,,8,5,5,5,0.04,,yes
+KXCBVOLUME-26-Q4-280,KXCBVOLUME-26-Q4,Coinbase trading volume in Q4?,Coinbase trading volume this quarter?,1468,4579,4776,1,7,,,8,5,5,5,0.04,,yes
+KXSOL26500-27JAN0100-T500,KXSOL26500-27JAN0100,Will Solana end 2026 over $500?,"Solana price above $500  on Jan 1, 2027?",1453,2014,2217,4,18,,,12,5,5,5,0.04,,yes
+KXSTOCKX8BUGSBUNNY-25-240,KXSTOCKX8BUGSBUNNY-25,"Average sales price of the Jordan 8 Retro ‘Bugs Bunny’ (2025) on StockX, 7 days after release?","Will Average Sales Price of the Jordan 8 Retro ""Bugs Bunny"" (2025) on StockX be above $240 7 days after release?",1271,2600,3088,0,7,,,10,5,5,5,0.04,,yes
+KXRANKLISTSONGBBH100-26JAN10-WHA,KXRANKLISTSONGBBH100-26JAN10,Which songs will be on the Billboard Hot 100 chart for the week of January 10th?,"Will What I Want (feat. Tate McRae) be 1-100 on the Billboard Hot 100 chart for the week of January 10, 2026?",1054,60,1124,85,98,,,10,5,5,5,0.04,,yes
+KXSPACEXCOUNT-26JAN-14,KXSPACEXCOUNT-26JAN,How many launches will SpaceX have in Jan 2026?,How many launches will SpaceX have in 2026?,1000,1104,2051,44,52,,,12,5,5,5,0.04,,yes
+KXRANKLISTSONGGOL-26DEC-GOL,KXRANKLISTSONGGOL-26DEC,Will “Golden” return to #1 on the Billboard Hot 100 in 2026?,Will “Golden” return to #1 on the Billboard Hot 100 in 2026?,776,449,522,69,89,,,8,5,5,5,0.04,,yes
+KXTRAVISKELCEWEDDING-30JAN01-AUS,KXTRAVISKELCEWEDDING-30JAN01,Who will be Groomsman for the wedding of Travis Kelce and Taylor Swift?,Will Austin Swift be a Groomsman for the wedding of Travis Kelce and Taylor Swift?,699,2658,321,67,78,,,18,5,5,5,0.04,,yes
+KXMRBEASTMENTION-26JAN31-FEAS,KXMRBEASTMENTION-26JAN31,What will MrBeast say during the Next MrBeast Youtube Video?,What will MrBeast say during Next MrBeast Youtube Video?,669,1276,316,63,74,,,18,5,5,5,0.04,,yes
+KXUAPFILES-27,KXUAPFILES-27,Will Trump release new UFO files before 2027?,Will Trump release new UFO files before 2027?,641,345,1353,59,80,,,8,5,5,5,0.04,,yes
+KXLEADERNBAREB-26-VWEM,KXLEADERNBAREB-26,Pro Basketball Rebounds Per Game Leader,Will Victor Wembanyama lead Pro Basketball in Rebounds Per Game for the 2025-26 Regular Season?,615,1679,2244,13,19,,,12,5,5,5,0.04,,yes
+KXFDAAPPROVALPSYCHEDELIC-27-ANYPSYCH,KXFDAAPPROVALPSYCHEDELIC-27,Will the FDA approve any psychedelic substance for medical use before 2027?,Will the FDA approve Any psychedelic substance for medical use this year?,609,1323,608,34,40,,,12,5,5,5,0.04,,yes
+KXCBVOLUME-26-Q4-260,KXCBVOLUME-26-Q4,Coinbase trading volume in Q4?,Coinbase trading volume this quarter?,604,1127,2051,45,77,,,20,5,5,5,0.04,,yes
+KXFOMCDISSENTCOUNT-26JAN-1,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,How many dissenting votes at the next Fed meeting?,552,4364,744,34,40,,,12,5,5,5,0.04,,yes
+KXGGPODCAST-26-GOO,KXGGPODCAST-26,Golden Globe for Best Podcast?,Will Good Hang with Amy Poehler win a Golden Globe for Best Podcast?,483,1159,2347,68,84,,,25,5,5,5,0.04,,yes
+KXSBADAPPEARANCES-26FEB09-SSWE,KXSBADAPPEARANCES-26FEB09,"Who will appear in a big game ad before Feb 9, 2026?","Will Sydney Sweeney appear in a big game ad before Feb 9, 2026?",413,714,506,72,79,,,25,5,5,5,0.04,,yes
+KXMRBEASTMENTION-26JAN31-BILL,KXMRBEASTMENTION-26JAN31,What will MrBeast say during the Next MrBeast Youtube Video?,What will MrBeast say during Next MrBeast Youtube Video?,410,360,499,14,20,,,12,5,5,5,0.04,,yes
+KXTXSENCOMBO-26NOV-TALCOR,KXTXSENCOMBO-26NOV,2026 Texas Senate matchup?,Will Dem Nominee be James Talarico AND GOP Nominee be John Cornyn for Nov 2026?,400,1140,36,13,19,,,10,5,5,5,0.04,,yes
+KXHMONTH-26JAN,KXHMONTH-26JAN,This Jan 2026 is the hottest January ever?,Will  Jan 2026 be the hottest Jan ever?,387,910,158,0,7,,,20,5,5,5,0.04,,yes
+KXECONSTATCPICORE-25DEC-T0.4,KXECONSTATCPICORE-25DEC,CPI core month-over-month in Dec 2025?,CPI core month-over-month in Dec 2025?,383,2450,905,16,23,,,12,5,5,5,0.04,,yes

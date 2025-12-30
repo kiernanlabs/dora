@@ -142,6 +142,9 @@ class TradingCalculator:
         self.window_hours = window_hours
         self.min_pnl_threshold = min_pnl_threshold
 
+        # Calculate cutoff time once to ensure consistency across all calculations
+        self.cutoff_time = datetime.now(timezone.utc) - timedelta(hours=window_hours)
+
         # Index trades by market
         self.trades_by_market: Dict[str, List[Dict]] = {}
         for trade in all_trades:
@@ -244,7 +247,8 @@ class TradingCalculator:
             key=lambda t: t.get('fill_timestamp') or t.get('timestamp', '')
         )
 
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.window_hours)
+        # Use the cutoff time calculated in __init__ for consistency
+        cutoff = self.cutoff_time
 
         # Track position state
         pos = PositionState()
@@ -295,7 +299,8 @@ class TradingCalculator:
                         pos.avg_sell_price = price
 
             # Track P&L at cutoff
-            if ts <= cutoff:
+            # Use < instead of <= to match get_trades_in_window() which uses >= cutoff
+            if ts < cutoff:
                 realized_pnl_before_window = pos.realized_pnl
 
         return pos.realized_pnl - realized_pnl_before_window
@@ -416,10 +421,6 @@ class TradingCalculator:
         total_all_time_pnl, _ = self.calculate_realized_pnl_from_trades(self.all_trades)
         summary.total_realized_pnl_all_time = total_all_time_pnl
 
-        # Calculate window P&L
-        total_window_pnl, _ = self.calculate_realized_pnl_from_trades(self.window_trades)
-        summary.total_realized_pnl_window = total_window_pnl
-
         # Aggregate window trade stats
         summary.total_trade_count = len(self.window_trades)
         summary.total_contracts_traded = sum(t.get('size', 0) for t in self.window_trades)
@@ -431,6 +432,11 @@ class TradingCalculator:
         for config in self.market_configs:
             market_summary = self.calculate_market_summary(config)
             summary.market_summaries.append(market_summary)
+
+            # Aggregate window P&L from individual market calculations
+            # This is the correct approach because calculate_window_pnl_for_market()
+            # uses all trades to establish proper cost basis before the window
+            summary.total_realized_pnl_window += market_summary.realized_pnl_window
 
             # Aggregate exposure
             summary.total_exposure += abs(market_summary.net_position)
@@ -457,6 +463,9 @@ class TradingCalculator:
             # Track markets with trades in window
             if market_summary.trade_count > 0:
                 summary.markets_with_trades += 1
+
+            # Include markets with trades OR open positions in the table
+            if market_summary.trade_count > 0 or market_summary.net_position != 0:
                 summary.markets_with_window_trades.append(market_summary)
 
             # Track flagged markets

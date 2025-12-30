@@ -1,0 +1,21 @@
+market_id,event_ticker,event_name,title,volume_24h,buy_volume,sell_volume,yes_bid,yes_ask,fair_value,fair_value_rationale,info_risk_probability,new_quote_size,new_max_inventory_yes,new_max_inventory_no,new_min_spread,approve
+KXFOMCDISSENTCOUNT-26JAN-3,KXFOMCDISSENTCOUNT-26JAN,How many dissenting votes at the next Fed meeting?,How many dissenting votes at the next Fed meeting?,2547,104,3821,8,30,,,12,5,5,5,0.04,no
+KXCPIYOY-25DEC-T2.5,KXCPIYOY-25DEC,Inflation in Dec 2025? (CPI YoY),Will the rate of CPI inflation be above 2.5% for the year ending in December 2025?,2012,9384,4094,84,92,,,12,5,5,5,0.04,no
+KXTAYLORSWIFTWEDDINGATTEND-28DEC31-PHO,KXTAYLORSWIFTWEDDINGATTEND-28DEC31,Who will attend Taylor Swift and Travis Kelce's Wedding?,Will Phoebe Bridgers attend Taylor Swift and Travis Kelce's Wedding?,1566,7153,1093,53,65,,,15,5,5,5,0.04,yes
+KXGA14S-26-CMOR,KXGA14S-26,Who will win the 2026 GA-14 special election?,Who will win the 2026 GA-14 special election (including any runoffs)?,1350,2005,2332,54,63,,,18,5,5,5,0.04,yes
+KXTAYLORSWIFTWEDDING-30JAN01-GIG,KXTAYLORSWIFTWEDDING-30JAN01,Who will be a Bridesmaid for the wedding of Travis Kelce and Taylor Swift?,Will Gigi Hadid be a Bridesmaid for the wedding of Travis Kelce and Taylor Swift?,1307,6375,2466,73,87,,,15,5,5,5,0.04,yes
+KXMRBEASTMENTION-26JAN31-SUBS,KXMRBEASTMENTION-26JAN31,What will MrBeast say during the Next MrBeast Youtube Video?,What will MrBeast say during Next MrBeast Youtube Video?,1237,1350,430,65,71,,,25,5,5,5,0.04,no
+KXSWIFTKELCEWEDDINGLOCATION-30-NEW,KXSWIFTKELCEWEDDINGLOCATION-30,Where will Taylor Swift and Travis Kelce’s Wedding occur?,Where will Taylor Swift and Travis Kelce’s Wedding occur?,1235,2550,105,47,64,,,15,5,5,5,0.04,yes
+KXSP500ADDQ-26MAR31-PSTG,KXSP500ADDQ-26MAR31,Which companies will be added to the S&P 500 in Q1 of 2026?,"Will Pure Storage be added to S&P 500 before Mar 31, 2026?",995,1096,1245,15,21,,,8,5,5,5,0.04,yes
+KXSBGUESTS-26-TS,KXSBGUESTS-26,Who will attend the Big Game?,Who will attend the Big Game?,935,2354,604,3,10,,,20,5,5,5,0.04,no
+KXMEASLES-26-2000,KXMEASLES-26,Measles cases in 2026?,Will there be more than 2000 measles cases in 2026?,928,3723,3004,45,52,,,12,5,5,5,0.04,yes
+KXSPACEXCOUNT-26JAN-15,KXSPACEXCOUNT-26JAN,How many launches will SpaceX have in Jan 2026?,How many launches will SpaceX have in 2026?,882,2247,2931,42,50,,,12,5,5,5,0.04,yes
+KXTAYLORSWIFTWEDDINGATTEND-28DEC31-BLA,KXTAYLORSWIFTWEDDINGATTEND-28DEC31,Who will attend Taylor Swift and Travis Kelce's Wedding?,Will Blake Lively attend Taylor Swift and Travis Kelce's Wedding?,875,1981,1007,31,41,,,15,5,5,5,0.04,yes
+EVSHARE-30JAN-30,EVSHARE-30JAN,EV market share in 2030?,EV market share in 2030?,714,917,1412,47,53,,,10,5,5,5,0.04,no
+KXTECHLAYOFF-25NOV-1.4,KXTECHLAYOFF-25NOV,Tech layoffs up in November 2025?,Tech layoffs up in Nov 2025?,703,923,277,41,77,,,15,5,5,5,0.04,no
+KXCBVOLUME-26-Q4-270,KXCBVOLUME-26-Q4,Coinbase trading volume in Q4?,Coinbase trading volume this quarter?,694,1288,2553,10,18,,,15,5,5,5,0.04,yes
+KXCABILLIONAIRETAX-26NOV03,KXCABILLIONAIRETAX-26NOV03,Will the California billionaire tax initiative appear on the 2026 ballot?,"Will a one-time tax on billionaires be held in California before Nov 3, 2026?",662,3847,243,75,84,,,15,5,5,5,0.04,yes
+KXCABLEAVE-25-26FEB,KXCABLEAVE-25,When will a member of Trump's Cabinet leave?,Will any member of Trump's Cabinet leave before Jan 2026?,603,1008,1867,13,21,,,10,5,5,5,0.04,no
+KXUBERTRIPS-26Q4-3.7,KXUBERTRIPS-26Q4,Uber trips in Q4?,"Will Uber Technologies, Inc. report above 3.7 billion Trips in Q4?",565,644,804,70,89,,,10,5,5,5,0.04,yes
+KXSBGUESTS-26-DJT,KXSBGUESTS-26,Who will attend the Big Game?,Who will attend the Big Game?,562,842,548,55,63,,,15,5,5,5,0.04,yes
+KXIPO-26-ANTHROPIC,KXIPO-26,Which Companies will officially announce an IPO before 2027?,Who will IPO before 2027?,542,4159,1774,56,63,,,8,5,5,5,0.04,no

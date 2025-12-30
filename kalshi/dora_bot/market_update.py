@@ -10,7 +10,7 @@ This script analyzes market performance and generates recommended config updates
    If quote_size is already <=5: exit (disable or set min_spread=0.50 if has position)
 
 2. Markets to EXPAND:
-   - Positive P&L in lookback period AND median fill size = current quote size
+   - Positive P&L in lookback period
    For expand markets: double quote_size, max_inventory_yes, max_inventory_no (capped at 25)
 
 3. Sibling market ACTIVATION (when expanding):
@@ -112,6 +112,9 @@ class RecommendedAction:
     new_quote_size: Optional[int]
     new_max_inventory_yes: Optional[int]
     new_max_inventory_no: Optional[int]
+    # Current settings (for comparison)
+    current_quote_size: Optional[int]
+    current_min_spread: Optional[float]
     # Context for review
     pnl_24h: float
     fill_count_24h: int
@@ -696,8 +699,6 @@ def generate_recommendations(
 
         if (analysis.current_enabled and
             analysis.pnl_24h > 0 and
-            analysis.median_fill_size is not None and
-            analysis.median_fill_size == analysis.current_quote_size and
             analysis.event_ticker and
             info_risk_ok):
             expand_events.add(analysis.event_ticker)
@@ -750,6 +751,8 @@ def generate_recommendations(
                         new_quote_size=None,
                         new_max_inventory_yes=None,
                         new_max_inventory_no=None,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -770,6 +773,8 @@ def generate_recommendations(
                         new_quote_size=DEFAULT_QUOTE_SIZE,
                         new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
                         new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -797,6 +802,8 @@ def generate_recommendations(
                     new_quote_size=new_quote_size,
                     new_max_inventory_yes=new_max_inv_yes,
                     new_max_inventory_no=new_max_inv_no,
+                    current_quote_size=analysis.current_quote_size,
+                    current_min_spread=analysis.current_min_spread,
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
@@ -824,6 +831,8 @@ def generate_recommendations(
                         new_quote_size=None,
                         new_max_inventory_yes=None,
                         new_max_inventory_no=None,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -844,6 +853,8 @@ def generate_recommendations(
                         new_quote_size=DEFAULT_QUOTE_SIZE,
                         new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
                         new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -866,6 +877,8 @@ def generate_recommendations(
                     new_quote_size=None,
                     new_max_inventory_yes=None,
                     new_max_inventory_no=None,
+                    current_quote_size=analysis.current_quote_size,
+                    current_min_spread=analysis.current_min_spread,
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
@@ -888,6 +901,8 @@ def generate_recommendations(
                     new_quote_size=None,
                     new_max_inventory_yes=None,
                     new_max_inventory_no=None,
+                    current_quote_size=analysis.current_quote_size,
+                    current_min_spread=analysis.current_min_spread,
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
@@ -903,8 +918,6 @@ def generate_recommendations(
             info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
             if (analysis.current_enabled and
                 analysis.pnl_24h > 0 and
-                analysis.median_fill_size is not None and
-                analysis.median_fill_size == analysis.current_quote_size and
                 info_risk_ok):
 
                 # Cap expansion at MAX_QUOTE_SIZE and MAX_INVENTORY
@@ -931,6 +944,8 @@ def generate_recommendations(
                         new_quote_size=None,
                         new_max_inventory_yes=None,
                         new_max_inventory_no=None,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -945,12 +960,14 @@ def generate_recommendations(
                         event_ticker=analysis.event_ticker,
                         event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
                         action='expand',
-                        reason=f"Positive P&L (${analysis.pnl_24h:.2f}) and median fill = quote size ({analysis.current_quote_size})",
+                        reason=f"Positive P&L (${analysis.pnl_24h:.2f})",
                         new_enabled=None,
                         new_min_spread=new_min_spread,
                         new_quote_size=new_quote_size,
                         new_max_inventory_yes=new_max_inv_yes,
                         new_max_inventory_no=new_max_inv_no,
+                        current_quote_size=analysis.current_quote_size,
+                        current_min_spread=analysis.current_min_spread,
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
@@ -967,7 +984,7 @@ def generate_recommendations(
             if analysis.pnl_24h == 0:
                 no_action_reason = "Neutral P&L ($0.00)"
             elif analysis.pnl_24h > 0:
-                no_action_reason = f"Positive P&L (${analysis.pnl_24h:.2f}) but median fill != quote size"
+                no_action_reason = f"Positive P&L (${analysis.pnl_24h:.2f}) but already at max settings"
             else:
                 no_action_reason = "No action criteria met"
 
@@ -982,6 +999,8 @@ def generate_recommendations(
                 new_quote_size=None,
                 new_max_inventory_yes=None,
                 new_max_inventory_no=None,
+                current_quote_size=analysis.current_quote_size,
+                current_min_spread=analysis.current_min_spread,
                 pnl_24h=analysis.pnl_24h,
                 fill_count_24h=analysis.fill_count_24h,
                 fill_count_48h=analysis.fill_count_48h,
@@ -1124,6 +1143,8 @@ def generate_sibling_activations(
                     new_quote_size=DEFAULT_QUOTE_SIZE,
                     new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
                     new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                    current_quote_size=None,  # New market, no current settings
+                    current_min_spread=None,  # New market, no current settings
                     pnl_24h=0.0,
                     fill_count_24h=0,
                     fill_count_48h=0,
@@ -1152,6 +1173,8 @@ def write_recommendations_csv(
         'event_name',
         'action',
         'reason',
+        'current_quote_size',
+        'current_min_spread',
         'new_enabled',
         'new_min_spread',
         'new_quote_size',
@@ -1182,6 +1205,8 @@ def write_recommendations_csv(
                 'event_name': rec.event_name or '',
                 'action': rec.action,
                 'reason': rec.reason,
+                'current_quote_size': int(rec.current_quote_size) if rec.current_quote_size is not None else '',
+                'current_min_spread': f'{rec.current_min_spread:.2f}' if rec.current_min_spread is not None else '',
                 'new_enabled': rec.new_enabled if rec.new_enabled is not None else '',
                 'new_min_spread': rec.new_min_spread if rec.new_min_spread is not None else '',
                 'new_quote_size': int(rec.new_quote_size) if rec.new_quote_size is not None else '',

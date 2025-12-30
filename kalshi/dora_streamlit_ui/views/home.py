@@ -61,7 +61,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                      unrealized_worst: float = 0.0, unrealized_best: float = 0.0,
                      active_bids_count: int = 0, active_bids_qty: int = 0,
                      active_asks_count: int = 0, active_asks_qty: int = 0,
-                     fees_today: float = 0.0):
+                     fees_today: float = 0.0, balance_data: Dict = None):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -103,21 +103,31 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
     st.plotly_chart(fig, width='stretch')
 
-    # Display summary metrics - Row 1: P&L metrics
-    col1, col2, col3, col4, col5 = st.columns(5)
+    # Display summary metrics - Row 1: P&L and balance metrics
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
+        # Display cash balance
+        if balance_data:
+            cash_balance = balance_data.get('balance', 0.0)
+            payout = balance_data.get('payout', 0.0)
+            total_balance = cash_balance + payout
+            st.metric("Cash Balance", f"${total_balance:.2f}",
+                      help=f"Balance: ${cash_balance:.2f} | Payout: ${payout:.2f}")
+        else:
+            st.metric("Cash Balance", "N/A", help="Balance not available")
+    with col2:
         total_pnl = df['cumulative_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Total Realized P&L", f"${total_pnl:.2f}")
-    with col2:
+    with col3:
         daily_pnl = df['daily_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Today's P&L", f"${daily_pnl:.2f}")
-    with col3:
+    with col4:
         st.metric("Fees Today", f"${fees_today:.2f}",
                   help="Total fees paid on trades today")
-    with col4:
+    with col5:
         st.metric("Unrealized (Worst)", f"${unrealized_worst:+.2f}",
                   help="If we exit all positions at current market best bid/ask")
-    with col5:
+    with col6:
         st.metric("Unrealized (Best)", f"${unrealized_best:+.2f}",
                   help="If we exit all positions at our active orders (if competitive) or market best")
 
@@ -1137,6 +1147,8 @@ def render(environment: str, region: str):
         open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
         open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)
         open_orders_last_updated = open_orders_data.get('last_updated')
+        # Fetch account balance
+        balance_data = _timed("get_balance", db_client.get_balance)
 
         overall_elapsed = time.perf_counter() - overall_start
         timings_str = ", ".join(f"{label}={elapsed:.3f}s" for label, elapsed in timings)
@@ -1276,7 +1288,7 @@ def render(environment: str, region: str):
     with col1:
         render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best,
                          active_bids_count, active_bids_qty, active_asks_count, active_asks_qty,
-                         fees_today)
+                         fees_today, balance_data)
 
     with col2:
         render_exposure_chart(positions, market_configs)
