@@ -713,7 +713,7 @@ class DoraBot:
             # This ensures duplicate orders on exchange get cancelled (only one matches).
             matched = False
             for target in to_place:
-                if target.matches(order, tolerance=0.01):  # 1 tick tolerance
+                if target.matches(order, tolerance=0.005):  # 0.5 tick tolerance
                     matched = True
                     to_place.remove(target)  # Don't need to place this
                     break
