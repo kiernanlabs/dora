@@ -247,7 +247,7 @@ class MarketMaker:
         inside_bid = best_bid + self.TICK_SIZE
         inside_ask = best_ask - self.TICK_SIZE
 
-        if (best_ask - best_bid) < 6:
+        if (best_ask - best_bid) < .06:
             inside_bid = best_bid
             inside_ask = best_ask
 
