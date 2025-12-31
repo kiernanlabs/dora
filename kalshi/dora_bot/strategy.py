@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 import math
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
 
@@ -57,7 +57,11 @@ class MarketMaker:
 
         trades = trades or []
         last_trade_price, last_trade_time = self._get_last_trade_info(trades)
-        if last_trade_price is not None:
+        wma_price, wma_trade_time, wma_trades_count = self._get_weighted_trade_info(trades)
+        if wma_price is not None:
+            fair_value = wma_price
+            fv_source = "wma_24h"
+        elif last_trade_price is not None:
             fair_value = last_trade_price
             fv_source = "last_trade"
         else:
@@ -109,7 +113,7 @@ class MarketMaker:
         # Log consolidated quote calculation with flattened fields for CloudWatch
         logic_msg = (
             "Quote calculation: fv_source={fv_source} fv={fv} last_trade={last_trade} "
-            "trades_count={trades_count} min_spread={min_spread} "
+            "trades_count={trades_count} wma_trades={wma_trades} min_spread={min_spread} "
             "skew={skew} net_yes={net_yes} max_yes={max_yes} max_no={max_no} "
             "target_bid={target_bid} target_ask={target_ask} "
             "bid_size={bid_size} ask_size={ask_size} "
@@ -119,6 +123,7 @@ class MarketMaker:
             fv=fair_value,
             last_trade=last_trade_price,
             trades_count=len(trades),
+            wma_trades=wma_trades_count,
             min_spread=config.min_spread,
             skew=skew,
             net_yes=position.net_yes_qty,
@@ -143,6 +148,8 @@ class MarketMaker:
             "fv_source": fv_source,
             "last_trade_price": last_trade_price,
             "last_trade_time": last_trade_time,
+            "wma_trade_time": wma_trade_time,
+            "wma_trades_count": wma_trades_count,
             "trades_count": len(trades),
             "min_spread": config.min_spread,
             "skew": skew,
@@ -360,6 +367,74 @@ class MarketMaker:
 
         return latest_price, latest_timestamp_raw
 
+    def _get_weighted_trade_info(
+        self,
+        trades: List[Dict[str, Any]],
+        max_trades: int = 5,
+        window_hours: int = 24,
+    ) -> tuple[Optional[float], Optional[str], int]:
+        if not trades:
+            return None, None, 0
+
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=window_hours)
+        recent_trades = []
+
+        for trade in trades:
+            quantity_raw = trade.get("quantity")
+            if quantity_raw is not None:
+                try:
+                    quantity = float(quantity_raw)
+                except (TypeError, ValueError):
+                    quantity = None
+                if quantity == 1:
+                    continue
+
+            price = self._extract_trade_price(trade)
+            if price is None:
+                continue
+
+            size = self._extract_trade_size(trade)
+            if size is None or size <= 0:
+                continue
+
+            timestamp_raw = trade.get("created_time") or trade.get("created_at") or trade.get("timestamp")
+            timestamp = self._parse_trade_timestamp(timestamp_raw) if timestamp_raw else None
+            if timestamp is None:
+                continue
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+            if timestamp < cutoff:
+                continue
+
+            recent_trades.append((timestamp, timestamp_raw, price, size))
+
+        if not recent_trades:
+            return None, None, 0
+
+        recent_trades.sort(key=lambda t: t[0], reverse=True)
+        recent_trades = recent_trades[:max_trades]
+
+        total_weight = 0.0
+        weighted_sum = 0.0
+        half_life_hours = window_hours / 2
+        decay_lambda = math.log(2) / half_life_hours
+
+        for timestamp, _, price, size in recent_trades:
+            age_seconds = (now - timestamp).total_seconds()
+            recency_weight = math.exp(-decay_lambda * (age_seconds / 3600.0))
+            weight = math.sqrt(size) * recency_weight
+            if weight <= 0:
+                continue
+            weighted_sum += price * weight
+            total_weight += weight
+
+        if total_weight == 0:
+            return None, None, len(recent_trades)
+
+        return weighted_sum / total_weight, recent_trades[0][1], len(recent_trades)
+
     def _extract_trade_price(self, trade: Dict[str, Any]) -> Optional[float]:
         raw_price = trade.get("yes_price")
         if raw_price is None:
@@ -377,6 +452,21 @@ class MarketMaker:
         # price returned from API in whole cents
         price = price / 100.0
         return price
+
+    def _extract_trade_size(self, trade: Dict[str, Any]) -> Optional[float]:
+        raw_size = trade.get("count")
+        if raw_size is None:
+            raw_size = trade.get("quantity")
+        if raw_size is None:
+            raw_size = trade.get("size")
+        if raw_size is None:
+            raw_size = trade.get("volume")
+        if raw_size is None:
+            return None
+        try:
+            return float(raw_size)
+        except (TypeError, ValueError):
+            return None
 
     def _parse_trade_timestamp(self, timestamp: Optional[str]) -> Optional[datetime]:
         if not timestamp:

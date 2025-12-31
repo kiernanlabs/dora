@@ -4,6 +4,7 @@ Market Deep Dive Page - Detailed view of fill logs
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Dict, List, Optional
 import sys
 import os
@@ -13,8 +14,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from db_client import ReadOnlyDynamoDBClient
 
 
+NY_TZ = ZoneInfo("America/New_York")
+
+
 def to_local_time(timestamp_str: str) -> str:
-    """Convert ISO timestamp to local time string."""
+    """Convert ISO timestamp to New York time string."""
     try:
         if 'Z' in timestamp_str:
             dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
@@ -23,7 +27,7 @@ def to_local_time(timestamp_str: str) -> str:
         else:
             dt = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
 
-        local_dt = dt.astimezone()
+        local_dt = dt.astimezone(NY_TZ)
         return local_dt.strftime('%Y-%m-%d %I:%M:%S %p')
     except Exception:
         return timestamp_str
@@ -120,8 +124,9 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
         bid_volume = sum(t.get('size', 0) for t in trades_sorted if format_fill_side(t.get('side')) == 'bid')
         ask_volume = sum(t.get('size', 0) for t in trades_sorted if format_fill_side(t.get('side')) == 'ask')
         total_fees = sum(t.get('fees', 0) or 0 for t in trades_sorted)
+        total_realized_pnl = sum(t.get('pnl_realized', 0) or 0 for t in trades_sorted)
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
             st.metric("Total Fills", len(trades))
         with col2:
@@ -130,6 +135,8 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
             st.metric("Bid/Ask Split", f"{bid_volume}/{ask_volume}")
         with col4:
             st.metric("Total Fees", f"${total_fees:.2f}")
+        with col5:
+            st.metric("Total Realized P&L", f"${total_realized_pnl:+.2f}")
 
     # Allow drilling into specific fill
     st.markdown("---")
