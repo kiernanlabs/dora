@@ -8,16 +8,12 @@ Handles API Gateway requests for proposal approval:
 import json
 import logging
 import os
-import sys
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
 
-# Add dora_bot to path for database access
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'dora_bot'))
-
-from dora_bot.dynamo import DynamoDBClient
-from dora_bot.models import MarketConfig
+# Use local db_client instead of dora_bot for Lambda deployment
+from db_client import DynamoDBClient
 
 from utils.proposal_manager import ProposalManager
 from utils.url_signer import URLSigner
@@ -470,15 +466,17 @@ def execute_single_proposal(proposal: Dict[str, Any], db_client: DynamoDBClient)
 
     try:
         if action == 'new_market':
-            # Create new market config
-            market_config = MarketConfig(
-                market_id=market_id,
-                quote_size=proposed_changes.get('quote_size', 5),
-                max_inventory_yes=proposed_changes.get('max_inventory_yes', 5),
-                max_inventory_no=proposed_changes.get('max_inventory_no', 5),
-                min_spread=proposed_changes.get('min_spread', 0.04),
-                enabled=proposed_changes.get('enabled', True),
-            )
+            # Create new market config as dict
+            market_config = {
+                'market_id': market_id,
+                'quote_size': proposed_changes.get('quote_size', 5),
+                'max_inventory_yes': proposed_changes.get('max_inventory_yes', 5),
+                'max_inventory_no': proposed_changes.get('max_inventory_no', 5),
+                'min_spread': proposed_changes.get('min_spread', 0.04),
+                'enabled': proposed_changes.get('enabled', True),
+                'inventory_skew_factor': 0.5,
+                'created_at': datetime.now(timezone.utc).isoformat(),
+            }
             db_client.put_market_config(market_config)
 
         else:
@@ -487,9 +485,9 @@ def execute_single_proposal(proposal: Dict[str, Any], db_client: DynamoDBClient)
             if not existing:
                 return {'market_id': market_id, 'success': False, 'error': 'Market config not found'}
 
-            # Apply proposed changes
+            # Apply proposed changes (existing is already a dict)
             for key, value in proposed_changes.items():
-                setattr(existing, key, value)
+                existing[key] = value
 
             db_client.put_market_config(existing)
 

@@ -4,7 +4,7 @@ This guide walks through setting up the infrastructure for the Dora Manager Lamb
 
 ## Prerequisites
 
-1. AWS CLI configured with appropriate credentials
+1. AWS CLI v2 configured with appropriate credentials (`aws --version` should show `aws-cli/2`)
 2. Python 3.12+ installed
 3. boto3 installed (`pip install boto3`)
 4. Existing Lambda function deployed

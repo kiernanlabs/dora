@@ -87,20 +87,22 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             logger.error(f"Invalid mode: {mode}")
             return {
                 'statusCode': 400,
-                'body': {
+                'headers': {'Content-Type': 'application/json'},
+                'body': json.dumps({
                     'success': False,
                     'error': f'Invalid mode: {mode}. Valid modes: report, market_update_only, market_screener_only, send_proposals_email'
-                }
+                })
             }
 
     except Exception as e:
         logger.error(f"Error in lambda_handler routing: {str(e)}", exc_info=True)
         return {
             'statusCode': 500,
-            'body': {
+            'headers': {'Content-Type': 'application/json'},
+            'body': json.dumps({
                 'success': False,
                 'error': str(e)
-            }
+            })
         }
 
 

@@ -15,9 +15,18 @@ MEMORY=512
 
 # Detect AWS CLI path (prefer venv version)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AWS_CMD="aws"
+AWS_CMD="${AWS_CMD:-aws}"
+if ! AWS_VERSION="$($AWS_CMD --version 2>&1)"; then
+    echo "ERROR: Unable to run AWS CLI. Install AWS CLI v2 and ensure it's on PATH, or set AWS_CMD to the v2 binary."
+    exit 1
+fi
+if [[ "$AWS_VERSION" != aws-cli/2* ]]; then
+    echo "ERROR: AWS CLI v2 is required. Detected: $AWS_VERSION"
+    echo "Install v2 and ensure 'aws' points to it, or set AWS_CMD to the v2 binary."
+    exit 1
+fi
 
-echo "Using AWS CLI: $AWS_CMD"
+echo "Using AWS CLI: $AWS_CMD ($AWS_VERSION)"
 
 # Create deployment package
 echo "Creating deployment package..."

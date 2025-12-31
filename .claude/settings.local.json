@@ -34,7 +34,9 @@
       "Bash(else echo \"NOT FOUND\")",
       "Bash(fi)",
       "Bash(bash:*)",
-      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")"
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
+      "Bash(source:*)",
+      "Bash(pip3 install:*)"
     ],
     "deny": [],
     "ask": []

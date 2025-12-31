@@ -1132,9 +1132,18 @@ def filter_and_score_markets(
                 market = futures[future]
                 try:
                     result = future.result()
-                    market['info_risk_probability'] = result.get('info_risk_probability')
-                    market['info_risk_rationale'] = result.get('info_risk_rationale')
-                    print(f"  [{completed}/{len(markets_to_assess)}] {market['ticker']}: {result.get('info_risk_probability', 0):.0%} risk")
+                    # Parse probability from string (e.g., "25%") to float
+                    prob_str = result.get('probability')
+                    prob_value = None
+                    if prob_str and prob_str != "N/A":
+                        try:
+                            prob_value = float(str(prob_str).replace('%', '').strip())
+                        except (ValueError, TypeError):
+                            pass
+                    market['info_risk_probability'] = prob_value
+                    market['info_risk_rationale'] = result.get('rationale')
+                    prob_display = f"{prob_value:.0f}%" if prob_value is not None else "N/A"
+                    print(f"  [{completed}/{len(markets_to_assess)}] {market['ticker']}: {prob_display} risk")
                 except Exception as e:
                     print(f"  [{completed}/{len(markets_to_assess)}] {market['ticker']}: Error - {e}")
                     market['info_risk_probability'] = None
