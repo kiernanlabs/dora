@@ -208,6 +208,7 @@ def generate_review_page_html(
     """
     from collections import defaultdict
     from datetime import datetime
+    import html as html_lib
 
     # Group proposals by event
     proposals_by_event = defaultdict(list)
@@ -385,13 +386,14 @@ def generate_review_page_html(
                 margin-bottom: 40px;
                 border: 1px solid #e0e0e0;
                 border-radius: 8px;
-                overflow: hidden;
+                overflow: visible;
             }}
 
             .event-header {{
                 background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                 color: white;
                 padding: 15px 20px;
+                border-radius: 8px 8px 0 0;
             }}
 
             .event-header-top {{
@@ -455,6 +457,9 @@ def generate_review_page_html(
 
             .table-wrapper {{
                 overflow-x: auto;
+                border-radius: 0 0 8px 8px;
+                position: relative;
+                z-index: 10;
             }}
 
             table {{
@@ -643,70 +648,141 @@ def generate_review_page_html(
                 font-weight: 600;
             }}
 
-            /* Tooltip styles */
-            .tooltip {{
-                position: relative;
-                display: inline-block;
-                cursor: help;
+            /* Clickable info styles */
+            .clickable-info {{
+                cursor: pointer;
                 border-bottom: 1px dotted #999;
+                display: inline-block;
             }}
 
-            .tooltip .tooltiptext {{
-                visibility: hidden;
-                width: 280px;
+            .clickable-info:hover {{
+                border-bottom: 2px solid #3498db;
+            }}
+
+            /* Modal styles */
+            .modal {{
+                display: none;
+                position: fixed;
+                z-index: 100000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.6);
+                animation: fadeIn 0.2s;
+            }}
+
+            .modal.show {{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }}
+
+            .modal-content {{
                 background-color: #2c3e50;
                 color: #fff;
-                text-align: left;
-                border-radius: 6px;
-                padding: 12px;
-                position: absolute;
-                z-index: 99999;
-                bottom: 125%;
-                left: 50%;
-                margin-left: -140px;
-                opacity: 0;
-                transition: opacity 0.3s;
-                font-size: 12px;
-                line-height: 1.5;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                padding: 25px;
+                border-radius: 8px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+                animation: slideIn 0.3s;
             }}
 
-            .tooltip .tooltiptext::after {{
-                content: "";
-                position: absolute;
-                top: 100%;
-                left: 50%;
-                margin-left: -5px;
-                border-width: 5px;
-                border-style: solid;
-                border-color: #2c3e50 transparent transparent transparent;
-            }}
-
-            .tooltip:hover .tooltiptext {{
-                visibility: visible;
-                opacity: 1;
-            }}
-
-            .tooltip-row {{
+            .modal-header {{
                 display: flex;
                 justify-content: space-between;
-                margin: 4px 0;
-                padding: 3px 0;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid rgba(255,255,255,0.2);
             }}
 
-            .tooltip-row:last-child {{
-                border-bottom: none;
-            }}
-
-            .tooltip-label {{
+            .modal-title {{
+                font-size: 18px;
                 font-weight: 600;
                 color: #ecf0f1;
             }}
 
-            .tooltip-value {{
+            .modal-close {{
+                font-size: 28px;
+                font-weight: bold;
+                color: #95a5a6;
+                cursor: pointer;
+                background: none;
+                border: none;
+                padding: 0;
+                line-height: 1;
+            }}
+
+            .modal-close:hover {{
+                color: #fff;
+            }}
+
+            .modal-body {{
+                font-size: 14px;
+                line-height: 1.8;
+            }}
+
+            .modal-row {{
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 8px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }}
+
+            .modal-row:last-child {{
+                border-bottom: none;
+            }}
+
+            .modal-label {{
+                font-weight: 600;
+                color: #ecf0f1;
+            }}
+
+            .modal-value {{
                 color: #3498db;
                 font-family: 'Courier New', monospace;
+            }}
+
+            .modal-section-title {{
+                font-weight: 600;
+                margin: 15px 0 10px 0;
+                color: #ecf0f1;
+                font-size: 15px;
+                border-top: 1px solid rgba(255,255,255,0.2);
+                padding-top: 15px;
+            }}
+
+            .modal-section-title:first-child {{
+                margin-top: 0;
+                border-top: none;
+                padding-top: 0;
+            }}
+
+            .modal-rationale {{
+                white-space: pre-wrap;
+                line-height: 1.6;
+                color: #ecf0f1;
+            }}
+
+            @keyframes fadeIn {{
+                from {{ opacity: 0; }}
+                to {{ opacity: 1; }}
+            }}
+
+            @keyframes slideIn {{
+                from {{
+                    transform: translateY(-50px);
+                    opacity: 0;
+                }}
+                to {{
+                    transform: translateY(0);
+                    opacity: 1;
+                }}
             }}
 
             /* Data section headers */
@@ -773,9 +849,56 @@ def generate_review_page_html(
             function deselectAll() {{
                 document.querySelectorAll('input[type="checkbox"][name="selected"]').forEach(cb => cb.checked = false);
             }}
+
+            function showModal(title, content) {{
+                const modal = document.getElementById('infoModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalBody = document.getElementById('modalBody');
+
+                modalTitle.textContent = title;
+                modalBody.innerHTML = content;
+                modal.classList.add('show');
+            }}
+
+            function showModalFromData(element) {{
+                const title = element.getAttribute('data-modal-title');
+                const content = element.getAttribute('data-modal-content');
+                showModal(title, content);
+            }}
+
+            function closeModal() {{
+                const modal = document.getElementById('infoModal');
+                modal.classList.remove('show');
+            }}
+
+            // Close modal when clicking outside of it
+            window.onclick = function(event) {{
+                const modal = document.getElementById('infoModal');
+                if (event.target === modal) {{
+                    closeModal();
+                }}
+            }}
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {{
+                if (event.key === 'Escape') {{
+                    closeModal();
+                }}
+            }});
         </script>
     </head>
     <body>
+        <!-- Modal -->
+        <div id="infoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-title" id="modalTitle"></span>
+                    <button class="modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+            </div>
+        </div>
+
         <div class="container">
             <h1>DORA Market Proposal Review</h1>
             <div class="timestamp">
@@ -1111,29 +1234,12 @@ def generate_review_page_html(
             sell_volume_trades = metadata.get('sell_volume_trades', 0)
             sell_volume_contracts = metadata.get('sell_volume_contracts', 0)
 
-            # Format Total Market Fills with tooltip
+            # Format Total Market Fills with modal
             total_fills_str = f"{volume_24h_trades:,}" if volume_24h_trades > 0 else "—"
             if volume_24h_trades > 0:
-                total_fills_html = f'''<span class="tooltip">{total_fills_str}
-                    <span class="tooltiptext">
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Buy Trades:</span>
-                            <span class="tooltip-value">{buy_volume_trades:,}</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Buy Volume:</span>
-                            <span class="tooltip-value">{buy_volume_contracts:,}</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Sell Trades:</span>
-                            <span class="tooltip-value">{sell_volume_trades:,}</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Sell Volume:</span>
-                            <span class="tooltip-value">{sell_volume_contracts:,}</span>
-                        </div>
-                    </span>
-                </span>'''
+                modal_content = f'''<div class="modal-row"><span class="modal-label">Buy Trades:</span><span class="modal-value">{buy_volume_trades:,}</span></div><div class="modal-row"><span class="modal-label">Buy Volume:</span><span class="modal-value">{buy_volume_contracts:,}</span></div><div class="modal-row"><span class="modal-label">Sell Trades:</span><span class="modal-value">{sell_volume_trades:,}</span></div><div class="modal-row"><span class="modal-label">Sell Volume:</span><span class="modal-value">{sell_volume_contracts:,}</span></div>'''
+                modal_content_escaped = html_lib.escape(modal_content, quote=True)
+                total_fills_html = f'''<span class="clickable-info" data-modal-title="Total Market Fills (24h)" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)">{total_fills_str}</span>'''
             else:
                 total_fills_html = total_fills_str
 
@@ -1145,42 +1251,14 @@ def generate_review_page_html(
             current_spread = metadata.get('current_spread')
             spread_24h_ago = metadata.get('spread_24h_ago')
 
-            # Format Market Spread with tooltip
+            # Format Market Spread with modal
             if current_spread is not None:
                 market_spread_str = f"{current_spread:.2f}¢"
-                market_spread_html = f'''<span class="tooltip">{market_spread_str}
-                    <span class="tooltiptext">
-                        <div style="font-weight: 600; margin-bottom: 8px; color: #ecf0f1;">Current (Now)</div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Bid:</span>
-                            <span class="tooltip-value">{yes_bid}¢</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Ask:</span>
-                            <span class="tooltip-value">{yes_ask}¢</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Spread:</span>
-                            <span class="tooltip-value">{current_spread:.2f}¢</span>
-                        </div>'''
+                modal_content = f'''<div class="modal-section-title">Current (Now)</div><div class="modal-row"><span class="modal-label">Bid:</span><span class="modal-value">{yes_bid}¢</span></div><div class="modal-row"><span class="modal-label">Ask:</span><span class="modal-value">{yes_ask}¢</span></div><div class="modal-row"><span class="modal-label">Spread:</span><span class="modal-value">{current_spread:.2f}¢</span></div>'''
                 if spread_24h_ago is not None:
-                    market_spread_html += f'''
-                        <div style="font-weight: 600; margin: 8px 0 8px 0; color: #ecf0f1; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">24 Hours Ago</div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Bid:</span>
-                            <span class="tooltip-value">{previous_yes_bid}¢</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Ask:</span>
-                            <span class="tooltip-value">{previous_yes_ask}¢</span>
-                        </div>
-                        <div class="tooltip-row">
-                            <span class="tooltip-label">Spread:</span>
-                            <span class="tooltip-value">{spread_24h_ago:.2f}¢</span>
-                        </div>'''
-                market_spread_html += '''
-                    </span>
-                </span>'''
+                    modal_content += f'''<div class="modal-section-title">24 Hours Ago</div><div class="modal-row"><span class="modal-label">Bid:</span><span class="modal-value">{previous_yes_bid}¢</span></div><div class="modal-row"><span class="modal-label">Ask:</span><span class="modal-value">{previous_yes_ask}¢</span></div><div class="modal-row"><span class="modal-label">Spread:</span><span class="modal-value">{spread_24h_ago:.2f}¢</span></div>'''
+                modal_content_escaped = html_lib.escape(modal_content, quote=True)
+                market_spread_html = f'''<span class="clickable-info" data-modal-title="Market Spread" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)">{market_spread_str}</span>'''
             else:
                 market_spread_str = "—"
                 market_spread_html = market_spread_str
@@ -1193,9 +1271,11 @@ def generate_review_page_html(
                                 <td class="market-id">{market_id}</td>
                                 <!-- Internal Data Columns -->
                                 <td>
-                                    <span class="tooltip">
-                                        <span class="action-badge action-{action.replace(' ', '_')}">{action}</span>
-                                        <span class="tooltiptext">{full_rationale}</span>
+                                    <span class="clickable-info action-badge action-{action.replace(' ', '_')}"
+                                          data-modal-title="Rationale"
+                                          data-modal-content="{html_lib.escape('<div class="modal-rationale">' + full_rationale + '</div>', quote=True)}"
+                                          onclick="showModalFromData(this)">
+                                        {action}
                                     </span>
                                 </td>
                                 <td>{action_dropdown}</td>
@@ -1256,6 +1336,7 @@ def generate_screener_candidates_html(
         HTML string with card-based layout
     """
     from datetime import datetime
+    import html as html_lib
 
     total_candidates = len(screener_proposals)
     timestamp = datetime.utcnow().strftime("%B %d, %Y %H:%M UTC")
@@ -1549,74 +1630,156 @@ def generate_screener_candidates_html(
                 color: #664d03;
             }}
 
-            /* Tooltip styles */
-            .tooltip {{
-                position: relative;
-                display: inline-block;
-                cursor: help;
+            /* Clickable info styles */
+            .clickable-info {{
+                cursor: pointer;
                 border-bottom: 1px dotted #999;
+                display: inline-block;
             }}
 
-            .tooltip .tooltiptext {{
-                visibility: hidden;
-                width: 280px;
+            .clickable-info:hover {{
+                border-bottom: 2px solid #3498db;
+            }}
+
+            /* Modal styles */
+            .modal {{
+                display: none;
+                position: fixed;
+                z-index: 100000;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.6);
+                animation: fadeIn 0.2s;
+            }}
+
+            .modal.show {{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }}
+
+            .modal-content {{
                 background-color: #2c3e50;
                 color: #fff;
-                text-align: left;
-                border-radius: 6px;
-                padding: 12px;
-                position: absolute;
-                z-index: 99999;
-                bottom: 125%;
-                left: 50%;
-                margin-left: -140px;
-                opacity: 0;
-                transition: opacity 0.3s;
-                font-size: 12px;
-                line-height: 1.5;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                padding: 25px;
+                border-radius: 8px;
+                max-width: 500px;
+                width: 90%;
+                max-height: 80vh;
+                overflow-y: auto;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+                animation: slideIn 0.3s;
             }}
 
-            .tooltip .tooltiptext::after {{
-                content: "";
-                position: absolute;
-                top: 100%;
-                left: 50%;
-                margin-left: -5px;
-                border-width: 5px;
-                border-style: solid;
-                border-color: #2c3e50 transparent transparent transparent;
-            }}
-
-            .tooltip:hover .tooltiptext {{
-                visibility: visible;
-                opacity: 1;
-            }}
-
-            .tooltip-row {{
+            .modal-header {{
                 display: flex;
                 justify-content: space-between;
-                margin: 4px 0;
-                padding: 3px 0;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                align-items: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid rgba(255,255,255,0.2);
             }}
 
-            .tooltip-row:last-child {{
-                border-bottom: none;
-            }}
-
-            .tooltip-label {{
+            .modal-title {{
+                font-size: 18px;
                 font-weight: 600;
                 color: #ecf0f1;
             }}
 
-            .tooltip-value {{
+            .modal-close {{
+                font-size: 28px;
+                font-weight: bold;
+                color: #95a5a6;
+                cursor: pointer;
+                background: none;
+                border: none;
+                padding: 0;
+                line-height: 1;
+            }}
+
+            .modal-close:hover {{
+                color: #fff;
+            }}
+
+            .modal-body {{
+                font-size: 14px;
+                line-height: 1.8;
+            }}
+
+            .modal-row {{
+                display: flex;
+                justify-content: space-between;
+                margin: 8px 0;
+                padding: 8px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }}
+
+            .modal-row:last-child {{
+                border-bottom: none;
+            }}
+
+            .modal-label {{
+                font-weight: 600;
+                color: #ecf0f1;
+            }}
+
+            .modal-value {{
                 color: #3498db;
                 font-family: 'Courier New', monospace;
+            }}
+
+            .modal-section-title {{
+                font-weight: 600;
+                margin: 15px 0 10px 0;
+                color: #ecf0f1;
+                font-size: 15px;
+                border-top: 1px solid rgba(255,255,255,0.2);
+                padding-top: 15px;
+            }}
+
+            .modal-section-title:first-child {{
+                margin-top: 0;
+                border-top: none;
+                padding-top: 0;
+            }}
+
+            .modal-rationale {{
+                white-space: pre-wrap;
+                line-height: 1.6;
+                color: #ecf0f1;
+            }}
+
+            @keyframes fadeIn {{
+                from {{ opacity: 0; }}
+                to {{ opacity: 1; }}
+            }}
+
+            @keyframes slideIn {{
+                from {{
+                    transform: translateY(-50px);
+                    opacity: 0;
+                }}
+                to {{
+                    transform: translateY(0);
+                    opacity: 1;
+                }}
             }}
         </style>
     </head>
     <body>
+        <!-- Modal -->
+        <div id="infoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <span class="modal-title" id="modalTitle"></span>
+                    <button class="modal-close" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+            </div>
+        </div>
+
         <div class="container">
             <h1>📋 DORA Market Screener Candidates</h1>
             <div class="timestamp">Generated: {timestamp}</div>
@@ -1688,74 +1851,21 @@ def generate_screener_candidates_html(
         quote_size = proposed.get('quote_size', 5)
         min_spread = proposed.get('min_spread', 0.04)
 
-        # Format Total Market Trades with tooltip
+        # Format Total Market Trades with modal
         if volume_24h_trades > 0:
-            volume_str = f'''<span class="tooltip">{volume_24h_trades:,} trades
-                <span class="tooltiptext">
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Total Trades:</span>
-                        <span class="tooltip-value">{volume_24h_trades:,}</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Total Volume:</span>
-                        <span class="tooltip-value">{volume_24h_contracts:,}</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Buy Trades:</span>
-                        <span class="tooltip-value">{buy_volume_trades:,}</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Buy Volume:</span>
-                        <span class="tooltip-value">{buy_volume_contracts:,}</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Sell Trades:</span>
-                        <span class="tooltip-value">{sell_volume_trades:,}</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Sell Volume:</span>
-                        <span class="tooltip-value">{sell_volume_contracts:,}</span>
-                    </div>
-                </span>
-            </span>'''
+            modal_content = f'''<div class="modal-row"><span class="modal-label">Total Trades:</span><span class="modal-value">{volume_24h_trades:,}</span></div><div class="modal-row"><span class="modal-label">Total Volume:</span><span class="modal-value">{volume_24h_contracts:,}</span></div><div class="modal-row"><span class="modal-label">Buy Trades:</span><span class="modal-value">{buy_volume_trades:,}</span></div><div class="modal-row"><span class="modal-label">Buy Volume:</span><span class="modal-value">{buy_volume_contracts:,}</span></div><div class="modal-row"><span class="modal-label">Sell Trades:</span><span class="modal-value">{sell_volume_trades:,}</span></div><div class="modal-row"><span class="modal-label">Sell Volume:</span><span class="modal-value">{sell_volume_contracts:,}</span></div>'''
+            modal_content_escaped = html_lib.escape(modal_content, quote=True)
+            volume_str = f'''<span class="clickable-info" data-modal-title="Market Volume (24h)" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)">{volume_24h_trades:,} trades</span>'''
         else:
             volume_str = "—"
 
-        # Format Market Spread with tooltip
+        # Format Market Spread with modal
         if current_spread is not None:
-            spread_str = f'''<span class="tooltip">{current_spread:.2f}¢
-                <span class="tooltiptext">
-                    <div style="font-weight: 600; margin-bottom: 8px; color: #ecf0f1;">Current (Now)</div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Bid:</span>
-                        <span class="tooltip-value">{yes_bid}¢</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Ask:</span>
-                        <span class="tooltip-value">{yes_ask}¢</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Spread:</span>
-                        <span class="tooltip-value">{current_spread:.2f}¢</span>
-                    </div>'''
+            modal_content = f'''<div class="modal-section-title">Current (Now)</div><div class="modal-row"><span class="modal-label">Bid:</span><span class="modal-value">{yes_bid}¢</span></div><div class="modal-row"><span class="modal-label">Ask:</span><span class="modal-value">{yes_ask}¢</span></div><div class="modal-row"><span class="modal-label">Spread:</span><span class="modal-value">{current_spread:.2f}¢</span></div>'''
             if spread_24h_ago is not None:
-                spread_str += f'''
-                    <div style="font-weight: 600; margin: 8px 0 8px 0; color: #ecf0f1; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">24 Hours Ago</div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Bid:</span>
-                        <span class="tooltip-value">{previous_yes_bid}¢</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Ask:</span>
-                        <span class="tooltip-value">{previous_yes_ask}¢</span>
-                    </div>
-                    <div class="tooltip-row">
-                        <span class="tooltip-label">Spread:</span>
-                        <span class="tooltip-value">{spread_24h_ago:.2f}¢</span>
-                    </div>'''
-            spread_str += '''
-                </span>
-            </span>'''
+                modal_content += f'''<div class="modal-section-title">24 Hours Ago</div><div class="modal-row"><span class="modal-label">Bid:</span><span class="modal-value">{previous_yes_bid}¢</span></div><div class="modal-row"><span class="modal-label">Ask:</span><span class="modal-value">{previous_yes_ask}¢</span></div><div class="modal-row"><span class="modal-label">Spread:</span><span class="modal-value">{spread_24h_ago:.2f}¢</span></div>'''
+            modal_content_escaped = html_lib.escape(modal_content, quote=True)
+            spread_str = f'''<span class="clickable-info" data-modal-title="Market Spread" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)">{current_spread:.2f}¢</span>'''
         else:
             spread_str = "—"
 
@@ -1876,6 +1986,42 @@ def generate_screener_candidates_html(
                         checkbox.closest('.candidate-card').classList.add('selected');
                     }
                 });
+            });
+
+            function showModal(title, content) {
+                const modal = document.getElementById('infoModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalBody = document.getElementById('modalBody');
+
+                modalTitle.textContent = title;
+                modalBody.innerHTML = content;
+                modal.classList.add('show');
+            }
+
+            function showModalFromData(element) {
+                const title = element.getAttribute('data-modal-title');
+                const content = element.getAttribute('data-modal-content');
+                showModal(title, content);
+            }
+
+            function closeModal() {
+                const modal = document.getElementById('infoModal');
+                modal.classList.remove('show');
+            }
+
+            // Close modal when clicking outside of it
+            window.onclick = function(event) {
+                const modal = document.getElementById('infoModal');
+                if (event.target === modal) {
+                    closeModal();
+                }
+            }
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    closeModal();
+                }
             });
         </script>
     </body>
