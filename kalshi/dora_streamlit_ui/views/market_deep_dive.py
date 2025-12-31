@@ -89,13 +89,15 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
         timestamp = trade.get('fill_timestamp') or trade.get('timestamp', '')
 
         table_data.append({
-            'Timestamp': to_local_time(timestamp) if timestamp else 'N/A',
+            'Timestamp': timestamp or 'N/A',
+            'Local Time': to_local_time(timestamp) if timestamp else 'N/A',
             'Fill ID': trade.get('fill_id', '')[:20] + '...' if trade.get('fill_id') else 'N/A',
             'Order ID': trade.get('order_id', '')[:20] + '...' if trade.get('order_id') else 'N/A',
             'Side': format_fill_side(trade.get('side')),
             'Price': f"${trade.get('price', 0.0):.3f}" if trade.get('price') else 'N/A',
             'Size': trade.get('size', 0),
             'Fees': f"${trade.get('fees', 0.0):.2f}" if trade.get('fees') is not None else 'N/A',
+            'Realized P&L': f"${trade.get('pnl_realized', 0.0):+.2f}" if trade.get('pnl_realized') is not None else 'N/A',
             'Total Value': f"${(trade.get('price', 0.0) * trade.get('size', 0)):.2f}",
         })
 
