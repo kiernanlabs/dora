@@ -4,7 +4,7 @@ SES Email Sender for Dora Manager Reports
 import boto3
 from typing import Optional
 import logging
-from .calculator import TradingSummary, MarketSummary
+from calculator import TradingSummary, MarketSummary
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,20 @@ class EmailSender:
         if include_sign:
             return f"${value:+,.2f}"
         return f"${value:,.2f}"
+
+    def format_position_qty(self, value: Optional[object]) -> str:
+        """Format a position quantity as a signed integer string."""
+        if value is None:
+            qty = 0
+        else:
+            try:
+                qty = int(value)
+            except (TypeError, ValueError):
+                try:
+                    qty = int(float(value))
+                except (TypeError, ValueError):
+                    qty = 0
+        return f"{qty:+d}"
 
     def format_market_row_html(self, market: MarketSummary) -> str:
         """Format a market summary as an HTML table row."""
@@ -440,4 +454,304 @@ class EmailSender:
             logger.error(f"Failed to send email: {type(e).__name__}: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
+            return False
+
+    def send_market_proposals_email(
+        self,
+        proposals: list,
+        proposal_id: str,
+        review_url: str,
+        approve_all_url: str,
+        recipient: str,
+        environment: str = "prod"
+    ) -> bool:
+        """Send market proposals email with approval links.
+
+        Args:
+            proposals: List of proposal dicts
+            proposal_id: UUID of the proposal batch
+            review_url: Signed URL for reviewing proposals
+            approve_all_url: Signed URL for approving all
+            recipient: Email recipient
+            environment: 'demo' or 'prod'
+
+        Returns:
+            True if email sent successfully
+        """
+        # Count proposals by source and action
+        update_proposals = [p for p in proposals if p['proposal_source'] == 'market_update']
+        screener_proposals = [p for p in proposals if p['proposal_source'] == 'market_screener']
+        all_proposals = proposals
+
+        # Count by action
+        action_counts = {}
+        for p in update_proposals:
+            action = p['action']
+            action_counts[action] = action_counts.get(action, 0) + 1
+
+        # Calculate summary statistics
+        total_pnl = sum(p.get('metadata', {}).get('pnl_24h', 0) or 0 for p in all_proposals)
+        total_fills = sum(p.get('metadata', {}).get('fill_count', 0) or 0 for p in all_proposals)
+        markets_with_fills = sum(1 for p in all_proposals if (p.get('metadata', {}).get('fill_count', 0) or 0) > 0)
+        markets_with_fills_pct = (markets_with_fills / len(all_proposals) * 100) if all_proposals else 0
+        total_position = sum(abs(p.get('metadata', {}).get('position_qty', 0) or 0) for p in all_proposals)
+        total_current_quote_size = sum(p.get('current_config', {}).get('quote_size', 0) or 0 for p in all_proposals)
+        total_proposed_quote_size = sum(
+            p.get('proposed_changes', {}).get('quote_size') or p.get('current_config', {}).get('quote_size', 0) or 0
+            for p in all_proposals
+        )
+
+        # Get top 10 positive and negative P&Ls
+        proposals_with_pnl = [(p, p.get('metadata', {}).get('pnl_24h', 0) or 0) for p in all_proposals]
+        proposals_with_pnl.sort(key=lambda x: x[1], reverse=True)
+        top_10_positive = [(p, pnl) for p, pnl in proposals_with_pnl if pnl > 0][:10]
+        top_10_negative = [(p, pnl) for p, pnl in reversed(proposals_with_pnl) if pnl < 0][:10]
+
+        subject = f"[DORA {environment.upper()}] Market Management Proposals - {len(proposals)} Total | P&L: ${total_pnl:+,.2f}"
+
+        # Build HTML email body
+        html_body = f"""
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; }}
+                .header {{ background-color: #4CAF50; color: white; padding: 20px; }}
+                .summary {{ background-color: #f9f9f9; padding: 15px; margin: 20px 0; }}
+                .section-header {{
+                    background-color: #2196F3;
+                    color: white;
+                    padding: 10px;
+                    margin: 20px 0 10px 0;
+                }}
+                .proposal-table {{ width: 100%; border-collapse: collapse; margin-bottom: 20px; }}
+                .proposal-table th, .proposal-table td {{
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: left;
+                }}
+                .proposal-table th {{ background-color: #4CAF50; color: white; }}
+                .button {{
+                    background-color: #4CAF50;
+                    color: white;
+                    padding: 15px 32px;
+                    text-decoration: none;
+                    display: inline-block;
+                    margin: 10px 5px;
+                    border-radius: 4px;
+                }}
+                .expiry-notice {{
+                    background-color: #fff3cd;
+                    color: #856404;
+                    padding: 10px;
+                    border-left: 4px solid #ffc107;
+                    margin: 20px 0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>DORA Market Management Proposals</h1>
+                <p>Environment: {environment.upper()} | Proposal ID: {proposal_id}</p>
+            </div>
+
+            <div class="summary">
+                <h2>Summary Statistics</h2>
+                <table style="width: 100%; margin: 10px 0;">
+                    <tr>
+                        <td><strong>Total Proposals:</strong></td>
+                        <td>{len(proposals)}</td>
+                        <td><strong>Market Updates:</strong></td>
+                        <td>{len(update_proposals)}</td>
+                        <td><strong>New Candidates:</strong></td>
+                        <td>{len(screener_proposals)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total P&L (24h):</strong></td>
+                        <td style="color: {'green' if total_pnl >= 0 else 'red'}; font-weight: bold;">${total_pnl:+,.2f}</td>
+                        <td><strong>Total Fills:</strong></td>
+                        <td>{total_fills:,}</td>
+                        <td><strong>Markets with Fills:</strong></td>
+                        <td>{markets_with_fills} ({markets_with_fills_pct:.0f}%)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Position:</strong></td>
+                        <td>{total_position:,}</td>
+                        <td><strong>Current Quote Size:</strong></td>
+                        <td>{total_current_quote_size:,}</td>
+                        <td><strong>Proposed Quote Size:</strong></td>
+                        <td>{total_proposed_quote_size:,}</td>
+                    </tr>
+                </table>
+        """
+
+        # Add action breakdown
+        if action_counts:
+            html_body += "<h3>Action Breakdown:</h3><ul>"
+            for action, count in sorted(action_counts.items()):
+                html_body += f"<li>{action.replace('_', ' ').title()}: {count}</li>"
+            html_body += "</ul>"
+
+        html_body += """
+            </div>
+
+            <div class="expiry-notice">
+                ⏰ <strong>Important:</strong> This approval link expires in 12 hours.
+            </div>
+        """
+
+        # Top 10 Positive P&Ls
+        if top_10_positive:
+            html_body += """
+            <div class="section-header" style="background-color: #28a745;">
+                <h2>📈 Top 10 Positive P&Ls</h2>
+            </div>
+            <table class="proposal-table">
+                <thead>
+                    <tr>
+                        <th>Market ID</th>
+                        <th>Action</th>
+                        <th>P&L (24h)</th>
+                        <th>Fills</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for p, pnl in top_10_positive:
+                fill_count = p.get('metadata', {}).get('fill_count', 0) or 0
+                position_qty = p.get('metadata', {}).get('position_qty', 0) or 0
+                html_body += f"""
+                    <tr>
+                        <td>{p['market_id']}</td>
+                        <td>{p.get('action', 'N/A')}</td>
+                        <td style="color: green; font-weight: bold;">${pnl:+,.2f}</td>
+                        <td>{fill_count}</td>
+                        <td>{self.format_position_qty(position_qty)}</td>
+                    </tr>
+                """
+            html_body += "</tbody></table>"
+
+        # Top 10 Negative P&Ls
+        if top_10_negative:
+            html_body += """
+            <div class="section-header" style="background-color: #dc3545;">
+                <h2>📉 Top 10 Negative P&Ls</h2>
+            </div>
+            <table class="proposal-table">
+                <thead>
+                    <tr>
+                        <th>Market ID</th>
+                        <th>Action</th>
+                        <th>P&L (24h)</th>
+                        <th>Fills</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for p, pnl in top_10_negative:
+                fill_count = p.get('metadata', {}).get('fill_count', 0) or 0
+                position_qty = p.get('metadata', {}).get('position_qty', 0) or 0
+                html_body += f"""
+                    <tr>
+                        <td>{p['market_id']}</td>
+                        <td>{p.get('action', 'N/A')}</td>
+                        <td style="color: red; font-weight: bold;">${pnl:+,.2f}</td>
+                        <td>{fill_count}</td>
+                        <td>{self.format_position_qty(position_qty)}</td>
+                    </tr>
+                """
+            html_body += "</tbody></table>"
+
+        # New Candidates Section
+        if screener_proposals:
+            html_body += """
+            <div class="section-header">
+                <h2>🆕 New Market Candidates (From Screener)</h2>
+            </div>
+            <table class="proposal-table">
+                <thead>
+                    <tr>
+                        <th>Market ID</th>
+                        <th>Title</th>
+                        <th>Volume (24h)</th>
+                        <th>Bid/Ask</th>
+                        <th>Quote Size</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+
+            for p in screener_proposals[:20]:  # Limit to 20 for email size
+                metadata = p.get('metadata', {})
+                volume = metadata.get('volume_24h', 0)
+                yes_bid = metadata.get('yes_bid', 0)
+                yes_ask = metadata.get('yes_ask', 0)
+                title = metadata.get('title', '')[:50]
+                quote_size = p.get('proposed_changes', {}).get('quote_size', 5)
+
+                html_body += f"""
+                    <tr>
+                        <td>{p['market_id']}</td>
+                        <td>{title}</td>
+                        <td>{volume:,}</td>
+                        <td>{yes_bid}/{yes_ask}</td>
+                        <td>{quote_size}</td>
+                    </tr>
+                """
+
+            html_body += "</tbody></table>"
+
+        # Action buttons
+        html_body += f"""
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{review_url}" class="button">Review & Approve</a>
+                <a href="{approve_all_url}" class="button">Approve All</a>
+            </div>
+
+            <p style="color: #666; font-size: 12px;">
+                Do not share this link with others. For security, links are single-use and expire after 12 hours.
+            </p>
+        </body>
+        </html>
+        """
+
+        # Plain text version
+        text_body = f"""
+DORA Market Management Proposals
+Environment: {environment.upper()}
+Proposal ID: {proposal_id}
+
+Summary:
+- Total Proposals: {len(proposals)}
+- Market Updates: {len(update_proposals)}
+- New Candidates: {len(screener_proposals)}
+
+Review URL: {review_url}
+Approve All URL: {approve_all_url}
+
+This link expires in 12 hours.
+        """
+
+        logger.info(f"Sending market proposals email to {recipient}")
+        logger.info(f"  Total proposals: {len(proposals)}")
+        logger.info(f"  Update proposals: {len(update_proposals)}")
+        logger.info(f"  Screener proposals: {len(screener_proposals)}")
+
+        try:
+            response = self.ses.send_email(
+                Source=self.sender_email,
+                Destination={'ToAddresses': [recipient]},
+                Message={
+                    'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                    'Body': {
+                        'Text': {'Data': text_body, 'Charset': 'UTF-8'},
+                        'Html': {'Data': html_body, 'Charset': 'UTF-8'}
+                    }
+                }
+            )
+            logger.info(f"Proposal email sent successfully. Message ID: {response['MessageId']}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send proposal email: {e}")
             return False

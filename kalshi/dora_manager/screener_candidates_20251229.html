@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalshi Screener Candidates - December 29, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 6px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 5px;
+        }
+        
+        .summary-value.green {
+            color: #28a745;
+        }
+        
+        .summary-value.yellow {
+            color: #ffc107;
+        }
+        
+        .summary-value.red {
+            color: #dc3545;
+        }
+        
+        .screener-section {
+            margin-top: 30px;
+        }
+        
+        .screener-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .screener-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .screener-count {
+            background: #3498db;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .candidate-card {
+            background: white;
+            padding: 18px;
+            margin-bottom: 18px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            transition: box-shadow 0.2s;
+        }
+        
+        .candidate-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+        }
+        
+        .candidate-card.rec-strong {
+            border-left: 5px solid #28a745;
+        }
+        
+        .candidate-card.rec-caution {
+            border-left: 5px solid #ffc107;
+        }
+        
+        .candidate-card.rec-avoid {
+            border-left: 5px solid #dc3545;
+        }
+        
+        .candidate-card.rec-neutral {
+            border-left: 5px solid #6c757d;
+        }
+        
+        .candidate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+        
+        .candidate-title-section {
+            flex: 1;
+        }
+        
+        .candidate-event-name {
+            font-size: 11px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .candidate-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        
+        .candidate-id {
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            color: #7f8c8d;
+        }
+        
+        .recommendation-badge {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        
+        .rec-strong .recommendation-badge {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #28a745;
+        }
+        
+        .rec-caution .recommendation-badge {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffc107;
+        }
+        
+        .rec-avoid .recommendation-badge {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #dc3545;
+        }
+        
+        .rec-neutral .recommendation-badge {
+            background: #e9ecef;
+            color: #495057;
+            border: 1px solid #6c757d;
+        }
+        
+        .candidate-commentary {
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.7;
+            margin: 14px 0;
+        }
+        
+        .rec-strong .candidate-commentary {
+            background: #f0f9f4;
+            border-left: 3px solid #28a745;
+        }
+        
+        .rec-caution .candidate-commentary {
+            background: #fffbf0;
+            border-left: 3px solid #ffc107;
+        }
+        
+        .rec-avoid .candidate-commentary {
+            background: #fef5f5;
+            border-left: 3px solid #dc3545;
+        }
+        
+        .rec-neutral .candidate-commentary {
+            background: #f8f9fa;
+            border-left: 3px solid #6c757d;
+        }
+        
+        .candidate-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 18px;
+            margin-top: 14px;
+        }
+        
+        .candidate-metric {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .candidate-metric-label {
+            font-size: 10px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+        
+        .candidate-metric-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background: #f8f9fa;
+        }
+        
+        .filter-btn.active {
+            border-color: #3498db;
+            background: #3498db;
+            color: white;
+        }
+        
+        .filter-btn.strong {
+            border-color: #28a745;
+        }
+        
+        .filter-btn.strong.active {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        
+        .filter-btn.caution {
+            border-color: #ffc107;
+        }
+        
+        .filter-btn.caution.active {
+            background: #ffc107;
+            border-color: #ffc107;
+        }
+        
+        .filter-btn.avoid {
+            border-color: #dc3545;
+        }
+        
+        .filter-btn.avoid.active {
+            background: #dc3545;
+            border-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Kalshi Screener Candidates</h1>
+        <div class="timestamp">Generated: December 29, 2025 07:02:02</div>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">Total Candidates</div>
+                <div class="summary-value">20</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Recommended</div>
+                <div class="summary-value green">5</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Monitor</div>
+                <div class="summary-value yellow">8</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Avoid</div>
+                <div class="summary-value red">7</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Volume 24h</div>
+                <div class="summary-value">$15,637</div>
+            </div>
+        </div>
+        
+        <div class="screener-section">
+            <div class="screener-header">
+                <div class="screener-title">New Market Opportunities</div>
+                <div class="screener-count">20 Markets</div>
+            </div>
+            
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="filterCards('all')">All (20)</button>
+                <button class="filter-btn strong" onclick="filterCards('rec-strong')">💚 Recommended (5)</button>
+                <button class="filter-btn caution" onclick="filterCards('rec-caution')">⚠️ Monitor (8)</button>
+                <button class="filter-btn avoid" onclick="filterCards('rec-avoid')">🔴 Avoid (7)</button>
+            </div>
+            
+            <div id="candidates-container">
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Pro Football Rushing Touchdown Leader</div>
+                            <div class="candidate-title">Will Derrick Henry lead American Pro Football League in Most Rushing Touchdowns for the 2025-2026 Regular Season?</div>
+                            <div class="candidate-id">KXLEADERNFLRUSHTDS-26JAN05-DHEN</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Good volume ($1.8k) but massively buy-skewed ($3.2k vs $133) with huge 26¢ spread (8-34). NFL season statistics markets attract sophisticated sports analytics traders who model game scripts, remaining schedules, and touchdown regression. Low info risk (8%) understates reality - fantasy football and sports betting communities are highly informed.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,750</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$3,184 / $133</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">8¢ / 34¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">26¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">8%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Coinbase trading volume in Q4?</div>
+                            <div class="candidate-title">Coinbase trading volume this quarter?</div>
+                            <div class="candidate-id">KXCBVOLUME-26-Q4-280</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ PROCEED WITH CAUTION - Good volume ($1.5k) with balanced institutional flow ($4.6k buy vs $4.8k sell). Tight 6¢ spread (1-7) at very low probability. Low info risk (8%) but Coinbase volume markets attract crypto-native traders who monitor real-time exchange data and on-chain metrics. Risk of adverse selection from informed crypto traders.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,468</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$4,579 / $4,776</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">1¢ / 7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">8%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Will Solana end 2026 over $500?</div>
+                            <div class="candidate-title">Solana price above $500  on Jan 1, 2027?</div>
+                            <div class="candidate-id">KXSOL26500-27JAN0100-T500</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ MONITOR - Good volume ($1.5k) with balanced flow ($2k buy vs $2.2k sell). Wide 14¢ spread (4-18) at low probability provides some opportunity. Moderate info risk (12%) but crypto price prediction markets attract sophisticated crypto traders who analyze technicals, macroeconomic factors, and market microstructure. Proceed cautiously.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,453</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$2,014 / $2,217</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">4¢ / 18¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">14¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Average sales price of the Jordan 8 Retro ‘Bugs Bunny’ (2025) on StockX, 7 days after release?</div>
+                            <div class="candidate-title">Will Average Sales Price of the Jordan 8 Retro "Bugs Bunny" (2025) on StockX be above $240 7 days after release?</div>
+                            <div class="candidate-id">KXSTOCKX8BUGSBUNNY-25-240</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ PROCEED WITH CAUTION - Good volume ($1.3k) with sell-skewed flow ($2.6k buy vs $3.1k sell). Wide 7¢ spread (0-7) at very low probability. Moderate info risk (10%) but sneaker resale markets attract informed sneakerhead traders who track release quantities, bot activity, and secondary market demand. Some risk of adverse selection.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,271</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$2,600 / $3,088</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">0¢ / 7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">10%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Which songs will be on the Billboard Hot 100 chart for the week of January 10th?</div>
+                            <div class="candidate-title">Will What I Want (feat. Tate McRae) be 1-100 on the Billboard Hot 100 chart for the week of January 10, 2026?</div>
+                            <div class="candidate-id">KXRANKLISTSONGBBH100-26JAN10-WHA</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Moderate volume ($1.1k) but this is a scheduled Billboard chart release. Heavily sell-skewed ($60 buy vs $1.1k sell) with massive 13¢ spread (85-98) at high probability. Low info risk (10%) but Billboard prediction markets attract music industry insiders and chart analysts who track streaming data, radio play, and sales metrics.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,054</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$60 / $1,124</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">85¢ / 98¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">13¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">10%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">How many launches will SpaceX have in Jan 2026?</div>
+                            <div class="candidate-title">How many launches will SpaceX have in 2026?</div>
+                            <div class="candidate-id">KXSPACEXCOUNT-26JAN-14</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Moderate volume ($1k) with sell-skewed flow ($1.1k buy vs $2.1k sell). Tight 8¢ spread (44-52) near 50/50. Moderate info risk (12%) but SpaceX launch tracking communities are extremely well-informed, monitoring weather, technical readiness, and launch schedules in real-time. High risk of adverse selection.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$1,000</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,104 / $2,051</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">44¢ / 52¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">8¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Will “Golden” return to #1 on the Billboard Hot 100 in 2026?</div>
+                            <div class="candidate-title">Will “Golden” return to #1 on the Billboard Hot 100 in 2026?</div>
+                            <div class="candidate-id">KXRANKLISTSONGGOL-26DEC-GOL</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ MONITOR - Moderate volume ($776) with balanced flow ($449 buy vs $522 sell). Massive 20¢ spread (69-89) at high probability. Low info risk (8%) but Billboard chart return markets can attract music industry insiders. The wide spread suggests pricing inefficiency but monitor for informed traders with streaming/radio data.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$776</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$449 / $522</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">69¢ / 89¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">20¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">8%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-strong" data-filter="rec-strong">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Who will be Groomsman for the wedding of Travis Kelce and Taylor Swift?</div>
+                            <div class="candidate-title">Will Austin Swift be a Groomsman for the wedding of Travis Kelce and Taylor Swift?</div>
+                            <div class="candidate-id">KXTRAVISKELCEWEDDING-30JAN01-AUS</div>
+                        </div>
+                        <div class="recommendation-badge">💚 RECOMMENDED</div>
+                    </div>
+                    <div class="candidate-commentary">⭐ STRONG CANDIDATE - Moderate volume ($699) with extremely buy-skewed flow ($2.7k vs $321) from fan speculation. Wide 11¢ spread (67-78). Moderate info risk (18%) - groomsman selections are pure celebrity speculation. Austin Swift as Taylor's brother makes this a natural retail fan speculation play with emotionally-driven, uninformed trading.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$699</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$2,658 / $321</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">67¢ / 78¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">11¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">18%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-strong" data-filter="rec-strong">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">What will MrBeast say during the Next MrBeast Youtube Video?</div>
+                            <div class="candidate-title">What will MrBeast say during Next MrBeast Youtube Video?</div>
+                            <div class="candidate-id">KXMRBEASTMENTION-26JAN31-FEAS</div>
+                        </div>
+                        <div class="recommendation-badge">💚 RECOMMENDED</div>
+                    </div>
+                    <div class="candidate-commentary">⭐ STRONG CANDIDATE - Moderate volume ($669) with heavy buy bias ($1.3k vs $316). Wide 11¢ spread (63-74). Moderate info risk (18%) - MrBeast video content is notoriously unpredictable. YouTube creator content speculation attracts casual fans without insider information. Good opportunity for capturing uninformed social media trader flow.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$669</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,276 / $316</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">63¢ / 74¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">11¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">18%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Will Trump release new UFO files before 2027?</div>
+                            <div class="candidate-title">Will Trump release new UFO files before 2027?</div>
+                            <div class="candidate-id">KXUAPFILES-27</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ MONITOR - Moderate volume ($641) with sell-skewed flow ($345 buy vs $1.4k sell). Massive 21¢ spread (59-80) at high probability. Low info risk (8%) but political/government disclosure markets can attract DC insiders. The wide spread provides opportunity but watch for traders with advance knowledge of administration plans.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$641</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$345 / $1,353</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">59¢ / 80¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">21¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">8%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Pro Basketball Rebounds Per Game Leader</div>
+                            <div class="candidate-title">Will Victor Wembanyama lead Pro Basketball in Rebounds Per Game for the 2025-26 Regular Season?</div>
+                            <div class="candidate-id">KXLEADERNBAREB-26-VWEM</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Moderate volume ($615) with sell-skewed flow ($1.7k buy vs $2.2k sell). Tight 6¢ spread (13-19) at low probability. Moderate info risk (12%) but NBA statistical leader markets attract sophisticated basketball analytics traders who model player usage rates, injury risk, and remaining schedules. High informed trader presence.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$615</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,679 / $2,244</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">13¢ / 19¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Will the FDA approve any psychedelic substance for medical use before 2027?</div>
+                            <div class="candidate-title">Will the FDA approve Any psychedelic substance for medical use this year?</div>
+                            <div class="candidate-id">KXFDAAPPROVALPSYCHEDELIC-27-ANYPSYCH</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ MONITOR - Moderate volume ($609) with heavy buy bias ($1.3k vs $608). Tight 6¢ spread (34-40) at mid-probability. Moderate info risk (12%) but FDA approval markets can attract biotech/pharma insiders with knowledge of clinical trials and regulatory timelines. Some risk but the speculation angle may bring retail interest.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$609</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,323 / $608</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">34¢ / 40¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Coinbase trading volume in Q4?</div>
+                            <div class="candidate-title">Coinbase trading volume this quarter?</div>
+                            <div class="candidate-id">KXCBVOLUME-26-Q4-260</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Moderate volume ($604) with sell-skewed flow ($1.1k buy vs $2.1k sell). Massive 32¢ spread (45-77) shows extreme uncertainty. High info risk (20%) - crypto exchange volume markets attract informed crypto traders monitoring real-time data. Wide spread tempting but high adverse selection risk.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$604</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,127 / $2,051</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">45¢ / 77¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">32¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">20%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-strong" data-filter="rec-strong">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">How many dissenting votes at the next Fed meeting?</div>
+                            <div class="candidate-title">How many dissenting votes at the next Fed meeting?</div>
+                            <div class="candidate-id">KXFOMCDISSENTCOUNT-26JAN-1</div>
+                        </div>
+                        <div class="recommendation-badge">💚 RECOMMENDED</div>
+                    </div>
+                    <div class="candidate-commentary">⭐ EXCELLENT CANDIDATE - Moderate volume ($552) but extremely buy-skewed ($4.4k vs $744) suggesting retail speculation on rare Fed dissent scenarios. Tight 6¢ spread (34-40) at mid-probability. Moderate info risk (12%) - Fed dissent at '1 vote' level is common but specific count hard to predict. Good balance of activity and uncertainty for market-making.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$552</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$4,364 / $744</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">34¢ / 40¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Golden Globe for Best Podcast?</div>
+                            <div class="candidate-title">Will Good Hang with Amy Poehler win a Golden Globe for Best Podcast?</div>
+                            <div class="candidate-id">KXGGPODCAST-26-GOO</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ PROCEED WITH CAUTION - Lower volume ($483) with sell-skewed flow ($1.2k buy vs $2.3k sell). Wide 16¢ spread (68-84) at high probability. High info risk (25%) - Golden Globe awards can have insider leaks from Academy voters. Entertainment awards markets sometimes attract informed traders. Monitor closely for adverse selection.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$483</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,159 / $2,347</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">68¢ / 84¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">16¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">25%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-strong" data-filter="rec-strong">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">Who will appear in a big game ad before Feb 9, 2026?</div>
+                            <div class="candidate-title">Will Sydney Sweeney appear in a big game ad before Feb 9, 2026?</div>
+                            <div class="candidate-id">KXSBADAPPEARANCES-26FEB09-SSWE</div>
+                        </div>
+                        <div class="recommendation-badge">💚 RECOMMENDED</div>
+                    </div>
+                    <div class="candidate-commentary">⭐ STRONG CANDIDATE - Lower volume ($413) with buy-skewed flow ($714 vs $506). Tight 7¢ spread (72-79) at high probability. High info risk (25%) noted but Super Bowl ad appearances are typically kept confidential until release. Sydney Sweeney's high profile attracts fan speculation. Celebrity/advertising speculation with limited insider leakage.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$413</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$714 / $506</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">72¢ / 79¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">25%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-strong" data-filter="rec-strong">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">What will MrBeast say during the Next MrBeast Youtube Video?</div>
+                            <div class="candidate-title">What will MrBeast say during Next MrBeast Youtube Video?</div>
+                            <div class="candidate-id">KXMRBEASTMENTION-26JAN31-BILL</div>
+                        </div>
+                        <div class="recommendation-badge">💚 RECOMMENDED</div>
+                    </div>
+                    <div class="candidate-commentary">⭐ STRONG CANDIDATE - Lower volume ($410) with balanced flow ($360 vs $499). Tight 6¢ spread (14-20) at low probability. Moderate info risk (12%) - MrBeast content unpredictable. YouTube content keyword speculation at low probability provides good market-making opportunity with limited informed trader risk.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$410</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$360 / $499</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">14¢ / 20¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">2026 Texas Senate matchup?</div>
+                            <div class="candidate-title">Will Dem Nominee be James Talarico AND GOP Nominee be John Cornyn for Nov 2026?</div>
+                            <div class="candidate-id">KXTXSENCOMBO-26NOV-TALCOR</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Lower volume ($400) but massively buy-skewed ($1.1k vs $36). Tight 6¢ spread (13-19) at low probability. Low info risk (10%) but political primary/general election matchup markets attract informed political operatives, pollsters, and local political insiders with ground-level intelligence. High risk.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$400</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$1,140 / $36</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">13¢ / 19¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">6¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">10%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-caution" data-filter="rec-caution">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">This Jan 2026 is the hottest January ever?</div>
+                            <div class="candidate-title">Will  Jan 2026 be the hottest Jan ever?</div>
+                            <div class="candidate-id">KXHMONTH-26JAN</div>
+                        </div>
+                        <div class="recommendation-badge">⚠️ MONITOR</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ MONITOR - Lower volume ($387) with heavy buy bias ($910 vs $158). Wide 7¢ spread (0-7) at very low probability. High info risk (20%) - climate data markets can attract meteorologists and climate scientists with access to preliminary data. Some risk but the speculation element may work if monitored closely.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$387</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$910 / $158</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">0¢ / 7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">20%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="candidate-card rec-avoid" data-filter="rec-avoid">
+                    <div class="candidate-header">
+                        <div class="candidate-title-section">
+                            <div class="candidate-event-name">CPI core month-over-month in Dec 2025?</div>
+                            <div class="candidate-title">CPI core month-over-month in Dec 2025?</div>
+                            <div class="candidate-id">KXECONSTATCPICORE-25DEC-T0.4</div>
+                        </div>
+                        <div class="recommendation-badge">🔴 AVOID</div>
+                    </div>
+                    <div class="candidate-commentary">⚠️ AVOID - Lower volume ($383) but massively buy-skewed ($2.5k vs $905). Tight 7¢ spread (16-23) at low probability. Moderate info risk (12%) but CPI component markets attract sophisticated macro traders who analyze preliminary indicators and BLS methodology. Economic data markets consistently have adverse selection risk.</div>
+                    <div class="candidate-metrics">
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Volume 24h</div>
+                            <div class="candidate-metric-value">$383</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Buy / Sell</div>
+                            <div class="candidate-metric-value">$2,450 / $905</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Bid / Ask</div>
+                            <div class="candidate-metric-value">16¢ / 23¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Spread</div>
+                            <div class="candidate-metric-value">7¢</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Info Risk</div>
+                            <div class="candidate-metric-value">12%</div>
+                        </div>
+                        <div class="candidate-metric">
+                            <div class="candidate-metric-label">Quote Size</div>
+                            <div class="candidate-metric-value">5</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function filterCards(filterClass) {
+            const cards = document.querySelectorAll('.candidate-card');
+            const buttons = document.querySelectorAll('.filter-btn');
+            
+            // Update button states
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Filter cards
+            cards.forEach(card => {
+                if (filterClass === 'all' || card.dataset.filter === filterClass) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

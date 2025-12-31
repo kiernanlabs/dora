@@ -374,10 +374,11 @@ class TradingCalculator:
                         (summary.our_ask_price - summary.avg_cost) * summary.net_position - exit_fee
                     )
                 elif summary.market_best_bid:
-                    exit_fee = calculate_fill_fee(summary.market_best_bid, summary.net_position)
-                    summary.unrealized_pnl_best = (
-                        (summary.market_best_bid - summary.avg_cost) * summary.net_position - exit_fee
-                    )
+                    # exit_fee = calculate_fill_fee(summary.market_best_bid, summary.net_position)
+                    summary.unrealized_pnl_best = 0
+                    # (
+                    #     (summary.market_best_bid - summary.avg_cost) * summary.net_position - exit_fee
+                    # )
             elif summary.net_position < 0:
                 if summary.our_bid_price and summary.is_bid_active:
                     exit_fee = calculate_fill_fee(summary.our_bid_price, abs(summary.net_position))
@@ -385,10 +386,11 @@ class TradingCalculator:
                         (summary.avg_cost - summary.our_bid_price) * abs(summary.net_position) - exit_fee
                     )
                 elif summary.market_best_ask:
-                    exit_fee = calculate_fill_fee(summary.market_best_ask, abs(summary.net_position))
-                    summary.unrealized_pnl_best = (
-                        (summary.avg_cost - summary.market_best_ask) * abs(summary.net_position) - exit_fee
-                    )
+                    # exit_fee = calculate_fill_fee(summary.market_best_ask, abs(summary.net_position))
+                    summary.unrealized_pnl_best = 0
+                    # (
+                    #     (summary.avg_cost - summary.market_best_ask) * abs(summary.net_position) - exit_fee
+                    # )
 
         # Calculate window metrics
         window_trades = self.window_trades_by_market.get(market_id, [])

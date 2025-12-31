@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalshi Markets Report - December 27, 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #2c3e50;
+            margin: 40px 0 20px 0;
+            font-size: 22px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 6px;
+        }
+        
+        .summary-item {
+            text-align: center;
+        }
+        
+        .summary-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-top: 5px;
+        }
+        
+        .event-section {
+            margin-bottom: 40px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .event-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+        }
+        
+        .event-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        
+        .event-title-group {
+            flex: 1;
+        }
+        
+        .event-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .event-ticker {
+            font-size: 12px;
+            font-family: 'Courier New', monospace;
+            opacity: 0.8;
+        }
+        
+        .event-stats {
+            display: flex;
+            gap: 25px;
+            font-size: 14px;
+        }
+        
+        .event-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .event-stat-label {
+            font-size: 11px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .event-stat-value {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .key-takeaways {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 15px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 10px;
+            border-left: 3px solid rgba(255, 255, 255, 0.5);
+        }
+        
+        .takeaway-label {
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        thead {
+            background: #34495e;
+            color: white;
+        }
+        
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        tbody tr.total-row {
+            background: #e8f4f8;
+            font-weight: 600;
+            border-top: 2px solid #3498db;
+        }
+        
+        tbody tr.total-row:hover {
+            background: #d6eaf5;
+        }
+        
+        /* Screener section */
+        .screener-section {
+            margin-top: 40px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #3498db;
+        }
+        
+        .screener-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .screener-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .screener-count {
+            background: #3498db;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .candidate-card {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .candidate-card.rec-strong {
+            border-left: 4px solid #28a745;
+        }
+        
+        .candidate-card.rec-caution {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .candidate-card.rec-avoid {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .candidate-card.rec-neutral {
+            border-left: 4px solid #6c757d;
+        }
+        
+        .candidate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+        }
+        
+        .candidate-title-section {
+            flex: 1;
+        }
+        
+        .candidate-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 4px;
+        }
+        
+        .candidate-id {
+            font-size: 11px;
+            font-family: 'Courier New', monospace;
+            color: #7f8c8d;
+        }
+        
+        .recommendation-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        
+        .rec-strong .recommendation-badge {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .rec-caution .recommendation-badge {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .rec-avoid .recommendation-badge {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .rec-neutral .recommendation-badge {
+            background: #e9ecef;
+            color: #495057;
+        }
+        
+        .candidate-commentary {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 12px 0;
+            border-left: 3px solid #6c757d;
+        }
+        
+        .rec-strong .candidate-commentary {
+            background: #f0f9f4;
+            border-left-color: #28a745;
+        }
+        
+        .rec-caution .candidate-commentary {
+            background: #fffbf0;
+            border-left-color: #ffc107;
+        }
+        
+        .rec-avoid .candidate-commentary {
+            background: #fef5f5;
+            border-left-color: #dc3545;
+        }
+        
+        .candidate-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-top: 12px;
+        }
+        
+        .candidate-metric {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .candidate-metric-label {
+            font-size: 10px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+        
+        .candidate-metric-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Action badges */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .badge-expand {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-exit {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-scale_down {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-reset_defaults {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-activate_sibling {
+            background: #e7e7ff;
+            color: #3838a8;
+        }
+        
+        /* P&L highlighting */
+        .pnl-positive {
+            background: #d4edda;
+            color: #155724;
+            font-weight: 600;
+        }
+        
+        .pnl-negative {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: 600;
+        }
+        
+        .pnl-zero {
+            color: #6c757d;
+        }
+        
+        /* Info risk highlighting */
+        .risk-low {
+            background: #d4edda;
+        }
+        
+        .risk-medium {
+            background: #fff3cd;
+        }
+        
+        .risk-high {
+            background: #f8d7da;
+        }
+        
+        /* Boolean indicators */
+        .bool-true {
+            color: #28a745;
+            font-weight: 600;
+        }
+        
+        .bool-false {
+            color: #dc3545;
+            font-weight: 600;
+        }
+        
+        /* Approval status */
+        .approve-yes {
+            background: #28a745;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .approve-no {
+            background: #dc3545;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .market-id {
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            color: #495057;
+        }
+        
+        .numeric {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* Tooltip styles */
+        .info-risk-cell {
+            position: relative;
+            cursor: help;
+        }
+        
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            z-index: 1000;
+            background: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+            width: 400px;
+            right: 0;
+            top: 100%;
+            margin-top: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .tooltip::before {
+            content: "";
+            position: absolute;
+            bottom: 100%;
+            right: 20px;
+            border: 6px solid transparent;
+            border-bottom-color: #2c3e50;
+        }
+        
+        .info-risk-cell:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .risk-percentage {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 2px dashed transparent;
+        }
+        
+        .info-risk-cell:hover .risk-percentage {
+            border-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Kalshi Markets Report</h1>
+        <div class="timestamp">Generated: December 27, 2025 07:12:00</div>
+        
+        <div class="summary">
+            <div class="summary-item">
+                <div class="summary-label">Total Events</div>
+                <div class="summary-value">9</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Markets</div>
+                <div class="summary-value">33</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total P&L 24h</div>
+                <div class="summary-value">$2.83</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Fills 24h</div>
+                <div class="summary-value">36</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-label">Total Fills 48h</div>
+                <div class="summary-value">67</div>
+            </div>
+        </div>
+        
+        <h2>Active Markets</h2>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">Next NFL Coach Out</div>
+                        <div class="event-ticker">KXNEXTCOACHOUTNFL-26-2</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">7</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$1.57</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">11</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">27</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Strong performance with $1.57 P&L across 7 markets. Expanding 2 markets shows good liquidity opportunity. High info risk on LV market (45%) due to Raiders' poor season and imminent Black Monday coaching changes. Tampa Bay and Miami markets showing consistent profit with lower risk profiles.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-TB</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 10</td>
+                            <td class="numeric pnl-positive">$0.18</td>
+                            <td class="numeric">2</td>
+                            <td class="numeric">3</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (-5)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">5%</span>
+                                <div class="tooltip">A >20ppt move from ~6% in the next 7 days would require Tampa Bay to announce a firing/resignation (or similarly decisive news) before any other NFL head coach — an outcome that is uncommon in the middle/close of the regular season. Most head-coach changes are announced immediately after a team’s season ends (early January) and typically cluster across multiple teams, so the chance Tampa Bay is uniquely the next coach out within seven days is low.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-LV</td>
+                            <td><span class="badge badge-reset_defaults">Reset Defaults</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-positive">$0.86</td>
+                            <td class="numeric">5</td>
+                            <td class="numeric">15</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (-21)</td>
+                            <td class="numeric info-risk-cell risk-high">
+                                <span class="risk-percentage">45%</span>
+                                <div class="tooltip">Moderate (45%) — The Raiders have had a very poor 2025 season (listed 2–13) and Pete Carroll (hired Jan 2025) has already overseen midseason staff changes, so a coach exit or competing head‑coach announcements in the next week that would swing this market >20 percentage points is plausible. NFL teams frequently announce coaching changes immediately after the regular season (Black Monday), which raises short‑term risk of market‑moving news; however there’s no single confirmed imminent Las Vegas head‑coach resignation/firing reported at the time of this assessment. ([en.wikipedia.org](https://en.wikipedia.org/wiki/2025_Las_Vegas_Raiders_season?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-MIA</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 20</td>
+                            <td class="numeric pnl-positive">$0.53</td>
+                            <td class="numeric">4</td>
+                            <td class="numeric">9</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">5%</span>
+                                <div class="tooltip">Very low — multiple reputable reports in Dec 2025 say Mike McDaniel will remain head coach through at least the end of the 2025 season and he’s on a multi‑year extension, while owner Stephen Ross has publicly signaled patience; the Dolphins previously fired GM Chris Grier but explicitly kept McDaniel, so an in‑season firing or immediate departure in the next 7 days is unlikely. A sudden resignation, health issue, or explosive new reporting could still move the market, but those are low‑probability in the coming week. ([nbcsports.com](https://www.nbcsports.com/nfl/profootballtalk/rumor-mill/news/report-mike-mcdaniel-to-remain-dolphins-coach-through-the-end-of-the-season/?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-KC</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">2%</span>
+                                <div class="tooltip">A >20ppt move from the current ~4% price would require a sudden Kansas City head-coach departure/announcement in the next 7 days (to push price above ~24%). That outcome is very unlikely given KC's stable coaching situation and no known imminent decision points; other coaches leaving earlier could only lower the price by at most ~4ppts, so only a rare shock (health/scandal/abrupt retirement/firing) would produce a >20ppt move.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-ARI</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">12%</span>
+                                <div class="tooltip">Definitive, market-moving news (an Arizona HC firing/resignation or an incontrovertible public guarantee of retention/extension) within the next 7 days is possible but uncommon; coach changes tend to cluster in early January and any announcement that clearly makes Arizona the first exit would be required to shift this ~14% price by >20 ppts. Given the short window and the likelihood that any early moves involve multiple teams or incremental reporting rather than a decisive Arizona announcement, the chance of a >20ppt swing in the next week is low but non-negligible.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-NO</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">3%</span>
+                                <div class="tooltip">Very low — head coaching changes for New Orleans are typically announced after the regular season and most firings/resignations occur in January, so a sudden departure in the next 7 days is unlikely. While unexpected resignations or emergency developments can occur, the historical cadence and timing make a >20 percentage-point jump from ~4% within one week improbable (~3%).</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXNEXTCOACHOUTNFL-26-2-DET</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">6%</span>
+                                <div class="tooltip">At a 6% baseline, the only way to move the market >20 ppts in the next 7 days is for Detroit’s head coach to be fired or to announce they are leaving (which would immediately push the price well above +20 ppts or resolve the market). Late-December/early-January is a time when firings happen, but historically the first head-coach departures are uncommon in a single-week window and most clubs wait until season end/early January—so the short‑window chance is small but non-zero.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$1.57</td>
+                            <td class="numeric">11</td>
+                            <td class="numeric">27</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">GTA VI Pricing</div>
+                        <div class="event-ticker">KXGTAPRICE</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">3</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$0.84</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">2</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">5</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Solid performer ($0.84) with GTA-90 market expanding based on strong fill activity. Price discovery continues as market awaits Rockstar's official MSRP announcement. Low trading volume overall (2 fills) suggests limited near-term catalysts, which aligns with November 2026 launch timeline.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXGTAPRICE-70</td>
+                            <td><span class="badge badge-reset_defaults">Reset Defaults</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-medium">
+                                <span class="risk-percentage">20%</span>
+                                <div class="tooltip">There is a low-to-moderate chance (≈20%) that definitive pricing news (official Rockstar/MSRP announcement or major retailer listings/leaks) will appear in the next 7 days and move the market by >20 percentage points. Such a swing would require clear, authoritative information (e.g., an MSRP of ≤$70 or a confirmed $79.99+) and absent a known imminent announcement the short time window makes this unlikely though not impossible due to leaks or surprise press releases.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXGTAPRICE-90</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 25</td>
+                            <td class="numeric pnl-positive">$0.84</td>
+                            <td class="numeric">2</td>
+                            <td class="numeric">5</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (-10)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">Rockstar has pushed GTA VI’s console launch to November 19, 2026 and there is no official PS5 base-game MSRP or pre-order pricing announced, so a definitive price reveal in the next 7 days is unlikely. ([hypebeast.com](https://hypebeast.com/2025/11/gta-6-delayed-to-november-19-2026-with-a-console-first-launch?utm_source=openai)) While pricing speculation and occasional retailer/listing leaks (including $100 rumors) have circulated, the chance of a credible official price or retailer pre-order leak this holiday week that would move the market by >20 percentage points is low but non-zero. ([gtaboom.com](https://www.gtaboom.com/Another_Analyst_Adds_to_the_GTA_6_Price_Tag_Rumors?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXGTAPRICE-100</td>
+                            <td><span class="badge badge-reset_defaults">Reset Defaults</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">A >20ppt move from the current 18% would essentially require a definitive MSRP/pre‑order listing at or above $100 (or an equivalently credible leak) within the next 7 days. Official pricing announcements from Rockstar/Take‑Two are typically tied to launch/preorder windows and are unlikely in the holiday week, so while a retailer leak or surprise announcement could push the market above ~38%, that is low probability over the next week.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$0.84</td>
+                            <td class="numeric">2</td>
+                            <td class="numeric">5</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">S&P 500 Q1 2026 Additions</div>
+                        <div class="event-ticker">KXSP500ADDQ-26MAR31</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">6</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$0.57</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">6</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">6</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Moderate P&L ($0.57) with some fill activity (6 fills in 24h). All 5 sibling markets activated to capture potential S&P inclusion speculation. Year-end timing reduces likelihood of major announcements, keeping info risk low to moderate across all candidates.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-SOFI</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 10</td>
+                            <td class="numeric pnl-positive">$0.57</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (-1)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">8%</span>
+                                <div class="tooltip">Very low — there are no scheduled S&P index‑committee announcement windows in the next 7 days and S&P typically announces changes several trading days before an effective inclusion (the next quarterly rebalance is mid‑March), so an index announcement this week is unlikely. ([researchgate.net](https://www.researchgate.net/publication/228260037_The_Addition_and_Deletion_Effects_of_the_Standard_Poor%27s_500_Index_and_Its_Dynamic_Evolvement_from_1990_to_2002_Demand_Curves_Market_Efficiency_Information_Volume_and_Return?utm_source=openai)) SoFi’s next obvious material event is its late‑January earnings and the company just completed a large equity offering in December; combined with the holiday week, the probability of a surprise M&A/filing or index decision that would move market pricing >20 percentage points in the next 7 days is small but not zero. ([marketbeat.com](https://www.marketbeat.com/stocks/NASDAQ/SOFI/earnings/?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-MSTR</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">7%</span>
+                                <div class="tooltip">Low probability — S&P 500 inclusion announcements typically cluster around quarterly rebalances (especially closer to March) and there is no public indication of an imminent committee decision or corporate action (large buyback, drastic float change or forced reclassification) that would prompt a sudden >20 percentage-point repricing in the next 7 days. While an unexpected, material corporate move by MicroStrategy or an out-of-cycle S&P decision could produce a large jump, those events are unlikely on this short horizon given current information.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-CIEN</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-medium">
+                                <span class="risk-percentage">15%</span>
+                                <div class="tooltip">An S&P 500 inclusion announcement or definitive corporate action (e.g., an acquisition or an explicit commitment altering float/market cap) in the next 7 days would move the market >20ppts, but such events are relatively unlikely over the year-end/New Year holiday window. S&P typically times reconstitution or additions closer to the effective dates in the Jan–Mar window, so while a surprise takeover or unexpected company disclosure could occur, the near-term probability of material news is low but non-zero.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-PSTG</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">8%</span>
+                                <div class="tooltip">Very low — S&P inclusion announcements or decisive corporate actions (M&A, split) that would swing market probabilities by >20ppt are uncommon during the year‑end/New Year holiday week. Unless S&P Dow Jones unexpectedly names Pure Storage in a rare pre‑January announcement or the company discloses a major deal in the next 7 days, there’s a slim chance of news large enough to move the market >20ppts.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-ALNY</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">An S&P 500 addition announcement (or definitive leak) within the next 7 days is unlikely given the holiday period and typical timing of index committee communications; an official inclusion announcement would be required to swing price from ~18% to >38%. There are no known imminent corporate events or regulatory filings for Alnylam that would reliably generate a >20 percentage-point reprice in this short window, so only a low-probability surprise or rumor would move the market that much.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXSP500ADDQ-26MAR31-VRT</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">A >20ppt move would almost certainly require a formal S&P inclusion announcement or major corporate news (M&A or material guidance change). S&P index changes and Vertiv corporate events that would guarantee such a move are unlikely in the next 7 days and there are no known scheduled catalysts; a late leak or surprise deal could still occur but is low probability.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$0.57</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric">6</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">Tech Layoffs - November 2025</div>
+                        <div class="event-ticker">KXTECHLAYOFF-25NOV</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">1</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$0.34</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">7</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">7</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Profitable market ($0.34) with solid activity (7 fills). Expanding quote size to 10 based on consistent demand. Low info risk (8%) as BLS JOLTS data release is outside the 7-day window (Jan 7, 2026). Market well-positioned for continued steady trading.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXTECHLAYOFF-25NOV-1.4</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 10</td>
+                            <td class="numeric pnl-positive">$0.34</td>
+                            <td class="numeric">7</td>
+                            <td class="numeric">7</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">8%</span>
+                                <div class="tooltip">The BLS JOLTS release that will report the November 2025 layoffs/discharges rate (the official series referenced by the market) is scheduled for January 7, 2026, outside the Dec 27–Jan 3 window, so an official resolution in the next 7 days is very unlikely. Individual large tech-firm layoff announcements could still shift sentiment, but absent a major multi-thousand-job shock (which is uncommon on such short notice) it’s unlikely to move a 50% market by more than 20 percentage points within seven days. ([bls.gov](https://www.bls.gov/jlt/?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$0.34</td>
+                            <td class="numeric">7</td>
+                            <td class="numeric">7</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">Jensen Huang CES 2026 Mentions</div>
+                        <div class="event-ticker">KXJENSENMENTION-26JAN06</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">5</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$0.25</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">1</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">2</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Modest activity ($0.25, 1 fill 24h) across CES 2026 keyword speculation markets. Activated 4 sibling markets to capture various keyword possibilities. Limited near-term catalysts as keynote is after the 7-day assessment window. Arizona market expanding based on positive P&L.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXJENSENMENTION-26JAN06-ARIZ</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 20</td>
+                            <td class="numeric pnl-positive">$0.25</td>
+                            <td class="numeric">1</td>
+                            <td class="numeric">2</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-medium">
+                                <span class="risk-percentage">15%</span>
+                                <div class="tooltip">CES 2026 keynote is after the 7‑day window, and NVIDIA rarely publishes verbatim scripts or explicit word‑level confirmations in advance, so a definitive confirm/deny that Jensen will say “Arizona” is unlikely. There is a small chance of a press release, program detail, or credible leak in the next week that would swing market expectations by >20 ppts, but that outcome is low probability.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXJENSENMENTION-26JAN06-CAPI</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">CES 2026 keynote and any definitive transcript are outside the 7‑day window (Dec 27–Jan 3), so a pre-release that would move the market >20 ppts is unlikely. There is a small chance (press teaser, slide leak, or CEO interview) could explicitly state he will say the word “Capital,” but historically NVIDIA/CEO communications rarely reveal an exact keyword ahead of a live keynote, so large moves from such news are low probability.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXJENSENMENTION-26JAN06-SUPE</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">8%</span>
+                                <div class="tooltip">The CES keynote will almost certainly occur after the next 7 days, so the outcome won’t be decided in that window; the only plausible market-moving news before then would be a pre-release promo clip, interview, or credible script leak showing Jensen Huang saying “Supersonic.” That specific, targeted reveal is possible but unlikely, so I assess a low (~8%) chance of news in the next 7 days that would move the price by >20 percentage points.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXJENSENMENTION-26JAN06-500</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">8%</span>
+                                <div class="tooltip">The CES keynote is more than 7 days away so the outcome cannot be decided in this window; the holiday period (Dec 27–Jan 3) makes a definitive company preview or reliable leak that would bump the market >20 percentage points unlikely. Only a direct NVIDIA preview, an authoritative leak quoting “500 Billion,” or an influential analyst report would plausibly move the price by that magnitude in the next week, and those scenarios are low-probability.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXJENSENMENTION-26JAN06-ELON</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">12%</span>
+                                <div class="tooltip">CES keynotes are in early January so Jensen Huang’s live remarks are unlikely to be fully revealed within the next 7 days; therefore a decisive pre-release that would swing the market >20 p.p. is improbable. Only low-probability catalysts—an official program explicitly naming Elon/Musk, a high-confidence leak of the keynote script, or a sudden NVIDIA/Elon-linked announcement—would move the price that much in the coming week.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$0.25</td>
+                            <td class="numeric">1</td>
+                            <td class="numeric">2</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">Tennessee Titans Head Coach</div>
+                        <div class="event-ticker">KXTENNCOACH-26</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">5</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">+$0.08</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">3</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">6</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Low activity ($0.08, 3 fills) with Matt Nagy market expanding. Activated 4 additional candidates (Daboll, Smith, Flores, Freeman) to capture full coaching carousel. Interview timeline pushed to mid-January reduces immediate market-moving risk.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXTENNCOACH-26-MNAG</td>
+                            <td><span class="badge badge-expand">Expand</span></td>
+                            <td class="numeric">0.04 / 20</td>
+                            <td class="numeric pnl-positive">$0.08</td>
+                            <td class="numeric">3</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (-20)</td>
+                            <td class="numeric info-risk-cell risk-medium">
+                                <span class="risk-percentage">15%</span>
+                                <div class="tooltip">Interviews for the Titans’ head-coaching vacancy are not expected to begin until roughly mid‑January, so a final hire inside the next 7 days (Dec 27–Jan 3) is unlikely. ([musiccitymiracles.com](https://www.musiccitymiracles.com/tennessee-titans-coaching-staff/63187/titans-coaching-search-matt-nagy-viewed-internally-as-serious-candidate)) There is active media chatter that Matt Nagy is a serious candidate and books/odds have moved, so incremental rumors or endorsements could move the market modestly, but a >20 percentage‑point swing without an actual hire or a decisive leak is unlikely — overall ~15% chance of such market‑moving news in the next 7 days. ([profootballrumors.com](https://www.profootballrumors.com/2025/12/matt-nagy-considered-a-serious-candidate-for-titans-hc-job?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXTENNCOACH-26-JBRA</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-medium">
+                                <span class="risk-percentage">15%</span>
+                                <div class="tooltip">There are no public indications that Tennessee has finalized or is about to finalize a permanent HC hire for Joe Brady, and the NFL coaching carousel usually accelerates after the regular season ends (often late Dec–early Jan), so an outright hire announcement in the next 7 days is unlikely. That said, credible leaks or a surprise rapid decision could still move the market by >20 ppts, so I assign a modest (~15%) chance of such market-moving news within one week.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXTENNCOACH-26-BDAB</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">7%</span>
+                                <div class="tooltip">There is a low but non‑zero chance of market‑moving news in the next 7 days: the NFL coaching carousel typically accelerates in early January, but there are currently no public signals tying Brian Daboll to the Tennessee job and the market is already priced very low. A sudden hire announcement or a definitive public ruling-out (or Daboll signing elsewhere) could move the price >20 ppts, but such specific, decisive news within one week is unlikely.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXTENNCOACH-26-ASMI</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">A >20ppt move from ~7% would require a concrete, high-confidence announcement or leak that Arthur Smith is the next permanent coach (or similarly outsized news boosting his odds above ~27%). While head‑coach decisions often crystallize in early January, absent clear reporting or an imminent hire I assess a low but non‑negligible chance of such market-moving news in the next 7 days.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXTENNCOACH-26-BFLO</td>
+                            <td><span class="badge badge-activate_sibling">Activate Sibling</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">7%</span>
+                                <div class="tooltip">The Titans remain in an active, multi-candidate head-coach search after Brian Callahan’s firing and reporting indicates the team is still interviewing and considering several candidates rather than imminently finalizing a hire — making a sudden Flores hire within the next 7 days (by 2026-01-03) unlikely. ([bleacherreport.com](https://bleacherreport.com/articles/25262408-titans-reportedly-beginning-stages-nfl-hc-search-after-brian-callahan-firing/?utm_source=openai)) Brian Flores is currently serving as an NFL defensive coordinator, and there are stronger-linked candidates (e.g., Matt Nagy, Marcus Freeman) in recent coverage, so the chance of market-moving confirmation that Flores will be the next permanent Tennessee head coach in the next week is low but not zero (accounts/leaks could still surface). ([en.wikipedia.org](https://en.wikipedia.org/wiki/Brian_Flores?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-positive">$0.08</td>
+                            <td class="numeric">3</td>
+                            <td class="numeric">6</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">AI-Generated Streaming Series</div>
+                        <div class="event-ticker">KXAISTREAMSERIES-27</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">1</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">$0.00</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">0</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Zero activity - exiting market. No trading in lookback period with quote size already at minimum. Holiday week timing and lack of known Amazon streaming announcements make near-term movement highly unlikely (5% info risk).
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXAISTREAMSERIES-27-AMA</td>
+                            <td><span class="badge badge-exit">Exit</span></td>
+                            <td class="numeric">- / -</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">5%</span>
+                                <div class="tooltip">A >20ppt move from ~14% would essentially require a direct Amazon announcement or immediate public release of a fully AI‑generated multi‑episode series; given the holiday week (Dec 27–Jan 3), no known Amazon events, and the technical/rights/PR hurdles, that is very unlikely. Broader industry reports could shift sentiment slightly but are unlikely to move the market by more than 20 percentage points within seven days.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">2026 IPO Markets</div>
+                        <div class="event-ticker">KXIPO-26</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">3</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">$0.00</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">0</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">0</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    No activity across 3 IPO markets. Year-end timing and lack of imminent SEC filing deadlines make near-term movement unlikely. Exiting markets or maintaining minimum parameters until Q1 2026 when IPO activity typically increases.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXIPO-26-ANTHROPIC</td>
+                            <td><span class="badge badge-exit">Exit</span></td>
+                            <td class="numeric">- / -</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">10%</span>
+                                <div class="tooltip">It is year‑end (Dec 27) and there are no imminent, schedule‑driven SEC filings or corporate deadlines that would typically produce definitive IPO confirmation or decisive negative evidence in the next 7 days. While a surprise S‑1 filing, executive confirmation, or major adverse development could swing the market >20 ppts, those events are relatively unlikely on such short notice, so only a low single‑digit/low‑double‑digit chance exists of market‑moving news in the coming week.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXIPO-26-DATABRICKS</td>
+                            <td><span class="badge badge-scale_down">Scale Down</span></td>
+                            <td class="numeric">0.08 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">6%</span>
+                                <div class="tooltip">The year-end holiday window (Dec 27–Jan 2) and lack of scheduled filings make a high-confidence IPO confirmation or equally weighty negative development unlikely in the next 7 days. Only a credible SEC filing, explicit Databricks confirmation of an IPO timeline, or a major acquisition/regulatory shock would plausibly move the market by >20 percentage points, and those events have a low probability this week (~6%).</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr>
+                            <td class="market-id">KXIPO-26-RIPPLE</td>
+                            <td><span class="badge badge-reset_defaults">Reset Defaults</span></td>
+                            <td class="numeric">0.05 / 5</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric"><span class="bool-false">No</span> (0)</td>
+                            <td class="numeric info-risk-cell risk-low">
+                                <span class="risk-percentage">12%</span>
+                                <div class="tooltip">A decisive IPO confirmation or disavowal for Ripple that would swing the market >20 percentage points in the next 7 days is unlikely: IPO announcements are typically planned and announced with lead time, and there’s been no public signal of an imminent filing. Year‑end holiday timing further reduces the chance of major corporate or regulatory news, though a small tail risk remains from leaks, unexpected confidential filings becoming public, or a sudden board decision.</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-zero">$0.00</td>
+                            <td class="numeric">0</td>
+                            <td class="numeric">0</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="event-section">
+            <div class="event-header">
+                <div class="event-header-top">
+                    <div class="event-title-group">
+                        <div class="event-title">DOJ Epstein Files Personnel</div>
+                        <div class="event-ticker">KXDOJEPSTEINOUT-26</div>
+                    </div>
+                    <div class="event-stats">
+                        <div class="event-stat">
+                            <div class="event-stat-label">Markets</div>
+                            <div class="event-stat-value">1</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">P&L 24h</div>
+                            <div class="event-stat-value">$-0.82</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 24h</div>
+                            <div class="event-stat-value">6</div>
+                        </div>
+                        <div class="event-stat">
+                            <div class="event-stat-label">Fills 48h</div>
+                            <div class="event-stat-value">14</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="key-takeaways">
+                    <div class="takeaway-label">Key Takeaways</div>
+                    Loss-making position (-$0.82) with moderate activity (6 fills 24h). Scaling down quote size from 20 to 10 due to negative P&L. High info risk (28%) reflects ongoing DOJ scrutiny and reported internal tensions, though holiday period may delay any personnel moves.
+                </div>
+            </div>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Market ID</th>
+                            <th>Action</th>
+                            <th>Spread / Quote</th>
+                            <th>P&L 24h</th>
+                            <th>Fill 24h</th>
+                            <th>Fill 48h</th>
+                            <th>Position</th>
+                            <th>Info Risk %</th>
+                            <th>Approve</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        <tr>
+                            <td class="market-id">KXDOJEPSTEINOUT-26</td>
+                            <td><span class="badge badge-scale_down">Scale Down</span></td>
+                            <td class="numeric">0.08 / 10</td>
+                            <td class="numeric pnl-negative">-$0.82</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric">14</td>
+                            <td class="numeric"><span class="bool-true">Yes</span> (1)</td>
+                            <td class="numeric info-risk-cell risk-high">
+                                <span class="risk-percentage">28%</span>
+                                <div class="tooltip">The DOJ released an initial batch of Epstein files in mid‑December and is under intense, bipartisan scrutiny, and outlets have reported internal tensions and earlier threats to resign — factors that raise the chance of a departure being reported. However, as of Dec 27 there are no confirmed reports of DOJ employees leaving directly because of the December release, the department says document production will continue on a rolling basis over the coming weeks, and the holiday period makes an immediate, decisive personnel exit less likely. ([theguardian.com](https://www.theguardian.com/us-news/2025/dec/19/jeffrey-epstein-files-us-justice-department?utm_source=openai))</div>
+                            </td>
+                            <td><span class="approve-yes">YES</span></td>
+                        </tr>
+
+                        <tr class="total-row">
+                            <td colspan="2"><strong>Event Total</strong></td>
+                            <td class="numeric">-</td>
+                            <td class="numeric pnl-negative">-$0.82</td>
+                            <td class="numeric">6</td>
+                            <td class="numeric">14</td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="screener-section">
+            <div class="screener-header">
+                <div class="screener-title">📋 New Market Candidates (Screener)</div>
+                <div class="screener-count">8 Candidates</div>
+            </div>
+
+            <div class="candidate-card rec-strong">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">How many dissenting votes at the next Fed meeting?</div>
+                        <div class="candidate-id">KXFOMCDISSENTCOUNT-26JAN-4</div>
+                    </div>
+                    <div class="recommendation-badge">💚 RECOMMENDED</div>
+                </div>
+                <div class="candidate-commentary">⭐ STRONG CANDIDATE - High volume ($2.8k) with balanced buy/sell flow indicates retail speculation on Fed meeting dynamics. Wide 9¢ spread and low info risk (20%) make this ideal for market-making. FOMC dissent patterns are difficult to predict but attract consistent interest from political/economic hobbyists.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$2,804</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$30 / $3,218</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">3¢ / 12¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">20%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-strong">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">Who will feature on Drake's  album 'Iceman'?</div>
+                        <div class="candidate-id">KXFEATUREDRAKE-27-SEX</div>
+                    </div>
+                    <div class="recommendation-badge">💚 RECOMMENDED</div>
+                </div>
+                <div class="candidate-commentary">⭐ STRONG CANDIDATE - Excellent volume ($1.6k) with heavy buy-side bias ($2.1k buy vs $480 sell) suggests fan speculation. 10¢ spread at 47-57 provides room for profitable quotes. Low info risk (20%) as album details rarely leak comprehensively. Entertainment markets typically generate steady uninformed flow from casual traders.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$1,626</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$2,174 / $480</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">47¢ / 57¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">20%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-caution">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">Will Jaxon Smith-Njigba lead American Pro Football League in Most Receiving Yards for the 2025-2026 Regular Season?</div>
+                        <div class="candidate-id">KXLEADERNFLRYDS-26JAN05-JSNJ</div>
+                    </div>
+                    <div class="recommendation-badge">⚠️ MONITOR</div>
+                </div>
+                <div class="candidate-commentary">⚠️ PROCEED WITH CAUTION - Solid volume ($1.5k) but heavily skewed buy-side ($1.8k vs $112 sell). Tight 6¢ spread at 49-55 suggests some informed positioning. Moderate info risk (12%) as season statistics are public and analyzable. May attract sharp NFL analytics traders - monitor for adverse selection.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$1,503</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$1,761 / $112</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">49¢ / 55¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">12%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-strong">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">What will MrBeast say during Next MrBeast Youtube Video?</div>
+                        <div class="candidate-id">KXMRBEASTMENTION-26JAN31-SUBS</div>
+                    </div>
+                    <div class="recommendation-badge">💚 RECOMMENDED</div>
+                </div>
+                <div class="candidate-commentary">⭐ STRONG CANDIDATE - Very high volume ($1.4k base + $3.5k buy volume) with massive buy interest. Wide 10¢ spread at 69-79 despite high price indicates strong retail demand. Low info risk (12%) - MrBeast video content is unpredictable. Influencer/entertainment markets excellent for capturing uninformed social media trader flow.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$1,439</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$3,549 / $545</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">69¢ / 79¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">12%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-strong">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">How many dissenting votes at the next Fed meeting?</div>
+                        <div class="candidate-id">KXFOMCDISSENTCOUNT-26JAN-3</div>
+                    </div>
+                    <div class="recommendation-badge">💚 RECOMMENDED</div>
+                </div>
+                <div class="candidate-commentary">⭐ EXCELLENT CANDIDATE - Moderate volume ($857) but extremely wide 38¢ spread (6-44) indicates high uncertainty and pricing inefficiency. Low info risk (15%). Fed dissent at '3 votes' level is rare enough to maintain interest but obscure enough to avoid informed traders. Great opportunity for competitive market-making.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$857</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$75 / $1,303</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">6¢ / 44¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">15%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-avoid">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">Will the rate of core CPI inflation be above 2.5% for the year ending in December 2025?</div>
+                        <div class="candidate-id">KXCPICOREYOY-25DEC-T2.5</div>
+                    </div>
+                    <div class="recommendation-badge">🔴 AVOID</div>
+                </div>
+                <div class="candidate-commentary">⚠️ AVOID - Despite massive volume ($849 + $22.9k buy), this is a data release market with published BLS schedule. Tight 9¢ spread at 75-84 near resolution suggests informed positioning. Low stated info risk (10%) but economic data markets attract sophisticated macro traders. Risk of adverse selection is high.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$849</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$22,924 / $1,151</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">75¢ / 84¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">10%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-strong">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">Will Idris Elba be the next James Bond?</div>
+                        <div class="candidate-id">KXBOND-30-IDRIS</div>
+                    </div>
+                    <div class="recommendation-badge">💚 RECOMMENDED</div>
+                </div>
+                <div class="candidate-commentary">⭐ STRONG CANDIDATE - Good volume ($833) heavily buy-skewed ($3.2k vs $163). Wide 9¢ spread at 0-9 (low probability event). Very low info risk (5%) as Bond casting is pure Hollywood speculation with no reliable insider information flow. Entertainment speculation markets ideal for uninformed retail participation.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$833</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$3,226 / $163</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">0¢ / 9¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">5%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-card rec-avoid">
+                <div class="candidate-header">
+                    <div class="candidate-title-section">
+                        <div class="candidate-title">Will ** coreinflation** in 2025 be above_below_between ?</div>
+                        <div class="candidate-id">KXCPICOREA-2025-3.3</div>
+                    </div>
+                    <div class="recommendation-badge">🔴 AVOID</div>
+                </div>
+                <div class="candidate-commentary">⚠️ AVOID - Similar to CPI market above - high volume ($796) but this is economic data subject to analysis. Massive institutional volume ($8.2k buy, $10.6k sell) suggests sophisticated traders. Tight 7¢ spread at 0-7. While stated info risk is low (8%), macro data markets consistently attract informed flow. Skip this one.</div>
+                <div class="candidate-metrics">
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Volume 24h</div>
+                        <div class="candidate-metric-value">$796</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Buy / Sell</div>
+                        <div class="candidate-metric-value">$8,242 / $10,634</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Bid / Ask</div>
+                        <div class="candidate-metric-value">0¢ / 7¢</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Info Risk</div>
+                        <div class="candidate-metric-value">8%</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Quote Size</div>
+                        <div class="candidate-metric-value">5</div>
+                    </div>
+                    <div class="candidate-metric">
+                        <div class="candidate-metric-label">Min Spread</div>
+                        <div class="candidate-metric-value">0.04</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

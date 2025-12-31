@@ -79,6 +79,24 @@ class DynamoDBClient:
             logger.error(f"Error fetching market config for {market_id}: {e}")
             return None
 
+    def put_market_config(self, config: Dict[str, Any]) -> bool:
+        """
+        Save or update a market configuration.
+
+        Args:
+            config: Dictionary containing market configuration
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.market_config_table.put_item(Item=config)
+            logger.info(f"Saved market config for {config.get('market_id')}")
+            return True
+        except Exception as e:
+            logger.error(f"Error saving market config: {e}")
+            return False
+
     def disable_market(self, market_id: str, reason: str) -> bool:
         """
         Disable a market by setting enabled=False.
