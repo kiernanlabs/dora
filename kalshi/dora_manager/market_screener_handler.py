@@ -113,6 +113,22 @@ def handle_market_screener_only(event: Dict[str, Any], context: Any) -> Dict[str
                     'current_quote_size': None,
                     'current_min_spread': None,
                     'created_at': None,  # New market, not yet created
+
+                    # Enriched Kalshi metadata for AI model (matching market_update format)
+                    'event_title': market.get('event_name', ''),  # Event name/title
+                    'market_title': market.get('title', ''),  # Market title
+                    'volume_24h_trades': market.get('buy_volume_trades', 0) + market.get('sell_volume_trades', 0),  # Total trade count
+                    'volume_24h_contracts': market.get('volume_24h', 0),  # Total 24h volume
+                    'buy_volume_trades': market.get('buy_volume_trades', 0),  # Buy side trade count
+                    'buy_volume_contracts': market.get('buy_volume', 0),  # Buy side volume
+                    'sell_volume_trades': market.get('sell_volume_trades', 0),  # Sell side trade count
+                    'sell_volume_contracts': market.get('sell_volume', 0),  # Sell side volume
+                    'current_spread': market.get('current_spread', 0),
+                    'spread_24h_ago': market.get('previous_spread', 0) / 100 if market.get('previous_spread') else None,  # Convert cents to decimal
+                    'yes_bid': market.get('yes_bid'),
+                    'yes_ask': market.get('yes_ask'),
+                    'previous_yes_bid': market.get('previous_yes_bid'),
+                    'previous_yes_ask': market.get('previous_yes_ask'),
                 }
 
                 proposal = {

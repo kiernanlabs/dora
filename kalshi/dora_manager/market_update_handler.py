@@ -118,6 +118,22 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
                         'info_risk': rec_dict.get('info_risk_probability'),
                         'position_qty': rec_dict.get('position_qty', 0),
                         'created_at': rec_dict.get('created_at'),
+                        'last_fill_at': rec_dict.get('last_fill_time'),
+                        # Enriched Kalshi metadata for AI model
+                        'event_title': rec_dict.get('event_title'),
+                        'market_title': rec_dict.get('market_title'),
+                        'volume_24h_trades': rec_dict.get('volume_24h_trades', 0),
+                        'volume_24h_contracts': rec_dict.get('volume_24h_contracts', 0),
+                        'buy_volume_trades': rec_dict.get('buy_volume_trades', 0),
+                        'buy_volume_contracts': rec_dict.get('buy_volume_contracts', 0),
+                        'sell_volume_trades': rec_dict.get('sell_volume_trades', 0),
+                        'sell_volume_contracts': rec_dict.get('sell_volume_contracts', 0),
+                        'current_spread': rec_dict.get('current_spread'),
+                        'spread_24h_ago': rec_dict.get('spread_24h_ago'),
+                        'yes_bid': rec_dict.get('yes_bid'),
+                        'yes_ask': rec_dict.get('yes_ask'),
+                        'previous_yes_bid': rec_dict.get('previous_yes_bid'),
+                        'previous_yes_ask': rec_dict.get('previous_yes_ask'),
                     }
                 }
                 proposals.append(proposal)

@@ -92,6 +92,22 @@ class MarketAnalysis:
     has_position: bool
     position_qty: int
     created_at: Optional[datetime] = None  # When the market config was created
+    # Enriched Kalshi metadata for AI model input
+    event_title: Optional[str] = None  # Full event title
+    market_title: Optional[str] = None  # Full market title
+    volume_24h_trades: int = 0  # Total number of trades in 24hr
+    volume_24h_contracts: int = 0  # Total number of contracts traded in 24hr
+    buy_volume_trades: int = 0  # Buy side trade count
+    buy_volume_contracts: int = 0  # Buy side contract count
+    sell_volume_trades: int = 0  # Sell side trade count
+    sell_volume_contracts: int = 0  # Sell side contract count
+    current_spread: Optional[float] = None  # Current bid-ask spread
+    spread_24h_ago: Optional[float] = None  # Spread 24hrs ago
+    # Orderbook data (in cents)
+    yes_bid: Optional[int] = None  # Current yes bid price
+    yes_ask: Optional[int] = None  # Current yes ask price
+    previous_yes_bid: Optional[int] = None  # Yes bid 24hrs ago
+    previous_yes_ask: Optional[int] = None  # Yes ask 24hrs ago
 
 
 @dataclass
@@ -114,6 +130,7 @@ class RecommendedAction:
     pnl_24h: float
     fill_count_24h: int
     fill_count_48h: int
+    last_fill_time: Optional[datetime]
     has_position: bool
     position_qty: int
     # Information risk assessment (for activate_sibling actions)
@@ -121,6 +138,22 @@ class RecommendedAction:
     info_risk_rationale: Optional[str] = None
     # Market creation date (for protection period tracking)
     created_at: Optional[datetime] = None
+    # Enriched Kalshi metadata for AI model input
+    event_title: Optional[str] = None
+    market_title: Optional[str] = None
+    volume_24h_trades: int = 0
+    volume_24h_contracts: int = 0
+    buy_volume_trades: int = 0
+    buy_volume_contracts: int = 0
+    sell_volume_trades: int = 0
+    sell_volume_contracts: int = 0
+    current_spread: Optional[float] = None
+    spread_24h_ago: Optional[float] = None
+    # Orderbook data (in cents)
+    yes_bid: Optional[int] = None
+    yes_ask: Optional[int] = None
+    previous_yes_bid: Optional[int] = None
+    previous_yes_ask: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -140,11 +173,26 @@ class RecommendedAction:
             'pnl_24h': self.pnl_24h,
             'fill_count_24h': self.fill_count_24h,
             'fill_count_48h': self.fill_count_48h,
+            'last_fill_time': self.last_fill_time.isoformat() if self.last_fill_time else None,
             'has_position': self.has_position,
             'position_qty': self.position_qty,
             'info_risk_probability': self.info_risk_probability,
             'info_risk_rationale': self.info_risk_rationale,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'event_title': self.event_title,
+            'market_title': self.market_title,
+            'volume_24h_trades': self.volume_24h_trades,
+            'volume_24h_contracts': self.volume_24h_contracts,
+            'buy_volume_trades': self.buy_volume_trades,
+            'buy_volume_contracts': self.buy_volume_contracts,
+            'sell_volume_trades': self.sell_volume_trades,
+            'sell_volume_contracts': self.sell_volume_contracts,
+            'current_spread': self.current_spread,
+            'spread_24h_ago': self.spread_24h_ago,
+            'yes_bid': self.yes_bid,
+            'yes_ask': self.yes_ask,
+            'previous_yes_bid': self.previous_yes_bid,
+            'previous_yes_ask': self.previous_yes_ask,
         }
 
 
@@ -466,12 +514,20 @@ def fetch_market_details(market_ids: List[str]) -> Dict[str, Dict[str, Any]]:
             yes_ask = market_data.get('yes_ask', 100) or 100
             current_price = (yes_bid + yes_ask) / 2
 
+            # Get previous bid/ask for historical spread calculation
+            previous_yes_bid = market_data.get('previous_yes_bid')
+            previous_yes_ask = market_data.get('previous_yes_ask')
+
             market_details[market_id] = {
                 'title': market_data.get('title', ''),
                 'subtitle': market_data.get('subtitle', ''),
                 'rules_primary': market_data.get('rules_primary', ''),
                 'current_price': current_price,
                 'event_ticker': market_data.get('event_ticker'),
+                'yes_bid': yes_bid,
+                'yes_ask': yes_ask,
+                'previous_yes_bid': previous_yes_bid,
+                'previous_yes_ask': previous_yes_ask,
             }
         except Exception as e:
             print(f"Warning: Could not fetch details for {market_id}: {e}")
@@ -506,6 +562,125 @@ def fetch_event_names(event_tickers: List[str]) -> Dict[str, str]:
             event_names[event_ticker] = ''
 
     return event_names
+
+
+def fetch_trade_history(
+    market_id: str,
+    limit: int = 100,
+    max_retries: int = 5,
+    base_delay: float = 1.0,
+) -> List[Dict[str, Any]]:
+    """Fetch trade history for a market from Kalshi API with exponential backoff.
+
+    Args:
+        market_id: Market ticker
+        limit: Maximum number of trades to fetch
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds for exponential backoff
+
+    Returns:
+        List of trade dictionaries
+    """
+    import time
+    import random
+
+    url = f"{KALSHI_API_BASE}/trade-api/v2/markets/trades"
+    params = {"ticker": market_id, "limit": limit}
+
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, params=params, timeout=10)
+
+            # Handle rate limiting with exponential backoff
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    # Exponential backoff with jitter
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    time.sleep(delay)
+                    continue
+                else:
+                    print(f"  Warning: Rate limited for {market_id} after {max_retries} retries")
+                    return []
+
+            response.raise_for_status()
+            data = response.json()
+            return data.get("trades", [])
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 429 and attempt < max_retries - 1:
+                delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                time.sleep(delay)
+                continue
+            print(f"  Warning: Could not fetch trades for {market_id}: {e}")
+            return []
+        except Exception as e:
+            print(f"  Warning: Could not fetch trades for {market_id}: {e}")
+            return []
+
+    return []
+
+
+def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int, int, int]:
+    """Calculate total volume on buy and sell sides from trade history.
+
+    Args:
+        trades: List of trade dictionaries
+
+    Returns:
+        Tuple of (buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts)
+    """
+    buy_volume_trades = 0
+    buy_volume_contracts = 0
+    sell_volume_trades = 0
+    sell_volume_contracts = 0
+
+    for trade in trades:
+        # Kalshi trades have 'taker_side' which is 'yes' or 'no'
+        # 'yes' means the taker bought YES, 'no' means the taker sold YES (bought NO)
+        count = trade.get("count", 0) or 0
+        taker_side = trade.get("taker_side", "")
+
+        if taker_side == "yes":
+            buy_volume_trades += 1
+            buy_volume_contracts += count
+        elif taker_side == "no":
+            sell_volume_trades += 1
+            sell_volume_contracts += count
+
+    return buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts
+
+
+def filter_trades_by_time(trades: List[Dict[str, Any]], hours: int = 24) -> List[Dict[str, Any]]:
+    """Filter trades to only include those from the last N hours.
+
+    Args:
+        trades: List of trade dictionaries
+        hours: Number of hours to look back
+
+    Returns:
+        Filtered list of trades
+    """
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
+    filtered_trades = []
+
+    for trade in trades:
+        trade_time_str = trade.get("created_time")
+        if trade_time_str:
+            try:
+                # Handle both ISO format with and without 'Z'
+                if trade_time_str.endswith('Z'):
+                    trade_time_str = trade_time_str[:-1] + '+00:00'
+                trade_time = datetime.fromisoformat(trade_time_str)
+                if trade_time.tzinfo is None:
+                    trade_time = trade_time.replace(tzinfo=timezone.utc)
+
+                if trade_time >= cutoff:
+                    filtered_trades.append(trade)
+            except (ValueError, TypeError):
+                # If we can't parse the timestamp, skip it
+                continue
+
+    return filtered_trades
 
 
 def analyze_markets(
@@ -554,6 +729,15 @@ def analyze_markets(
     # Fetch event_tickers for all markets from public API
     print(f"Fetching event info for {len(configs)} markets...")
     event_tickers = fetch_event_tickers(list(configs.keys()))
+
+    # Fetch enriched metadata for AI model input
+    print(f"Fetching market details for {len(configs)} markets...")
+    market_details = fetch_market_details(list(configs.keys()))
+
+    # Get unique event tickers and fetch their names
+    unique_event_tickers = list(set(ticker for ticker in event_tickers.values() if ticker))
+    print(f"Fetching event names for {len(unique_event_tickers)} events...")
+    event_names = fetch_event_names(unique_event_tickers)
 
     # Get current positions
     positions = dynamo.get_positions()
@@ -642,9 +826,38 @@ def analyze_markets(
         has_position = position is not None and position.get('net_yes_qty', 0) != 0
         position_qty = position.get('net_yes_qty', 0) if position else 0
 
+        # Fetch enriched Kalshi metadata
+        market_detail = market_details.get(market_id) or {}
+        # Use event_ticker from market_detail (already fetched), fallback to event_tickers dict
+        event_ticker = market_detail.get('event_ticker') or event_tickers.get(market_id)
+        event_title = event_names.get(event_ticker, '') if event_ticker else None
+        market_title = market_detail.get('title')
+
+        # Calculate current spread from orderbook
+        yes_bid = market_detail.get('yes_bid', 0) or 0
+        yes_ask = market_detail.get('yes_ask', 100) or 100
+        current_spread = (yes_ask - yes_bid) / 100 if yes_ask and yes_bid else None
+
+        # Calculate spread from 24 hours ago
+        previous_yes_bid = market_detail.get('previous_yes_bid')
+        previous_yes_ask = market_detail.get('previous_yes_ask')
+        if previous_yes_bid is not None and previous_yes_ask is not None:
+            spread_24h_ago = (previous_yes_ask - previous_yes_bid) / 100
+        else:
+            spread_24h_ago = None
+
+        # Fetch trade history for volume calculations (24h window)
+        trades = fetch_trade_history(market_id, limit=200)
+        trades_24h = filter_trades_by_time(trades, hours=24)
+
+        # Calculate volume statistics
+        volume_24h_trades = len(trades_24h)
+        volume_24h_contracts = sum(trade.get('count', 0) or 0 for trade in trades_24h)
+        buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades_24h)
+
         analyses[market_id] = MarketAnalysis(
             market_id=market_id,
-            event_ticker=event_tickers.get(market_id),
+            event_ticker=event_ticker,
             pnl_24h=pnl_lookback,  # Named pnl_24h for backward compat but uses configured lookback
             fill_count_24h=len(fills_pnl),  # Fills in P&L lookback period
             fill_count_48h=len(fills_volume),  # Fills in volume lookback period
@@ -658,6 +871,21 @@ def analyze_markets(
             has_position=has_position,
             position_qty=position_qty,
             created_at=config.created_at,
+            # Enriched Kalshi metadata
+            event_title=event_title,
+            market_title=market_title,
+            volume_24h_trades=volume_24h_trades,
+            volume_24h_contracts=volume_24h_contracts,
+            buy_volume_trades=buy_volume_trades,
+            buy_volume_contracts=buy_volume_contracts,
+            sell_volume_trades=sell_volume_trades,
+            sell_volume_contracts=sell_volume_contracts,
+            current_spread=current_spread,
+            spread_24h_ago=spread_24h_ago,
+            yes_bid=yes_bid,
+            yes_ask=yes_ask,
+            previous_yes_bid=previous_yes_bid,
+            previous_yes_ask=previous_yes_ask,
         )
 
     return analyses
@@ -912,11 +1140,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -935,11 +1179,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 action_taken = True
             elif analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
@@ -965,11 +1225,27 @@ def generate_recommendations(
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                 ))
                 action_taken = True
             elif is_protected:
@@ -995,11 +1271,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1018,11 +1310,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 action_taken = True
             elif analysis.has_position:
@@ -1043,11 +1351,27 @@ def generate_recommendations(
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                 ))
                 action_taken = True
             else:
@@ -1068,11 +1392,27 @@ def generate_recommendations(
                     pnl_24h=analysis.pnl_24h,
                     fill_count_24h=analysis.fill_count_24h,
                     fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                     has_position=analysis.has_position,
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                 ))
                 action_taken = True
 
@@ -1112,11 +1452,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1135,11 +1491,27 @@ def generate_recommendations(
                         pnl_24h=analysis.pnl_24h,
                         fill_count_24h=analysis.fill_count_24h,
                         fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                         has_position=analysis.has_position,
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
                     ))
                 action_taken = True
 
@@ -1169,11 +1541,27 @@ def generate_recommendations(
                 pnl_24h=analysis.pnl_24h,
                 fill_count_24h=analysis.fill_count_24h,
                 fill_count_48h=analysis.fill_count_48h,
+                        last_fill_time=analysis.last_fill_time,
                 has_position=analysis.has_position,
                 position_qty=analysis.position_qty,
                 info_risk_probability=ir_prob,
                 info_risk_rationale=ir_rationale,
                         created_at=analysis.created_at,
+                        # Enriched Kalshi metadata
+                        event_title=analysis.event_title,
+                        market_title=analysis.market_title,
+                        volume_24h_trades=analysis.volume_24h_trades,
+                        volume_24h_contracts=analysis.volume_24h_contracts,
+                        buy_volume_trades=analysis.buy_volume_trades,
+                        buy_volume_contracts=analysis.buy_volume_contracts,
+                        sell_volume_trades=analysis.sell_volume_trades,
+                        sell_volume_contracts=analysis.sell_volume_contracts,
+                        current_spread=analysis.current_spread,
+                        spread_24h_ago=analysis.spread_24h_ago,
+                        yes_bid=analysis.yes_bid,
+                        yes_ask=analysis.yes_ask,
+                        previous_yes_bid=analysis.previous_yes_bid,
+                        previous_yes_ask=analysis.previous_yes_ask,
             ))
 
     # Third pass: For expand events, activate sibling markets that are not already active
@@ -1315,11 +1703,27 @@ def generate_sibling_activations(
                     pnl_24h=0.0,
                     fill_count_24h=0,
                     fill_count_48h=0,
+                    last_fill_time=None,  # New market, no fills yet
                     has_position=False,
                     position_qty=0,
                     info_risk_probability=info_risk,
                     info_risk_rationale=ir_result.get("rationale"),
                     created_at=None,  # New market, not yet in config
+                    # Enriched Kalshi metadata - will be populated on next analysis
+                    event_title=None,
+                    market_title=None,
+                    volume_24h_trades=0,
+                    volume_24h_contracts=0,
+                    buy_volume_trades=0,
+                    buy_volume_contracts=0,
+                    sell_volume_trades=0,
+                    sell_volume_contracts=0,
+                    current_spread=None,
+                    spread_24h_ago=None,
+                    yes_bid=None,
+                    yes_ask=None,
+                    previous_yes_bid=None,
+                    previous_yes_ask=None,
                 ))
 
     return recommendations

@@ -734,17 +734,19 @@ def fetch_trade_history(
     return []
 
 
-def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int]:
+def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int, int, int]:
     """Calculate total volume on buy and sell sides from trade history.
 
     Args:
         trades: List of trade dictionaries
 
     Returns:
-        Tuple of (buy_volume, sell_volume) - volume of YES buying and YES selling
+        Tuple of (buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts)
     """
-    buy_volume = 0
-    sell_volume = 0
+    buy_volume_trades = 0
+    buy_volume_contracts = 0
+    sell_volume_trades = 0
+    sell_volume_contracts = 0
 
     for trade in trades:
         # Kalshi trades have 'taker_side' which is 'yes' or 'no'
@@ -753,11 +755,13 @@ def calculate_side_volumes(trades: List[Dict[str, Any]]) -> Tuple[int, int]:
         taker_side = trade.get("taker_side", "")
 
         if taker_side == "yes":
-            buy_volume += count
+            buy_volume_trades += 1
+            buy_volume_contracts += count
         elif taker_side == "no":
-            sell_volume += count
+            sell_volume_trades += 1
+            sell_volume_contracts += count
 
-    return buy_volume, sell_volume
+    return buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts
 
 
 def _check_side_volume_single(
@@ -781,20 +785,24 @@ def _check_side_volume_single(
     trades = fetch_trade_history(ticker)
 
     if not trades:
+        market["buy_volume_trades"] = 0
         market["buy_volume"] = 0
+        market["sell_volume_trades"] = 0
         market["sell_volume"] = 0
         return market, False, f"[{index}/{total}] {ticker}: No trades found - FILTERED OUT"
 
-    # Calculate side volumes
-    buy_volume, sell_volume = calculate_side_volumes(trades)
-    market["buy_volume"] = buy_volume
-    market["sell_volume"] = sell_volume
+    # Calculate side volumes (returns trades and contracts for each side)
+    buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades)
+    market["buy_volume_trades"] = buy_volume_trades
+    market["buy_volume"] = buy_volume_contracts  # Keep 'buy_volume' for backward compatibility
+    market["sell_volume_trades"] = sell_volume_trades
+    market["sell_volume"] = sell_volume_contracts  # Keep 'sell_volume' for backward compatibility
 
-    # Check if both sides have minimum volume
-    if buy_volume >= MIN_SIDE_VOLUME and sell_volume >= MIN_SIDE_VOLUME:
-        return market, True, f"[{index}/{total}] {ticker}: buy={buy_volume}, sell={sell_volume} - PASS"
+    # Check if both sides have minimum volume (checking contracts)
+    if buy_volume_contracts >= MIN_SIDE_VOLUME and sell_volume_contracts >= MIN_SIDE_VOLUME:
+        return market, True, f"[{index}/{total}] {ticker}: buy={buy_volume_contracts} ({buy_volume_trades} trades), sell={sell_volume_contracts} ({sell_volume_trades} trades) - PASS"
     else:
-        return market, False, f"[{index}/{total}] {ticker}: buy={buy_volume}, sell={sell_volume} - FILTERED OUT (need {MIN_SIDE_VOLUME} on each side)"
+        return market, False, f"[{index}/{total}] {ticker}: buy={buy_volume_contracts}, sell={sell_volume_contracts} - FILTERED OUT (need {MIN_SIDE_VOLUME} on each side)"
 
 
 def filter_by_side_volume(

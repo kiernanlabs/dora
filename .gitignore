@@ -12,3 +12,5 @@ markets analysis.xlsx
 markets.csv
 kalshi/dora_manager/package/*
 kalshi/dora_manager/lambda_package.zip
+kalshi/dora_manager/__pycache__/
+__pycache__/

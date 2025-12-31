@@ -11,6 +11,7 @@ import os
 from typing import Dict, Any, List
 from datetime import datetime, timezone
 from urllib.parse import parse_qs
+from decimal import Decimal
 
 # Use local db_client instead of dora_bot for Lambda deployment
 from db_client import DynamoDBClient
@@ -20,6 +21,25 @@ from utils.url_signer import URLSigner
 from email_sender import EmailSender
 
 logger = logging.getLogger(__name__)
+
+
+def convert_floats_to_decimal(obj: Any) -> Any:
+    """Recursively convert all float values to Decimal for DynamoDB compatibility.
+
+    Args:
+        obj: Object to convert (dict, list, or primitive)
+
+    Returns:
+        Converted object with floats replaced by Decimals
+    """
+    if isinstance(obj, float):
+        return Decimal(str(obj))
+    elif isinstance(obj, dict):
+        return {k: convert_floats_to_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_floats_to_decimal(item) for item in obj]
+    else:
+        return obj
 
 
 def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -90,7 +110,7 @@ def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, A
 
         # Route based on HTTP method
         if http_method == 'GET':
-            return handle_get_proposals(proposal_id, proposal_manager)
+            return handle_get_proposals(proposal_id, proposal_manager, signature, expiry)
         elif http_method == 'POST':
             return handle_post_execute(
                 event,
@@ -117,12 +137,14 @@ def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, A
         }
 
 
-def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager) -> Dict[str, Any]:
+def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, signature: str, expiry: str) -> Dict[str, Any]:
     """Handle GET request - display proposals for review.
 
     Args:
         proposal_id: UUID of proposal batch
         proposal_manager: ProposalManager instance
+        signature: URL signature for authentication
+        expiry: URL expiry timestamp
 
     Returns:
         API Gateway response with HTML page
@@ -154,9 +176,9 @@ def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager) ->
     # If only screener proposals, use card-based layout
     # If only update proposals or mixed, use table-based layout
     if screener_proposals and not update_proposals:
-        html = generate_screener_candidates_html(proposal_id, screener_proposals)
+        html = generate_screener_candidates_html(proposal_id, screener_proposals, signature, expiry)
     else:
-        html = generate_review_page_html(proposal_id, update_proposals, screener_proposals)
+        html = generate_review_page_html(proposal_id, update_proposals, screener_proposals, signature, expiry)
 
     return {
         'statusCode': 200,
@@ -168,7 +190,9 @@ def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager) ->
 def generate_review_page_html(
     proposal_id: str,
     update_proposals: List[Dict],
-    screener_proposals: List[Dict]
+    screener_proposals: List[Dict],
+    signature: str,
+    expiry: str
 ) -> str:
     """Generate HTML page for reviewing proposals.
 
@@ -176,6 +200,8 @@ def generate_review_page_html(
         proposal_id: UUID of proposal batch
         update_proposals: List of market update proposals
         screener_proposals: List of market screener proposals
+        signature: URL signature for authentication
+        expiry: URL expiry timestamp
 
     Returns:
         HTML string
@@ -205,6 +231,22 @@ def generate_review_page_html(
 
     total_proposals = len(all_proposals)
     timestamp = datetime.utcnow().strftime("%B %d, %Y %H:%M UTC")
+
+    # Calculate summary statistics across all proposals
+    total_pnl = sum(p.get('metadata', {}).get('pnl_24h', 0) or 0 for p in all_proposals)
+    total_fills = sum(p.get('metadata', {}).get('fill_count', 0) or 0 for p in all_proposals)
+    markets_with_fills = sum(1 for p in all_proposals if (p.get('metadata', {}).get('fill_count', 0) or 0) > 0)
+    markets_with_fills_pct = (markets_with_fills / total_proposals * 100) if total_proposals > 0 else 0
+
+    # Sum of outstanding positions
+    total_position = sum(abs(p.get('metadata', {}).get('position_qty', 0) or 0) for p in all_proposals)
+
+    # Sum of current and proposed quote sizes
+    total_current_quote_size = sum(p.get('current_config', {}).get('quote_size', 0) or 0 for p in all_proposals)
+    total_proposed_quote_size = sum(
+        p.get('proposed_changes', {}).get('quote_size') or p.get('current_config', {}).get('quote_size', 0) or 0
+        for p in all_proposals
+    )
 
     html = f"""
     <!DOCTYPE html>
@@ -283,6 +325,14 @@ def generate_review_page_html(
                 font-weight: bold;
                 color: #2c3e50;
                 margin-top: 5px;
+            }}
+
+            .summary-value.green {{
+                color: #28a745;
+            }}
+
+            .summary-value.red {{
+                color: #dc3545;
             }}
 
             .toggle-controls {{
@@ -480,6 +530,11 @@ def generate_review_page_html(
                 font-weight: 600;
             }}
 
+            .fill-stale {{
+                color: #dc3545;
+                font-weight: 600;
+            }}
+
             .actions {{
                 position: sticky;
                 bottom: 0;
@@ -540,6 +595,24 @@ def generate_review_page_html(
                 color: #6c757d;
             }}
 
+            .action-dropdown {{
+                padding: 6px 10px;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                background: white;
+                font-size: 12px;
+                color: #495057;
+                cursor: pointer;
+                width: 100%;
+                max-width: 200px;
+            }}
+
+            .action-dropdown:focus {{
+                outline: none;
+                border-color: #3498db;
+                box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+            }}
+
             .screener-section {{
                 margin-top: 40px;
                 padding: 25px;
@@ -568,6 +641,128 @@ def generate_review_page_html(
                 border-radius: 20px;
                 font-size: 14px;
                 font-weight: 600;
+            }}
+
+            /* Tooltip styles */
+            .tooltip {{
+                position: relative;
+                display: inline-block;
+                cursor: help;
+                border-bottom: 1px dotted #999;
+            }}
+
+            .tooltip .tooltiptext {{
+                visibility: hidden;
+                width: 280px;
+                background-color: #2c3e50;
+                color: #fff;
+                text-align: left;
+                border-radius: 6px;
+                padding: 12px;
+                position: absolute;
+                z-index: 99999;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -140px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                font-size: 12px;
+                line-height: 1.5;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }}
+
+            .tooltip .tooltiptext::after {{
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -5px;
+                border-width: 5px;
+                border-style: solid;
+                border-color: #2c3e50 transparent transparent transparent;
+            }}
+
+            .tooltip:hover .tooltiptext {{
+                visibility: visible;
+                opacity: 1;
+            }}
+
+            .tooltip-row {{
+                display: flex;
+                justify-content: space-between;
+                margin: 4px 0;
+                padding: 3px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }}
+
+            .tooltip-row:last-child {{
+                border-bottom: none;
+            }}
+
+            .tooltip-label {{
+                font-weight: 600;
+                color: #ecf0f1;
+            }}
+
+            .tooltip-value {{
+                color: #3498db;
+                font-family: 'Courier New', monospace;
+            }}
+
+            /* Data section headers */
+            .data-section-header {{
+                background: #34495e;
+                color: white;
+                padding: 8px 12px;
+                font-weight: 600;
+                font-size: 12px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                border-top: 2px solid #2c3e50;
+            }}
+
+            .data-section-header.internal {{
+                background: #16a085;
+            }}
+
+            .data-section-header.external {{
+                background: #e67e22;
+            }}
+
+            /* Event external data section */
+            .event-external-data {{
+                background: rgba(255, 255, 255, 0.12);
+                padding: 12px 15px;
+                border-radius: 4px;
+                font-size: 12px;
+                margin-top: 10px;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+                gap: 15px;
+            }}
+
+            .external-metric {{
+                display: flex;
+                flex-direction: column;
+            }}
+
+            .external-metric-label {{
+                font-size: 10px;
+                opacity: 0.85;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }}
+
+            .external-metric-value {{
+                font-size: 15px;
+                font-weight: 700;
+                font-family: 'Courier New', monospace;
+            }}
+
+            .capture-pct {{
+                color: #f39c12;
+                font-weight: 700;
             }}
         </style>
         <script>
@@ -601,6 +796,30 @@ def generate_review_page_html(
                     <div class="summary-label">New Candidates</div>
                     <div class="summary-value">{len(screener_proposals)}</div>
                 </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total P&L (24h)</div>
+                    <div class="summary-value {'green' if total_pnl >= 0 else 'red'}">${total_pnl:+,.2f}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total Fills</div>
+                    <div class="summary-value">{total_fills:,}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Markets with Fills</div>
+                    <div class="summary-value">{markets_with_fills} ({markets_with_fills_pct:.0f}%)</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Total Position</div>
+                    <div class="summary-value">{total_position:,}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Current Quote Size</div>
+                    <div class="summary-value">{total_current_quote_size:,}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Proposed Quote Size</div>
+                    <div class="summary-value">{total_proposed_quote_size:,}</div>
+                </div>
     """
 
     # Add action count summaries
@@ -613,7 +832,7 @@ def generate_review_page_html(
                 </div>
         """
 
-    html += """
+    html += f"""
             </div>
 
             <div class="toggle-controls">
@@ -624,7 +843,7 @@ def generate_review_page_html(
                 </div>
             </div>
 
-            <form method="POST" action="execute?signature={{signature}}&expiry={{expiry}}">
+            <form method="POST" action="{proposal_id}/execute?signature={signature}&expiry={expiry}">
     """
 
     # Calculate event-level statistics and sort by P&L
@@ -641,6 +860,26 @@ def generate_review_page_html(
             if p in update_proposals:
                 action_breakdown[p.get('action', 'unknown')] += 1
 
+        # Aggregate external market data (total market volume/trades)
+        # Get event_title from first proposal's metadata
+        event_title = None
+        for p in event_proposals:
+            event_title = p.get('metadata', {}).get('event_title')
+            if event_title:
+                break
+
+        # Sum up total external market data
+        total_market_trades = sum(p.get('metadata', {}).get('volume_24h_trades', 0) for p in event_proposals)
+        total_market_volume = sum(p.get('metadata', {}).get('volume_24h_contracts', 0) for p in event_proposals)
+        total_market_buy_trades = sum(p.get('metadata', {}).get('buy_volume_trades', 0) for p in event_proposals)
+        total_market_buy_volume = sum(p.get('metadata', {}).get('buy_volume_contracts', 0) for p in event_proposals)
+        total_market_sell_trades = sum(p.get('metadata', {}).get('sell_volume_trades', 0) for p in event_proposals)
+        total_market_sell_volume = sum(p.get('metadata', {}).get('sell_volume_contracts', 0) for p in event_proposals)
+
+        # Calculate DORA's capture percentage
+        # Note: total_fills is DORA's fills, total_market_trades is total market trades
+        capture_pct_trades = (total_fills / total_market_trades * 100) if total_market_trades > 0 else 0
+
         event_stats[event_ticker] = {
             'proposals': event_proposals,
             'total_pnl': total_pnl,
@@ -648,6 +887,14 @@ def generate_review_page_html(
             'update_count': event_update_count,
             'screener_count': event_screener_count,
             'action_breakdown': action_breakdown,
+            'event_title': event_title,
+            'total_market_trades': total_market_trades,
+            'total_market_volume': total_market_volume,
+            'total_market_buy_trades': total_market_buy_trades,
+            'total_market_buy_volume': total_market_buy_volume,
+            'total_market_sell_trades': total_market_sell_trades,
+            'total_market_sell_volume': total_market_sell_volume,
+            'capture_pct_trades': capture_pct_trades,
         }
 
     # Sort events by total P&L (descending - best first)
@@ -661,6 +908,16 @@ def generate_review_page_html(
         event_update_count = stats['update_count']
         event_screener_count = stats['screener_count']
         action_breakdown = stats['action_breakdown']
+        event_title = stats.get('event_title', event_ticker)
+
+        # External market data
+        total_market_trades = stats['total_market_trades']
+        total_market_volume = stats['total_market_volume']
+        total_market_buy_trades = stats['total_market_buy_trades']
+        total_market_buy_volume = stats['total_market_buy_volume']
+        total_market_sell_trades = stats['total_market_sell_trades']
+        total_market_sell_volume = stats['total_market_sell_volume']
+        capture_pct_trades = stats['capture_pct_trades']
 
         # Format P&L with color
         pnl_color = '#28a745' if total_pnl >= 0 else '#dc3545'
@@ -671,8 +928,8 @@ def generate_review_page_html(
                 <div class="event-header">
                     <div class="event-header-top">
                         <div class="event-title-group">
-                            <div class="event-title">{event_ticker}</div>
-                            <div class="event-ticker">{len(event_proposals)} proposal(s)</div>
+                            <div class="event-title">{event_title or event_ticker}</div>
+                            <div class="event-ticker">{event_ticker} • {len(event_proposals)} proposal(s)</div>
                         </div>
                         <div class="event-stats">
                             <div class="event-stat">
@@ -680,8 +937,8 @@ def generate_review_page_html(
                                 <span class="event-stat-value" style="color: {pnl_color};">{pnl_display}</span>
                             </div>
                             <div class="event-stat">
-                                <span class="event-stat-label">Fills</span>
-                                <span class="event-stat-value">{total_fills}</span>
+                                <span class="event-stat-label">DORA Fills</span>
+                                <span class="event-stat-value">{total_fills:,}</span>
                             </div>
                             <div class="event-stat">
                                 <span class="event-stat-label">Updates</span>
@@ -693,8 +950,27 @@ def generate_review_page_html(
                             </div>
                         </div>
                     </div>
-                    <div class="key-takeaways">
-                        <!-- Insights section - to be filled in later -->
+                    <div class="event-external-data">
+                        <div class="external-metric">
+                            <span class="external-metric-label">Total Market Trades (24h)</span>
+                            <span class="external-metric-value">{total_market_trades:,}</span>
+                        </div>
+                        <div class="external-metric">
+                            <span class="external-metric-label">Total Market Volume (24h)</span>
+                            <span class="external-metric-value">{total_market_volume:,}</span>
+                        </div>
+                        <div class="external-metric">
+                            <span class="external-metric-label">Buy Trades / Volume</span>
+                            <span class="external-metric-value">{total_market_buy_trades:,} / {total_market_buy_volume:,}</span>
+                        </div>
+                        <div class="external-metric">
+                            <span class="external-metric-label">Sell Trades / Volume</span>
+                            <span class="external-metric-value">{total_market_sell_trades:,} / {total_market_sell_volume:,}</span>
+                        </div>
+                        <div class="external-metric">
+                            <span class="external-metric-label">DORA Capture % (Trades)</span>
+                            <span class="external-metric-value capture-pct">{capture_pct_trades:.1f}%</span>
+                        </div>
                     </div>
                 </div>
 
@@ -702,18 +978,25 @@ def generate_review_page_html(
                     <table>
                         <thead>
                             <tr>
-                                <th class="checkbox-cell">✓</th>
-                                <th>Market ID</th>
-                                <th>Source</th>
-                                <th>Action</th>
+                                <th class="checkbox-cell" rowspan="2">✓</th>
+                                <th rowspan="2">Market ID</th>
+                                <th colspan="9" class="data-section-header internal">Internal Data (DORA Bot)</th>
+                                <th colspan="2" class="data-section-header external">External Data (Market)</th>
+                            </tr>
+                            <tr>
+                                <!-- Internal Data Columns -->
+                                <th>Proposed Action</th>
+                                <th>Override Action</th>
                                 <th>Created</th>
-                                <th>Fills</th>
+                                <th>DORA Fills</th>
+                                <th>Last Fill</th>
                                 <th>Position</th>
                                 <th>Current Size</th>
-                                <th>Current Spread</th>
+                                <th>Min Spread</th>
                                 <th>P&L (24h)</th>
-                                <th>Reason</th>
-                                <th>Proposed Changes</th>
+                                <!-- External Data Columns -->
+                                <th>Total Market Fills</th>
+                                <th>Market Spread</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -724,6 +1007,8 @@ def generate_review_page_html(
             source = 'Update' if p in update_proposals else 'Screener'
             action = p.get('action', 'activate')
             reason = p.get('reason', '')[:100]
+            # Get full rationale for tooltip (not truncated)
+            full_rationale = p.get('reason', 'No rationale provided')
 
             # Get P&L
             pnl = p.get('metadata', {}).get('pnl_24h', 0)
@@ -761,6 +1046,31 @@ def generate_review_page_html(
             else:
                 created_str = "—"
 
+            # Get last fill date
+            last_fill_at = p.get('metadata', {}).get('last_fill_at')
+            last_fill_str = "—"
+            last_fill_class = ""
+            if last_fill_at:
+                try:
+                    from datetime import datetime, timezone
+                    last_fill_dt = datetime.fromisoformat(last_fill_at.replace('Z', '+00:00'))
+                    now = datetime.now(timezone.utc)
+                    age = now - last_fill_dt
+
+                    # Format the time difference
+                    if age.days > 0:
+                        last_fill_str = f"{age.days}d ago"
+                    elif age.seconds >= 3600:
+                        last_fill_str = f"{age.seconds // 3600}h ago"
+                    else:
+                        last_fill_str = f"{age.seconds // 60}m ago"
+
+                    # Mark as stale if > 48 hours (2 days)
+                    if age.days >= 2:
+                        last_fill_class = "fill-stale"
+                except:
+                    last_fill_str = "—"
+
             # Get current config
             current_config = p.get('current_config', {})
             current_size = current_config.get('quote_size', '—')
@@ -784,22 +1094,121 @@ def generate_review_page_html(
                     changes_parts.append(f"{k}={v}")
             changes_str = ", ".join(changes_parts) if changes_parts else "—"
 
+            # Action dropdown options
+            action_options = ['expand', 'scale_down', 'exit', 'activate_sibling', 'reset_defaults']
+            action_dropdown = f'<select name="action_{market_id}" class="action-dropdown">'
+            action_dropdown += f'<option value="" selected>Use Proposed ({action})</option>'
+            for opt in action_options:
+                opt_label = opt.replace('_', ' ').title()
+                action_dropdown += f'<option value="{opt}">{opt_label}</option>'
+            action_dropdown += '</select>'
+
+            # External market data
+            metadata = p.get('metadata', {})
+            volume_24h_trades = metadata.get('volume_24h_trades', 0)
+            buy_volume_trades = metadata.get('buy_volume_trades', 0)
+            buy_volume_contracts = metadata.get('buy_volume_contracts', 0)
+            sell_volume_trades = metadata.get('sell_volume_trades', 0)
+            sell_volume_contracts = metadata.get('sell_volume_contracts', 0)
+
+            # Format Total Market Fills with tooltip
+            total_fills_str = f"{volume_24h_trades:,}" if volume_24h_trades > 0 else "—"
+            if volume_24h_trades > 0:
+                total_fills_html = f'''<span class="tooltip">{total_fills_str}
+                    <span class="tooltiptext">
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Buy Trades:</span>
+                            <span class="tooltip-value">{buy_volume_trades:,}</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Buy Volume:</span>
+                            <span class="tooltip-value">{buy_volume_contracts:,}</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Sell Trades:</span>
+                            <span class="tooltip-value">{sell_volume_trades:,}</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Sell Volume:</span>
+                            <span class="tooltip-value">{sell_volume_contracts:,}</span>
+                        </div>
+                    </span>
+                </span>'''
+            else:
+                total_fills_html = total_fills_str
+
+            # Get bid/ask data for Market Spread
+            yes_bid = metadata.get('yes_bid')
+            yes_ask = metadata.get('yes_ask')
+            previous_yes_bid = metadata.get('previous_yes_bid')
+            previous_yes_ask = metadata.get('previous_yes_ask')
+            current_spread = metadata.get('current_spread')
+            spread_24h_ago = metadata.get('spread_24h_ago')
+
+            # Format Market Spread with tooltip
+            if current_spread is not None:
+                market_spread_str = f"{current_spread:.2f}¢"
+                market_spread_html = f'''<span class="tooltip">{market_spread_str}
+                    <span class="tooltiptext">
+                        <div style="font-weight: 600; margin-bottom: 8px; color: #ecf0f1;">Current (Now)</div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Bid:</span>
+                            <span class="tooltip-value">{yes_bid}¢</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Ask:</span>
+                            <span class="tooltip-value">{yes_ask}¢</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Spread:</span>
+                            <span class="tooltip-value">{current_spread:.2f}¢</span>
+                        </div>'''
+                if spread_24h_ago is not None:
+                    market_spread_html += f'''
+                        <div style="font-weight: 600; margin: 8px 0 8px 0; color: #ecf0f1; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">24 Hours Ago</div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Bid:</span>
+                            <span class="tooltip-value">{previous_yes_bid}¢</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Ask:</span>
+                            <span class="tooltip-value">{previous_yes_ask}¢</span>
+                        </div>
+                        <div class="tooltip-row">
+                            <span class="tooltip-label">Spread:</span>
+                            <span class="tooltip-value">{spread_24h_ago:.2f}¢</span>
+                        </div>'''
+                market_spread_html += '''
+                    </span>
+                </span>'''
+            else:
+                market_spread_str = "—"
+                market_spread_html = market_spread_str
+
             html += f"""
                             <tr>
                                 <td class="checkbox-cell">
                                     <input type="checkbox" name="selected" value="{market_id}" checked>
                                 </td>
                                 <td class="market-id">{market_id}</td>
-                                <td>{source}</td>
-                                <td><span class="action-badge action-{action.replace(' ', '_')}">{action}</span></td>
+                                <!-- Internal Data Columns -->
+                                <td>
+                                    <span class="tooltip">
+                                        <span class="action-badge action-{action.replace(' ', '_')}">{action}</span>
+                                        <span class="tooltiptext">{full_rationale}</span>
+                                    </span>
+                                </td>
+                                <td>{action_dropdown}</td>
                                 <td>{created_str}</td>
                                 <td>{fill_str}</td>
+                                <td class="{last_fill_class}">{last_fill_str}</td>
                                 <td class="{position_class}">{position_str}</td>
                                 <td>{size_str}</td>
                                 <td>{spread_str}</td>
                                 <td class="{pnl_class}">{pnl_str}</td>
-                                <td>{reason}</td>
-                                <td class="changes-list">{changes_str}</td>
+                                <!-- External Data Columns -->
+                                <td>{total_fills_html}</td>
+                                <td>{market_spread_html}</td>
                             </tr>
             """
 
@@ -831,13 +1240,17 @@ def generate_review_page_html(
 
 def generate_screener_candidates_html(
     proposal_id: str,
-    screener_proposals: List[Dict]
+    screener_proposals: List[Dict],
+    signature: str,
+    expiry: str
 ) -> str:
     """Generate card-based HTML page for reviewing market screener candidates.
 
     Args:
         proposal_id: UUID of proposal batch
         screener_proposals: List of market screener proposals
+        signature: URL signature for authentication
+        expiry: URL expiry timestamp
 
     Returns:
         HTML string with card-based layout
@@ -1135,6 +1548,72 @@ def generate_screener_candidates_html(
             .info-banner strong {{
                 color: #664d03;
             }}
+
+            /* Tooltip styles */
+            .tooltip {{
+                position: relative;
+                display: inline-block;
+                cursor: help;
+                border-bottom: 1px dotted #999;
+            }}
+
+            .tooltip .tooltiptext {{
+                visibility: hidden;
+                width: 280px;
+                background-color: #2c3e50;
+                color: #fff;
+                text-align: left;
+                border-radius: 6px;
+                padding: 12px;
+                position: absolute;
+                z-index: 99999;
+                bottom: 125%;
+                left: 50%;
+                margin-left: -140px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                font-size: 12px;
+                line-height: 1.5;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }}
+
+            .tooltip .tooltiptext::after {{
+                content: "";
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                margin-left: -5px;
+                border-width: 5px;
+                border-style: solid;
+                border-color: #2c3e50 transparent transparent transparent;
+            }}
+
+            .tooltip:hover .tooltiptext {{
+                visibility: visible;
+                opacity: 1;
+            }}
+
+            .tooltip-row {{
+                display: flex;
+                justify-content: space-between;
+                margin: 4px 0;
+                padding: 3px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }}
+
+            .tooltip-row:last-child {{
+                border-bottom: none;
+            }}
+
+            .tooltip-label {{
+                font-weight: 600;
+                color: #ecf0f1;
+            }}
+
+            .tooltip-value {{
+                color: #3498db;
+                font-family: 'Courier New', monospace;
+            }}
         </style>
     </head>
     <body>
@@ -1158,7 +1637,7 @@ def generate_screener_candidates_html(
                 Check the boxes next to markets you want to enable and click "Approve Selected Proposals" to activate them.
             </div>
 
-            <form method="POST">
+            <form method="POST" action="{proposal_id}/execute?signature={signature}&expiry={expiry}">
                 <div class="toggle-controls">
                     <div class="toggle-label">Quick Selection</div>
                     <div class="toggle-buttons">
@@ -1179,13 +1658,23 @@ def generate_screener_candidates_html(
         title = metadata.get('title', '')
         subtitle = metadata.get('subtitle', '')
         event_ticker = metadata.get('event_ticker', '')
+        event_title = metadata.get('event_title', event_ticker)
 
-        volume_24h = metadata.get('volume_24h', 0)
-        buy_volume = metadata.get('buy_volume', 0)
-        sell_volume = metadata.get('sell_volume', 0)
-        yes_bid = metadata.get('yes_bid', 0)
-        yes_ask = metadata.get('yes_ask', 0)
-        current_spread = metadata.get('current_spread', 0)
+        # Enriched market data
+        volume_24h_trades = metadata.get('volume_24h_trades', 0)
+        volume_24h_contracts = metadata.get('volume_24h_contracts', 0)
+        buy_volume_trades = metadata.get('buy_volume_trades', 0)
+        buy_volume_contracts = metadata.get('buy_volume_contracts', 0)
+        sell_volume_trades = metadata.get('sell_volume_trades', 0)
+        sell_volume_contracts = metadata.get('sell_volume_contracts', 0)
+
+        yes_bid = metadata.get('yes_bid')
+        yes_ask = metadata.get('yes_ask')
+        previous_yes_bid = metadata.get('previous_yes_bid')
+        previous_yes_ask = metadata.get('previous_yes_ask')
+        current_spread = metadata.get('current_spread')
+        spread_24h_ago = metadata.get('spread_24h_ago')
+
         info_risk = metadata.get('info_risk')
         info_risk_rationale = metadata.get('info_risk_rationale', '')
         bid_depth = metadata.get('bid_depth_5c', 0)
@@ -1199,11 +1688,78 @@ def generate_screener_candidates_html(
         quote_size = proposed.get('quote_size', 5)
         min_spread = proposed.get('min_spread', 0.04)
 
-        # Format values
-        volume_str = f"${volume_24h:,}" if volume_24h else "—"
-        buy_sell_str = f"${buy_volume:,} / ${sell_volume:,}" if buy_volume or sell_volume else "—"
+        # Format Total Market Trades with tooltip
+        if volume_24h_trades > 0:
+            volume_str = f'''<span class="tooltip">{volume_24h_trades:,} trades
+                <span class="tooltiptext">
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Total Trades:</span>
+                        <span class="tooltip-value">{volume_24h_trades:,}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Total Volume:</span>
+                        <span class="tooltip-value">{volume_24h_contracts:,}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Buy Trades:</span>
+                        <span class="tooltip-value">{buy_volume_trades:,}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Buy Volume:</span>
+                        <span class="tooltip-value">{buy_volume_contracts:,}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Sell Trades:</span>
+                        <span class="tooltip-value">{sell_volume_trades:,}</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Sell Volume:</span>
+                        <span class="tooltip-value">{sell_volume_contracts:,}</span>
+                    </div>
+                </span>
+            </span>'''
+        else:
+            volume_str = "—"
+
+        # Format Market Spread with tooltip
+        if current_spread is not None:
+            spread_str = f'''<span class="tooltip">{current_spread:.2f}¢
+                <span class="tooltiptext">
+                    <div style="font-weight: 600; margin-bottom: 8px; color: #ecf0f1;">Current (Now)</div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Bid:</span>
+                        <span class="tooltip-value">{yes_bid}¢</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Ask:</span>
+                        <span class="tooltip-value">{yes_ask}¢</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Spread:</span>
+                        <span class="tooltip-value">{current_spread:.2f}¢</span>
+                    </div>'''
+            if spread_24h_ago is not None:
+                spread_str += f'''
+                    <div style="font-weight: 600; margin: 8px 0 8px 0; color: #ecf0f1; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 8px;">24 Hours Ago</div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Bid:</span>
+                        <span class="tooltip-value">{previous_yes_bid}¢</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Ask:</span>
+                        <span class="tooltip-value">{previous_yes_ask}¢</span>
+                    </div>
+                    <div class="tooltip-row">
+                        <span class="tooltip-label">Spread:</span>
+                        <span class="tooltip-value">{spread_24h_ago:.2f}¢</span>
+                    </div>'''
+            spread_str += '''
+                </span>
+            </span>'''
+        else:
+            spread_str = "—"
+
         bid_ask_str = f"{yes_bid}¢ / {yes_ask}¢" if yes_bid is not None and yes_ask is not None else "—"
-        spread_str = f"{current_spread}¢" if current_spread else "—"
         info_risk_str = f"{info_risk:.0f}%" if info_risk is not None else "—"
         depth_str = f"{bid_depth:,} / {ask_depth:,}" if bid_depth or ask_depth else "—"
 
@@ -1223,9 +1779,9 @@ def generate_screener_candidates_html(
                     <div class="candidate-card" data-market-id="{market_id}">
                         <div class="candidate-header">
                             <div class="candidate-title-section">
-                                <div class="candidate-event-name">{event_ticker or 'New Market'}</div>
+                                <div class="candidate-event-name">{event_title or event_ticker or 'New Market'}</div>
                                 <div class="candidate-title">{title or market_id}</div>
-                                <div class="candidate-id">{market_id}</div>
+                                <div class="candidate-id">{event_ticker} • {market_id}</div>
                             </div>
                             <div class="card-checkbox">
                                 <input type="checkbox" name="selected" value="{market_id}" id="check_{market_id}" checked
@@ -1366,12 +1922,23 @@ def handle_post_execute(
             data = json.loads(body)
             selected_markets = data.get('selected_proposals', [])
             approve_all = data.get('approve_all', False)
+            action_overrides = data.get('action_overrides', {})
         else:
             # Form data
             parsed = parse_qs(body)
             selected_markets = parsed.get('selected', [])
             action = parsed.get('action', [''])[0]
             approve_all = (action == 'approve_all')
+
+            # Extract action overrides from form data
+            # Form fields named "action_{market_id}" contain override actions
+            action_overrides = {}
+            for key, values in parsed.items():
+                if key.startswith('action_') and values and values[0]:
+                    market_id = key[7:]  # Remove 'action_' prefix
+                    override_action = values[0]
+                    if override_action:  # Only store if not empty
+                        action_overrides[market_id] = override_action
 
             if action == 'reject_all':
                 # Reject all proposals
@@ -1396,6 +1963,7 @@ def handle_post_execute(
         logger.error(f"Error parsing request body: {e}")
         selected_markets = []
         approve_all = False
+        action_overrides = {}
 
     # Get pending proposals
     proposals = proposal_manager.get_proposals_by_id(proposal_id, status_filter='pending')
@@ -1419,7 +1987,11 @@ def handle_post_execute(
     results = []
     for proposal in proposals_to_execute:
         try:
-            result = execute_single_proposal(proposal, db_client)
+            # Check if there's an action override for this market
+            market_id = proposal['market_id']
+            override_action = action_overrides.get(market_id)
+
+            result = execute_single_proposal(proposal, db_client, override_action)
             results.append(result)
 
             # Update proposal status
@@ -1460,7 +2032,12 @@ def handle_post_execute(
     failure_count = len(results) - success_count
 
     html_response = f"""
+    <!DOCTYPE html>
     <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Execution Complete</title>
+    </head>
     <body style="font-family: Arial; padding: 40px; text-align: center;">
         <h1>✓ Execution Complete</h1>
         <p>Successfully executed: {success_count}</p>
@@ -1472,30 +2049,41 @@ def handle_post_execute(
 
     return {
         'statusCode': 200,
-        'headers': {'Content-Type': 'text/html'},
+        'headers': {'Content-Type': 'text/html; charset=utf-8'},
         'body': html_response
     }
 
 
-def execute_single_proposal(proposal: Dict[str, Any], db_client: DynamoDBClient) -> Dict[str, Any]:
+def execute_single_proposal(
+    proposal: Dict[str, Any],
+    db_client: DynamoDBClient,
+    override_action: str = None
+) -> Dict[str, Any]:
     """Execute a single proposal.
 
     Args:
         proposal: Proposal dict from DynamoDB
         db_client: DynamoDBClient instance
+        override_action: Optional action to use instead of the proposed action
 
     Returns:
         Result dict with success status
     """
     market_id = proposal['market_id']
-    action = proposal['action']
+    # Use override action if provided, otherwise use the proposed action
+    action = override_action if override_action else proposal['action']
     proposed_changes = proposal.get('proposed_changes', {})
 
-    logger.info(f"Executing {action} for {market_id}")
+    logger.info(f"Executing {action} for {market_id}" +
+                (f" (overridden from {proposal['action']})" if override_action else ""))
 
     try:
         if action == 'new_market':
             # Create new market config as dict
+            # Get event_ticker from proposal metadata
+            metadata = proposal.get('metadata', {})
+            event_ticker = metadata.get('event_ticker', '')
+
             market_config = {
                 'market_id': market_id,
                 'quote_size': proposed_changes.get('quote_size', 5),
@@ -1504,9 +2092,16 @@ def execute_single_proposal(proposal: Dict[str, Any], db_client: DynamoDBClient)
                 'min_spread': proposed_changes.get('min_spread', 0.04),
                 'enabled': proposed_changes.get('enabled', True),
                 'inventory_skew_factor': 0.5,
+                'event_ticker': event_ticker,
                 'created_at': datetime.now(timezone.utc).isoformat(),
+                'updated_at': datetime.now(timezone.utc).isoformat(),
             }
-            db_client.put_market_config(market_config)
+            # Convert floats to Decimal for DynamoDB
+            market_config = convert_floats_to_decimal(market_config)
+            success = db_client.put_market_config(market_config)
+
+            if not success:
+                return {'market_id': market_id, 'success': False, 'error': 'Failed to save market config to DynamoDB'}
 
         else:
             # Update existing market config
@@ -1514,11 +2109,53 @@ def execute_single_proposal(proposal: Dict[str, Any], db_client: DynamoDBClient)
             if not existing:
                 return {'market_id': market_id, 'success': False, 'error': 'Market config not found'}
 
-            # Apply proposed changes (existing is already a dict)
-            for key, value in proposed_changes.items():
+            # If action was overridden, recalculate changes based on the new action
+            if override_action:
+                changes_to_apply = {}
+                current_quote_size = existing.get('quote_size', 5)
+
+                if action == 'exit':
+                    changes_to_apply = {'enabled': False}
+                elif action == 'scale_down':
+                    changes_to_apply = {
+                        'quote_size': max(1, int(current_quote_size * 0.5))
+                    }
+                elif action == 'expand':
+                    changes_to_apply = {
+                        'quote_size': int(current_quote_size * 1.5)
+                    }
+                elif action == 'reset_defaults':
+                    changes_to_apply = {
+                        'enabled': True,
+                        'quote_size': 5,
+                        'max_inventory_yes': 5,
+                        'max_inventory_no': 5,
+                        'min_spread': 0.04,
+                    }
+                elif action == 'activate_sibling':
+                    # This action is complex and requires sibling market info
+                    # For now, just enable the market
+                    changes_to_apply = {'enabled': True}
+                else:
+                    # Unknown action, use proposed changes
+                    changes_to_apply = proposed_changes
+            else:
+                # Use the original proposed changes
+                changes_to_apply = proposed_changes
+
+            # Apply changes to existing config
+            for key, value in changes_to_apply.items():
                 existing[key] = value
 
-            db_client.put_market_config(existing)
+            # Update the updated_at timestamp
+            existing['updated_at'] = datetime.now(timezone.utc).isoformat()
+
+            # Convert floats to Decimal for DynamoDB
+            existing = convert_floats_to_decimal(existing)
+            success = db_client.put_market_config(existing)
+
+            if not success:
+                return {'market_id': market_id, 'success': False, 'error': 'Failed to update market config in DynamoDB'}
 
         return {'market_id': market_id, 'success': True, 'action': action}
 

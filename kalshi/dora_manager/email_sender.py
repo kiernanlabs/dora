@@ -26,6 +26,20 @@ class EmailSender:
             return f"${value:+,.2f}"
         return f"${value:,.2f}"
 
+    def format_position_qty(self, value: Optional[object]) -> str:
+        """Format a position quantity as a signed integer string."""
+        if value is None:
+            qty = 0
+        else:
+            try:
+                qty = int(value)
+            except (TypeError, ValueError):
+                try:
+                    qty = int(float(value))
+                except (TypeError, ValueError):
+                    qty = 0
+        return f"{qty:+d}"
+
     def format_market_row_html(self, market: MarketSummary) -> str:
         """Format a market summary as an HTML table row."""
         pnl_window_color = "green" if market.realized_pnl_window >= 0 else "red"
@@ -467,6 +481,7 @@ class EmailSender:
         # Count proposals by source and action
         update_proposals = [p for p in proposals if p['proposal_source'] == 'market_update']
         screener_proposals = [p for p in proposals if p['proposal_source'] == 'market_screener']
+        all_proposals = proposals
 
         # Count by action
         action_counts = {}
@@ -474,7 +489,25 @@ class EmailSender:
             action = p['action']
             action_counts[action] = action_counts.get(action, 0) + 1
 
-        subject = f"[DORA {environment.upper()}] Market Management Proposals - {len(proposals)} Total"
+        # Calculate summary statistics
+        total_pnl = sum(p.get('metadata', {}).get('pnl_24h', 0) or 0 for p in all_proposals)
+        total_fills = sum(p.get('metadata', {}).get('fill_count', 0) or 0 for p in all_proposals)
+        markets_with_fills = sum(1 for p in all_proposals if (p.get('metadata', {}).get('fill_count', 0) or 0) > 0)
+        markets_with_fills_pct = (markets_with_fills / len(all_proposals) * 100) if all_proposals else 0
+        total_position = sum(abs(p.get('metadata', {}).get('position_qty', 0) or 0) for p in all_proposals)
+        total_current_quote_size = sum(p.get('current_config', {}).get('quote_size', 0) or 0 for p in all_proposals)
+        total_proposed_quote_size = sum(
+            p.get('proposed_changes', {}).get('quote_size') or p.get('current_config', {}).get('quote_size', 0) or 0
+            for p in all_proposals
+        )
+
+        # Get top 10 positive and negative P&Ls
+        proposals_with_pnl = [(p, p.get('metadata', {}).get('pnl_24h', 0) or 0) for p in all_proposals]
+        proposals_with_pnl.sort(key=lambda x: x[1], reverse=True)
+        top_10_positive = [(p, pnl) for p, pnl in proposals_with_pnl if pnl > 0][:10]
+        top_10_negative = [(p, pnl) for p, pnl in reversed(proposals_with_pnl) if pnl < 0][:10]
+
+        subject = f"[DORA {environment.upper()}] Market Management Proposals - {len(proposals)} Total | P&L: ${total_pnl:+,.2f}"
 
         # Build HTML email body
         html_body = f"""
@@ -522,22 +555,43 @@ class EmailSender:
             </div>
 
             <div class="summary">
-                <h2>Summary</h2>
-                <ul>
-                    <li><strong>Total Proposals: {len(proposals)}</strong></li>
-                    <li>Market Updates: {len(update_proposals)}</li>
+                <h2>Summary Statistics</h2>
+                <table style="width: 100%; margin: 10px 0;">
+                    <tr>
+                        <td><strong>Total Proposals:</strong></td>
+                        <td>{len(proposals)}</td>
+                        <td><strong>Market Updates:</strong></td>
+                        <td>{len(update_proposals)}</td>
+                        <td><strong>New Candidates:</strong></td>
+                        <td>{len(screener_proposals)}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total P&L (24h):</strong></td>
+                        <td style="color: {'green' if total_pnl >= 0 else 'red'}; font-weight: bold;">${total_pnl:+,.2f}</td>
+                        <td><strong>Total Fills:</strong></td>
+                        <td>{total_fills:,}</td>
+                        <td><strong>Markets with Fills:</strong></td>
+                        <td>{markets_with_fills} ({markets_with_fills_pct:.0f}%)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Position:</strong></td>
+                        <td>{total_position:,}</td>
+                        <td><strong>Current Quote Size:</strong></td>
+                        <td>{total_current_quote_size:,}</td>
+                        <td><strong>Proposed Quote Size:</strong></td>
+                        <td>{total_proposed_quote_size:,}</td>
+                    </tr>
+                </table>
         """
 
         # Add action breakdown
         if action_counts:
-            html_body += "<ul>"
+            html_body += "<h3>Action Breakdown:</h3><ul>"
             for action, count in sorted(action_counts.items()):
                 html_body += f"<li>{action.replace('_', ' ').title()}: {count}</li>"
-            html_body += "</ul></li>"
+            html_body += "</ul>"
 
-        html_body += f"""
-                    <li>New Market Candidates: {len(screener_proposals)}</li>
-                </ul>
+        html_body += """
             </div>
 
             <div class="expiry-notice">
@@ -545,41 +599,68 @@ class EmailSender:
             </div>
         """
 
-        # Market Updates Section
-        if update_proposals:
+        # Top 10 Positive P&Ls
+        if top_10_positive:
             html_body += """
-            <div class="section-header">
-                <h2>📊 Market Updates (Existing Markets)</h2>
+            <div class="section-header" style="background-color: #28a745;">
+                <h2>📈 Top 10 Positive P&Ls</h2>
             </div>
             <table class="proposal-table">
                 <thead>
                     <tr>
                         <th>Market ID</th>
                         <th>Action</th>
-                        <th>Reason</th>
                         <th>P&L (24h)</th>
-                        <th>Changes</th>
+                        <th>Fills</th>
+                        <th>Position</th>
                     </tr>
                 </thead>
                 <tbody>
             """
-
-            for p in update_proposals[:20]:  # Limit to 20 for email size
-                pnl = p.get('metadata', {}).get('pnl_24h', 0)
-                pnl_color = "green" if pnl >= 0 else "red"
-                changes = p.get('proposed_changes', {})
-                changes_str = ", ".join([f"{k}={v}" for k, v in list(changes.items())[:3]])
-
+            for p, pnl in top_10_positive:
+                fill_count = p.get('metadata', {}).get('fill_count', 0) or 0
+                position_qty = p.get('metadata', {}).get('position_qty', 0) or 0
                 html_body += f"""
                     <tr>
                         <td>{p['market_id']}</td>
-                        <td>{p['action']}</td>
-                        <td>{p['reason'][:50]}...</td>
-                        <td style="color: {pnl_color};">${pnl:.2f}</td>
-                        <td>{changes_str}</td>
+                        <td>{p.get('action', 'N/A')}</td>
+                        <td style="color: green; font-weight: bold;">${pnl:+,.2f}</td>
+                        <td>{fill_count}</td>
+                        <td>{self.format_position_qty(position_qty)}</td>
                     </tr>
                 """
+            html_body += "</tbody></table>"
 
+        # Top 10 Negative P&Ls
+        if top_10_negative:
+            html_body += """
+            <div class="section-header" style="background-color: #dc3545;">
+                <h2>📉 Top 10 Negative P&Ls</h2>
+            </div>
+            <table class="proposal-table">
+                <thead>
+                    <tr>
+                        <th>Market ID</th>
+                        <th>Action</th>
+                        <th>P&L (24h)</th>
+                        <th>Fills</th>
+                        <th>Position</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            for p, pnl in top_10_negative:
+                fill_count = p.get('metadata', {}).get('fill_count', 0) or 0
+                position_qty = p.get('metadata', {}).get('position_qty', 0) or 0
+                html_body += f"""
+                    <tr>
+                        <td>{p['market_id']}</td>
+                        <td>{p.get('action', 'N/A')}</td>
+                        <td style="color: red; font-weight: bold;">${pnl:+,.2f}</td>
+                        <td>{fill_count}</td>
+                        <td>{self.format_position_qty(position_qty)}</td>
+                    </tr>
+                """
             html_body += "</tbody></table>"
 
         # New Candidates Section
