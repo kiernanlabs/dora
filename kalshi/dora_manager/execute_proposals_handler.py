@@ -2223,6 +2223,15 @@ def execute_single_proposal(
     logger.info(f"Executing {action} for {market_id}" +
                 (f" (overridden from {proposal['action']})" if override_action else ""))
 
+    def build_default_settings(changes: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            'enabled': changes.get('enabled', True),
+            'quote_size': changes.get('quote_size', 5),
+            'max_inventory_yes': changes.get('max_inventory_yes', 5),
+            'max_inventory_no': changes.get('max_inventory_no', 5),
+            'min_spread': changes.get('min_spread', 0.05),
+        }
+
     try:
         if action == 'new_market':
             # Create new market config as dict
@@ -2253,6 +2262,31 @@ def execute_single_proposal(
             # Update existing market config
             existing = db_client.get_market_config(market_id)
             if not existing:
+                if action == 'activate_sibling':
+                    metadata = proposal.get('metadata', {})
+                    event_ticker = metadata.get('event_ticker', '')
+                    default_settings = build_default_settings(proposed_changes)
+
+                    market_config = {
+                        'market_id': market_id,
+                        'quote_size': default_settings['quote_size'],
+                        'max_inventory_yes': default_settings['max_inventory_yes'],
+                        'max_inventory_no': default_settings['max_inventory_no'],
+                        'min_spread': default_settings['min_spread'],
+                        'enabled': default_settings['enabled'],
+                        'inventory_skew_factor': 0.5,
+                        'event_ticker': event_ticker,
+                        'created_at': datetime.now(timezone.utc).isoformat(),
+                        'updated_at': datetime.now(timezone.utc).isoformat(),
+                    }
+                    market_config = convert_floats_to_decimal(market_config)
+                    success = db_client.put_market_config(market_config)
+
+                    if not success:
+                        return {'market_id': market_id, 'success': False, 'error': 'Failed to save market config to DynamoDB'}
+
+                    return {'market_id': market_id, 'success': True, 'action': action}
+
                 return {'market_id': market_id, 'success': False, 'error': 'Market config not found'}
 
             # If action was overridden, recalculate changes based on the new action
@@ -2279,15 +2313,16 @@ def execute_single_proposal(
                         'min_spread': 0.04,
                     }
                 elif action == 'activate_sibling':
-                    # This action is complex and requires sibling market info
-                    # For now, just enable the market
-                    changes_to_apply = {'enabled': True}
+                    changes_to_apply = build_default_settings({})
                 else:
                     # Unknown action, use proposed changes
                     changes_to_apply = proposed_changes
             else:
                 # Use the original proposed changes
-                changes_to_apply = proposed_changes
+                if action == 'activate_sibling':
+                    changes_to_apply = build_default_settings(proposed_changes)
+                else:
+                    changes_to_apply = proposed_changes
 
             # Apply changes to existing config
             for key, value in changes_to_apply.items():
