@@ -119,6 +119,8 @@ class RecommendedAction:
     # Information risk assessment (for activate_sibling actions)
     info_risk_probability: Optional[float] = None
     info_risk_rationale: Optional[str] = None
+    # Market creation date (for protection period tracking)
+    created_at: Optional[datetime] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -142,6 +144,7 @@ class RecommendedAction:
             'position_qty': self.position_qty,
             'info_risk_probability': self.info_risk_probability,
             'info_risk_rationale': self.info_risk_rationale,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -510,7 +513,8 @@ def analyze_markets(
     dynamo: DynamoDBClient = None,
     environment: str = None,
     pnl_lookback_hours: int = 24,
-    volume_lookback_hours: int = 48
+    volume_lookback_hours: int = 48,
+    enabled_only: bool = False
 ) -> Dict[str, MarketAnalysis]:
     """Analyze all markets based on fills and positions.
 
@@ -520,6 +524,7 @@ def analyze_markets(
         environment: 'demo' or 'prod' (auto-detected from db_client if not provided)
         pnl_lookback_hours: Hours to look back for P&L calculation (default 24)
         volume_lookback_hours: Hours to look back for fill count (default 48)
+        enabled_only: If True, only analyze enabled markets (default False)
 
     Returns:
         Dictionary mapping market_id to MarketAnalysis
@@ -537,8 +542,8 @@ def analyze_markets(
     cutoff_pnl = now - timedelta(hours=pnl_lookback_hours)
     cutoff_volume = now - timedelta(hours=volume_lookback_hours)
 
-    # Get all market configs (including disabled ones)
-    configs_list = dynamo.get_all_market_configs(enabled_only=False)
+    # Get market configs (filtered by enabled_only parameter)
+    configs_list = dynamo.get_all_market_configs(enabled_only=enabled_only)
 
     # Convert list to dict of MarketConfig objects
     configs: Dict[str, MarketConfig] = {}
@@ -911,6 +916,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -933,6 +939,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 action_taken = True
             elif analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
@@ -962,6 +969,7 @@ def generate_recommendations(
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                 ))
                 action_taken = True
             elif is_protected:
@@ -991,6 +999,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1013,6 +1022,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 action_taken = True
             elif analysis.has_position:
@@ -1037,6 +1047,7 @@ def generate_recommendations(
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                 ))
                 action_taken = True
             else:
@@ -1061,6 +1072,7 @@ def generate_recommendations(
                     position_qty=analysis.position_qty,
                     info_risk_probability=ir_prob,
                     info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                 ))
                 action_taken = True
 
@@ -1104,6 +1116,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1126,6 +1139,7 @@ def generate_recommendations(
                         position_qty=analysis.position_qty,
                         info_risk_probability=ir_prob,
                         info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
                     ))
                 action_taken = True
 
@@ -1159,6 +1173,7 @@ def generate_recommendations(
                 position_qty=analysis.position_qty,
                 info_risk_probability=ir_prob,
                 info_risk_rationale=ir_rationale,
+                        created_at=analysis.created_at,
             ))
 
     # Third pass: For expand events, activate sibling markets that are not already active
@@ -1304,6 +1319,7 @@ def generate_sibling_activations(
                     position_qty=0,
                     info_risk_probability=info_risk,
                     info_risk_rationale=ir_result.get("rationale"),
+                    created_at=None,  # New market, not yet in config
                 ))
 
     return recommendations

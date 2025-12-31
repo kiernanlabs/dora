@@ -64,11 +64,12 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
         # Run market update analysis
         logger.info("Running market update analysis...")
         try:
-            # Analyze existing markets
+            # Analyze existing markets (only enabled ones)
             market_analyses = analyze_markets(
                 db_client=db_client,
                 pnl_lookback_hours=pnl_lookback_hours,
-                volume_lookback_hours=volume_lookback_hours
+                volume_lookback_hours=volume_lookback_hours,
+                enabled_only=True
             )
             logger.info(f"Analyzed {len(market_analyses)} markets")
 
@@ -115,6 +116,8 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
                         'fill_count': rec_dict.get('fill_count_24h', 0),
                         'median_fill_size': None,  # Not in RecommendedAction
                         'info_risk': rec_dict.get('info_risk_probability'),
+                        'position_qty': rec_dict.get('position_qty', 0),
+                        'created_at': rec_dict.get('created_at'),
                     }
                 }
                 proposals.append(proposal)

@@ -79,6 +79,42 @@ def handle_market_screener_only(event: Dict[str, Any], context: Any) -> Dict[str
 
             # Convert candidates to proposals
             for market in filtered_markets[:top_n_candidates]:
+                # Build comprehensive metadata aligned with market_update structure
+                metadata = {
+                    # Basic market info
+                    'title': market.get('title', ''),
+                    'subtitle': market.get('subtitle', ''),
+                    'event_ticker': market.get('event_ticker', ''),
+                    'close_time': market.get('close_time'),
+
+                    # Trading metrics
+                    'volume_24h': market.get('volume_24h', 0),
+                    'buy_volume': market.get('buy_volume', 0),
+                    'sell_volume': market.get('sell_volume', 0),
+                    'yes_bid': market.get('yes_bid'),
+                    'yes_ask': market.get('yes_ask'),
+                    'current_spread': market.get('current_spread', 0),
+                    'previous_spread': market.get('previous_spread', 0),
+
+                    # Order book depth
+                    'bid_depth_5c': market.get('bid_depth_5c', 0),
+                    'ask_depth_5c': market.get('ask_depth_5c', 0),
+
+                    # Risk assessment
+                    'info_risk': market.get('info_risk_probability'),
+                    'info_risk_rationale': market.get('info_risk_rationale', ''),
+
+                    # P&L and position (0 for new markets, or historical if previously disabled)
+                    'pnl_24h': market.get('historical_realized_pnl', 0),
+                    'fill_count': 0,
+                    'position_qty': 0,
+
+                    # Current config (null for new markets)
+                    'current_quote_size': None,
+                    'current_min_spread': None,
+                    'created_at': None,  # New market, not yet created
+                }
+
                 proposal = {
                     'market_id': market['ticker'],
                     'proposal_source': 'market_screener',
@@ -92,13 +128,7 @@ def handle_market_screener_only(event: Dict[str, Any], context: Any) -> Dict[str
                         'min_spread': 0.04,
                         'enabled': True,
                     },
-                    'metadata': {
-                        'title': market.get('title', ''),
-                        'volume_24h': market.get('volume_24h', 0),
-                        'yes_bid': market.get('yes_bid'),
-                        'yes_ask': market.get('yes_ask'),
-                        'info_risk': market.get('info_risk_probability'),
-                    }
+                    'metadata': metadata
                 }
                 proposals.append(proposal)
                 screener_count += 1
