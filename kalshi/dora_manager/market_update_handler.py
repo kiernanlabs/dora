@@ -120,6 +120,7 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
                         'created_at': rec_dict.get('created_at'),
                         'last_fill_at': rec_dict.get('last_fill_time'),
                         # Enriched Kalshi metadata for AI model
+                        'event_ticker': rec_dict.get('event_ticker'),
                         'event_title': rec_dict.get('event_title'),
                         'market_title': rec_dict.get('market_title'),
                         'volume_24h_trades': rec_dict.get('volume_24h_trades', 0),
@@ -134,8 +135,16 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
                         'yes_ask': rec_dict.get('yes_ask'),
                         'previous_yes_bid': rec_dict.get('previous_yes_bid'),
                         'previous_yes_ask': rec_dict.get('previous_yes_ask'),
+                        'price_std_dev_24h': rec_dict.get('price_std_dev_24h'),
                     }
                 }
+
+                # Log if price_std_dev_24h is None for debugging
+                if rec_dict.get('price_std_dev_24h') is None:
+                    logger.debug(f"Market {rec_dict['market_id']}: price_std_dev_24h is None")
+                else:
+                    logger.debug(f"Market {rec_dict['market_id']}: price_std_dev_24h = {rec_dict['price_std_dev_24h']:.2f}¢")
+
                 proposals.append(proposal)
                 update_count += 1
 

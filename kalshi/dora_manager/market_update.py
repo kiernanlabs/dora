@@ -108,6 +108,8 @@ class MarketAnalysis:
     yes_ask: Optional[int] = None  # Current yes ask price
     previous_yes_bid: Optional[int] = None  # Yes bid 24hrs ago
     previous_yes_ask: Optional[int] = None  # Yes ask 24hrs ago
+    # Trade price statistics
+    price_std_dev_24h: Optional[float] = None  # Standard deviation of trade prices in 24h
 
 
 @dataclass
@@ -154,6 +156,8 @@ class RecommendedAction:
     yes_ask: Optional[int] = None
     previous_yes_bid: Optional[int] = None
     previous_yes_ask: Optional[int] = None
+    # Trade price statistics
+    price_std_dev_24h: Optional[float] = None  # Standard deviation of trade prices in 24h
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -193,6 +197,7 @@ class RecommendedAction:
             'yes_ask': self.yes_ask,
             'previous_yes_bid': self.previous_yes_bid,
             'previous_yes_ask': self.previous_yes_ask,
+            'price_std_dev_24h': self.price_std_dev_24h,
         }
 
 
@@ -855,6 +860,18 @@ def analyze_markets(
         volume_24h_contracts = sum(trade.get('count', 0) or 0 for trade in trades_24h)
         buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades_24h)
 
+        # Calculate price standard deviation from 24h trades
+        price_std_dev_24h = None
+        if trades_24h:
+            trade_prices = [trade.get('yes_price', 0) for trade in trades_24h if trade.get('yes_price') is not None]
+            if len(trade_prices) > 1:
+                price_std_dev_24h = statistics.stdev(trade_prices)
+                print(f"  {market_id}: calculated price_std_dev_24h = {price_std_dev_24h:.2f}¢ from {len(trade_prices)} trades")
+            else:
+                print(f"  {market_id}: insufficient trades for std dev (only {len(trade_prices)} trade prices)")
+        else:
+            print(f"  {market_id}: no trades in 24h window")
+
         analyses[market_id] = MarketAnalysis(
             market_id=market_id,
             event_ticker=event_ticker,
@@ -886,6 +903,7 @@ def analyze_markets(
             yes_ask=yes_ask,
             previous_yes_bid=previous_yes_bid,
             previous_yes_ask=previous_yes_ask,
+            price_std_dev_24h=price_std_dev_24h,
         )
 
     return analyses
@@ -1161,6 +1179,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1200,6 +1219,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
             elif analysis.current_quote_size > MIN_QUOTE_SIZE_FOR_SCALE_DOWN:
@@ -1246,6 +1266,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
             elif is_protected:
@@ -1292,6 +1313,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1331,6 +1353,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
             elif analysis.has_position:
@@ -1372,6 +1395,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
             else:
@@ -1413,6 +1437,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
 
@@ -1473,6 +1498,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
                     recommendations.append(RecommendedAction(
@@ -1512,6 +1538,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
 
@@ -1562,6 +1589,7 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        price_std_dev_24h=analysis.price_std_dev_24h,
             ))
 
     # Third pass: For expand events, activate sibling markets that are not already active
@@ -1687,6 +1715,41 @@ def generate_sibling_activations(
 
                 print(f"    {market_id}: volume_24h={volume_24h}, info_risk={info_risk}%{web_search_str} - OK")
 
+                # Extract available metadata from market API response
+                yes_bid = market.get('yes_bid')
+                yes_ask = market.get('yes_ask')
+                previous_yes_bid = market.get('previous_yes_bid')
+                previous_yes_ask = market.get('previous_yes_ask')
+                market_title = market.get('title', '')
+
+                # Calculate current spread if prices available
+                current_spread = None
+                if yes_bid is not None and yes_ask is not None:
+                    current_spread = (yes_ask - yes_bid) / 100
+
+                # Calculate spread from 24 hours ago if previous prices available
+                spread_24h_ago = None
+                if previous_yes_bid is not None and previous_yes_ask is not None:
+                    spread_24h_ago = (previous_yes_ask - previous_yes_bid) / 100
+
+                # Fetch trade history to get volume metrics and price std dev
+                trades = fetch_trade_history(market_id, limit=200)
+                trades_24h = filter_trades_by_time(trades, hours=24)
+
+                # Calculate volume statistics
+                volume_24h_trades = len(trades_24h)
+                volume_24h_contracts = sum(trade.get('count', 0) or 0 for trade in trades_24h)
+                buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades_24h)
+
+                # Calculate price standard deviation from 24h trades
+                price_std_dev_24h = None
+                if trades_24h:
+                    trade_prices = [trade.get('yes_price', 0) for trade in trades_24h if trade.get('yes_price') is not None]
+                    if len(trade_prices) > 1:
+                        import statistics
+                        price_std_dev_24h = statistics.stdev(trade_prices)
+                        print(f"      Calculated price_std_dev = {price_std_dev_24h:.2f}¢ from {len(trade_prices)} trades")
+
                 recommendations.append(RecommendedAction(
                     market_id=market_id,
                     event_ticker=event_ticker,
@@ -1709,21 +1772,22 @@ def generate_sibling_activations(
                     info_risk_probability=info_risk,
                     info_risk_rationale=ir_result.get("rationale"),
                     created_at=None,  # New market, not yet in config
-                    # Enriched Kalshi metadata - will be populated on next analysis
-                    event_title=None,
-                    market_title=None,
-                    volume_24h_trades=0,
-                    volume_24h_contracts=0,
-                    buy_volume_trades=0,
-                    buy_volume_contracts=0,
-                    sell_volume_trades=0,
-                    sell_volume_contracts=0,
-                    current_spread=None,
-                    spread_24h_ago=None,
-                    yes_bid=None,
-                    yes_ask=None,
-                    previous_yes_bid=None,
-                    previous_yes_ask=None,
+                    # Enriched Kalshi metadata from API
+                    event_title=event_names.get(event_ticker, ''),
+                    market_title=market_title,
+                    volume_24h_trades=volume_24h_trades,
+                    volume_24h_contracts=volume_24h_contracts,
+                    buy_volume_trades=buy_volume_trades,
+                    buy_volume_contracts=buy_volume_contracts,
+                    sell_volume_trades=sell_volume_trades,
+                    sell_volume_contracts=sell_volume_contracts,
+                    current_spread=current_spread,
+                    spread_24h_ago=spread_24h_ago,
+                    yes_bid=yes_bid,
+                    yes_ask=yes_ask,
+                    previous_yes_bid=previous_yes_bid,
+                    previous_yes_ask=previous_yes_ask,
+                    price_std_dev_24h=price_std_dev_24h,
                 ))
 
     return recommendations

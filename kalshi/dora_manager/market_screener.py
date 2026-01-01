@@ -30,6 +30,8 @@ import csv
 import json
 import os
 import sys
+import time
+import random
 import requests
 import pandas as pd
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -369,8 +371,10 @@ def fetch_all_markets(
     mve_filter: Optional[str] = "exclude",
     page_size: int = 1000,
     max_pages: Optional[int] = None,
+    max_retries: int = 5,
+    base_delay: float = 1.0,
 ) -> List[Dict[str, Any]]:
-    """Fetch all markets from Kalshi API with pagination.
+    """Fetch all markets from Kalshi API with pagination and exponential backoff.
 
     Args:
         status: Filter by market status (default: 'open').
@@ -378,6 +382,8 @@ def fetch_all_markets(
         mve_filter: MVE filter mode - 'exclude', 'only', or None (default: 'exclude')
         page_size: Number of markets per page (max 1000)
         max_pages: Optional limit on number of pages to fetch (for testing)
+        max_retries: Maximum number of retry attempts for rate limiting (default: 5)
+        base_delay: Base delay in seconds for exponential backoff (default: 1.0)
 
     Returns:
         List of market dictionaries
@@ -398,11 +404,36 @@ def fetch_all_markets(
         if cursor:
             params["cursor"] = cursor
 
-        # Make request
+        # Make request with retry logic
         url = f"{KALSHI_API_BASE}{MARKETS_ENDPOINT}"
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        data = response.json()
+
+        for attempt in range(max_retries):
+            try:
+                response = requests.get(url, params=params, timeout=10)
+
+                # Handle rate limiting with exponential backoff
+                if response.status_code == 429:
+                    if attempt < max_retries - 1:
+                        # Exponential backoff with jitter
+                        delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                        print(f"  Rate limited (429), retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})...")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print(f"  Rate limited after {max_retries} retries, giving up")
+                        response.raise_for_status()
+
+                response.raise_for_status()
+                data = response.json()
+                break  # Success, exit retry loop
+
+            except requests.exceptions.HTTPError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 1)
+                    print(f"  Rate limited (429), retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})...")
+                    time.sleep(delay)
+                    continue
+                raise  # Re-raise if not a retryable error or out of retries
 
         # Extract markets
         markets = data.get("markets", [])
@@ -695,9 +726,6 @@ def fetch_trade_history(
     Returns:
         List of trade dictionaries
     """
-    import time
-    import random
-
     url = f"{KALSHI_API_BASE}/trade-api/v2/markets/trades"
     params = {"ticker": market_id, "limit": limit}
 
@@ -797,6 +825,14 @@ def _check_side_volume_single(
     market["buy_volume"] = buy_volume_contracts  # Keep 'buy_volume' for backward compatibility
     market["sell_volume_trades"] = sell_volume_trades
     market["sell_volume"] = sell_volume_contracts  # Keep 'sell_volume' for backward compatibility
+
+    # Calculate price standard deviation from trades
+    trade_prices = [trade.get('yes_price', 0) for trade in trades if trade.get('yes_price') is not None]
+    if len(trade_prices) > 1:
+        import statistics
+        market["price_std_dev_24h"] = statistics.stdev(trade_prices)
+    else:
+        market["price_std_dev_24h"] = None
 
     # Check if both sides have minimum volume (checking contracts)
     if buy_volume_contracts >= MIN_SIDE_VOLUME and sell_volume_contracts >= MIN_SIDE_VOLUME:
@@ -1100,10 +1136,10 @@ def filter_and_score_markets(
     # Sort by 24hr volume (descending)
     filtered.sort(key=lambda x: x.get('volume_24h', 0), reverse=True)
 
-    # Take top N candidates
-    candidates = filtered[:top_n]
+    # Take top N*2 candidates before filtering (to ensure we have enough after filters)
+    candidates = filtered[:top_n * 2]
 
-    # Assess information risk for top 25 candidates by volume (unless skipped)
+    # Assess information risk for candidates (unless skipped)
     # Use parallel execution to speed up OpenAI API calls
     if not skip_info_risk and candidates:
         from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -1157,7 +1193,26 @@ def filter_and_score_markets(
                     market['info_risk_probability'] = None
                     market['info_risk_rationale'] = None
 
-    return candidates
+        # Filter out markets with >25% info risk
+        before_count = len(candidates)
+        candidates = [
+            m for m in candidates
+            if m.get('info_risk_probability') is None or m.get('info_risk_probability') <= MAX_INFO_RISK
+        ]
+        filtered_count = before_count - len(candidates)
+        if filtered_count > 0:
+            print(f"Filtered out {filtered_count} markets with >{MAX_INFO_RISK}% info risk")
+            print(f"{len(candidates)} markets remaining after info risk filter")
+
+    # Filter by side volume - requires both buy and sell volume
+    # This also calculates price_std_dev_24h
+    if candidates:
+        candidates = filter_by_side_volume(candidates, max_workers=3)
+        print(f"{len(candidates)} markets remaining after side volume filter")
+
+    # Sort by volume again and return top N
+    candidates.sort(key=lambda x: x.get('volume_24h', 0), reverse=True)
+    return candidates[:top_n]
 
 
 def print_top_markets(markets: List[Dict[str, Any]], n: int = 5) -> None:

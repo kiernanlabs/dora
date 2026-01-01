@@ -1,13 +1,13 @@
 """Market making strategy logic."""
 
-import logging
 from typing import Any, Dict, List, Optional
 import math
 from datetime import datetime, timedelta, timezone
 
 from dora_bot.models import OrderBook, Position, MarketConfig, TargetOrder
+from dora_bot.structured_logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class MarketMaker:
@@ -56,6 +56,30 @@ class MarketMaker:
             # return [], None
 
         trades = trades or []
+
+        # Check trade volatility before quoting
+        # Skip quoting if volatility (std dev) is greater than the current spread
+        # Both values are in decimal format (0.01-0.99), not cents, so comparison is valid
+        trade_std_dev, volatility_trades_count, volatility_window = self._calculate_trade_volatility(trades)
+        if trade_std_dev is not None and trade_std_dev > order_book.spread:
+            logger.info("Trade volatility greater than spread - skipping market", extra={
+                "market": config.market_id,
+                "reason": "high_volatility_vs_spread",
+                "trade_std_dev": trade_std_dev,
+                "current_spread": order_book.spread,
+                "volatility_trades_count": volatility_trades_count,
+                "volatility_window": volatility_window
+            })
+            return [], None
+        else :
+            logger.info(f"Trade volatility check passed - std: {trade_std_dev} | current_spread: {order_book.spread}", extra={
+                "market": config.market_id,
+                "trade_std_dev": trade_std_dev,
+                "current_spread": order_book.spread,
+                "volatility_trades_count": volatility_trades_count,
+                "volatility_window": volatility_window
+            })
+
         last_trade_price, last_trade_time = self._get_last_trade_info(trades)
         wma_price, wma_trade_time, wma_trades_count = self._get_weighted_trade_info(trades)
         if wma_price is not None:
@@ -435,6 +459,96 @@ class MarketMaker:
             return None, None, len(recent_trades)
 
         return weighted_sum / total_weight, recent_trades[0][1], len(recent_trades)
+
+    def _calculate_trade_volatility(
+        self,
+        trades: List[Dict[str, Any]],
+        max_trades: int = 5,
+        window_hours: int = 12,
+    ) -> tuple[Optional[float], int, str]:
+        """Calculate standard deviation of recent trade prices.
+
+        Compares last N trades vs. trades within time window and uses whichever has more trades.
+
+        Args:
+            trades: List of trades
+            max_trades: Maximum number of recent trades to consider
+            window_hours: Time window in hours to consider
+
+        Returns:
+            Tuple of (std_dev, trades_count, window_type) where window_type is "last_N_trades" or "time_window"
+        """
+        if not trades:
+            return None, 0, "none"
+
+        # Get last N trades (excluding quantity=1 trades)
+        last_n_prices = []
+        for trade in trades[:max_trades * 3]:  # Look at more trades to account for filtering
+            quantity_raw = trade.get("quantity")
+            if quantity_raw is not None:
+                try:
+                    quantity = float(quantity_raw)
+                except (TypeError, ValueError):
+                    quantity = None
+                if quantity == 1:
+                    continue
+
+            price = self._extract_trade_price(trade)
+            if price is None:
+                continue
+
+            last_n_prices.append(price)
+            if len(last_n_prices) >= max_trades:
+                break
+
+        # Get trades within time window
+        now = datetime.now(timezone.utc)
+        cutoff = now - timedelta(hours=window_hours)
+        window_prices = []
+
+        for trade in trades:
+            quantity_raw = trade.get("quantity")
+            if quantity_raw is not None:
+                try:
+                    quantity = float(quantity_raw)
+                except (TypeError, ValueError):
+                    quantity = None
+                if quantity == 1:
+                    continue
+
+            price = self._extract_trade_price(trade)
+            if price is None:
+                continue
+
+            timestamp_raw = trade.get("created_time") or trade.get("created_at") or trade.get("timestamp")
+            timestamp = self._parse_trade_timestamp(timestamp_raw) if timestamp_raw else None
+            if timestamp is None:
+                continue
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+
+            if timestamp < cutoff:
+                continue
+
+            window_prices.append(price)
+
+        # Use whichever has more trades
+        if len(window_prices) > len(last_n_prices):
+            prices = window_prices
+            window_type = f"time_window_{window_hours}h"
+        else:
+            prices = last_n_prices
+            window_type = f"last_{max_trades}_trades"
+
+        if len(prices) < 2:
+            return None, len(prices), window_type
+
+        # Calculate standard deviation
+        mean_price = sum(prices) / len(prices)
+        variance = sum((p - mean_price) ** 2 for p in prices) / len(prices)
+        std_dev = math.sqrt(variance)
+
+        return std_dev, len(prices), window_type
 
     def _extract_trade_price(self, trade: Dict[str, Any]) -> Optional[float]:
         raw_price = trade.get("yes_price")

@@ -965,7 +965,7 @@ class DoraBot:
                 trades = []
                 try:
                     rate_limiter.acquire(1, endpoint=f"get_trades:{market_id}")
-                    trades = self.exchange.get_trades(market_id, limit=10)
+                    trades = self.exchange.get_trades(market_id, limit=50)
                 except Exception as e:
                     logger.warning("Failed to fetch trades - falling back to mid price", extra={
                         "event_type": EventType.LOG,

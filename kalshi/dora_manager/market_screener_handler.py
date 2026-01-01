@@ -129,6 +129,7 @@ def handle_market_screener_only(event: Dict[str, Any], context: Any) -> Dict[str
                     'yes_ask': market.get('yes_ask'),
                     'previous_yes_bid': market.get('previous_yes_bid'),
                     'previous_yes_ask': market.get('previous_yes_ask'),
+                    'price_std_dev_24h': market.get('price_std_dev_24h'),  # Price standard deviation from 24h trades
                 }
 
                 proposal = {

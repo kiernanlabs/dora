@@ -1104,7 +1104,7 @@ def generate_review_page_html(
                                 <th class="checkbox-cell" rowspan="2">✓</th>
                                 <th rowspan="2">Market ID</th>
                                 <th colspan="9" class="data-section-header internal">Internal Data (DORA Bot)</th>
-                                <th colspan="2" class="data-section-header external">External Data (Market)</th>
+                                <th colspan="3" class="data-section-header external">External Data (Market)</th>
                             </tr>
                             <tr>
                                 <!-- Internal Data Columns -->
@@ -1120,6 +1120,7 @@ def generate_review_page_html(
                                 <!-- External Data Columns -->
                                 <th>Total Market Fills</th>
                                 <th>Market Spread</th>
+                                <th>Price StdDev 24h</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1263,6 +1264,13 @@ def generate_review_page_html(
                 market_spread_str = "—"
                 market_spread_html = market_spread_str
 
+            # Get price standard deviation
+            price_std_dev = metadata.get('price_std_dev_24h')
+            if price_std_dev is not None:
+                price_std_dev_str = f"{price_std_dev:.2f}¢"
+            else:
+                price_std_dev_str = "—"
+
             html += f"""
                             <tr>
                                 <td class="checkbox-cell">
@@ -1289,6 +1297,7 @@ def generate_review_page_html(
                                 <!-- External Data Columns -->
                                 <td>{total_fills_html}</td>
                                 <td>{market_spread_html}</td>
+                                <td>{price_std_dev_str}</td>
                             </tr>
             """
 
@@ -1872,6 +1881,11 @@ def generate_screener_candidates_html(
         bid_ask_str = f"{yes_bid}¢ / {yes_ask}¢" if yes_bid is not None and yes_ask is not None else "—"
         info_risk_str = f"{info_risk:.0f}%" if info_risk is not None else "—"
         depth_str = f"{bid_depth:,} / {ask_depth:,}" if bid_depth or ask_depth else "—"
+        buy_sell_str = f"{buy_volume_trades:,} / {sell_volume_trades:,}" if buy_volume_trades or sell_volume_trades else "—"
+
+        # Price standard deviation
+        price_std_dev = metadata.get('price_std_dev_24h')
+        price_std_dev_str = f"{price_std_dev:.2f}¢" if price_std_dev is not None else "—"
 
         # Historical P&L display
         pnl_class = "positive" if pnl > 0 else "negative" if pnl < 0 else ""
@@ -1932,6 +1946,10 @@ def generate_screener_candidates_html(
                             <div class="candidate-metric">
                                 <div class="candidate-metric-label">Min Spread</div>
                                 <div class="candidate-metric-value">{min_spread:.2%}</div>
+                            </div>
+                            <div class="candidate-metric">
+                                <div class="candidate-metric-label">Price StdDev 24h</div>
+                                <div class="candidate-metric-value">{price_std_dev_str}</div>
                             </div>"""
 
         # Show historical P&L if available
