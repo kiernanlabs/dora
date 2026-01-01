@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from market_screener import (
     fetch_all_markets,
     filter_and_score_markets,
+    enrich_with_orderbook_depth,
 )
 from db_client import DynamoDBClient
 
@@ -76,6 +77,12 @@ def handle_market_screener_only(event: Dict[str, Any], context: Any) -> Dict[str
                 top_n=top_n_candidates
             )
             logger.info(f"Filtered to {len(filtered_markets)} candidate markets")
+
+            # Enrich with order book depth for the top candidates
+            if filtered_markets:
+                logger.info(f"Enriching {len(filtered_markets)} markets with order book depth...")
+                filtered_markets = enrich_with_orderbook_depth(filtered_markets)
+                logger.info("Order book enrichment complete")
 
             # Convert candidates to proposals
             for market in filtered_markets[:top_n_candidates]:

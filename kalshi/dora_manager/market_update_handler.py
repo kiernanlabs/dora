@@ -135,6 +135,8 @@ def handle_market_update_only(event: Dict[str, Any], context: Any) -> Dict[str, 
                         'yes_ask': rec_dict.get('yes_ask'),
                         'previous_yes_bid': rec_dict.get('previous_yes_bid'),
                         'previous_yes_ask': rec_dict.get('previous_yes_ask'),
+                        'bid_depth_5c': rec_dict.get('bid_depth_5c', 0),
+                        'ask_depth_5c': rec_dict.get('ask_depth_5c', 0),
                         'price_std_dev_24h': rec_dict.get('price_std_dev_24h'),
                     }
                 }

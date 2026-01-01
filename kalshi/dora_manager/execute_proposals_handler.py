@@ -18,6 +18,7 @@ from db_client import DynamoDBClient
 
 from utils.proposal_manager import ProposalManager
 from utils.url_signer import URLSigner
+from utils.insights_manager import InsightsManager
 from email_sender import EmailSender
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,16 @@ def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, A
 
         # Route based on HTTP method
         if http_method == 'GET':
+            # GET requests should ONLY show the review page, never execute
+            # Log the full path to help debug routing issues
+            request_path = event.get('path', '')
+            resource = event.get('resource', '')
+            logger.info(f"GET request: path={request_path}, resource={resource}, proposal_id={proposal_id}")
+
+            # Safety check: Never execute on GET requests
+            if '/execute' in request_path or '/execute' in resource:
+                logger.warning(f"GET request to /execute endpoint blocked for security - showing review page instead")
+
             return handle_get_proposals(proposal_id, proposal_manager, signature, expiry)
         elif http_method == 'POST':
             return handle_post_execute(
@@ -172,13 +183,37 @@ def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, si
     update_proposals = [p for p in proposals if p['proposal_source'] == 'market_update']
     screener_proposals = [p for p in proposals if p['proposal_source'] == 'market_screener']
 
+    # Retrieve AI insights for this proposal batch
+    try:
+        region = proposal_manager.region
+        environment = proposal_manager.environment
+        insights_manager = InsightsManager(region=region, environment=environment)
+        all_insights = insights_manager.get_insight_by_proposal(proposal_id)
+
+        # Organize insights by type
+        event_insights = {
+            item['entity_id']: item
+            for item in all_insights
+            if item.get('insight_type') == 'event'
+        }
+        market_insights = {
+            item['entity_id']: item
+            for item in all_insights
+            if item.get('insight_type') == 'market'
+        }
+        logger.info(f"Retrieved {len(event_insights)} event insights and {len(market_insights)} market insights")
+    except Exception as e:
+        logger.error(f"Error retrieving insights: {e}")
+        event_insights = {}
+        market_insights = {}
+
     # Route to appropriate HTML generator based on proposal types
     # If only screener proposals, use card-based layout
     # If only update proposals or mixed, use table-based layout
     if screener_proposals and not update_proposals:
-        html = generate_screener_candidates_html(proposal_id, screener_proposals, signature, expiry)
+        html = generate_screener_candidates_html(proposal_id, screener_proposals, market_insights, signature, expiry)
     else:
-        html = generate_review_page_html(proposal_id, update_proposals, screener_proposals, signature, expiry)
+        html = generate_review_page_html(proposal_id, update_proposals, screener_proposals, event_insights, market_insights, signature, expiry)
 
     return {
         'statusCode': 200,
@@ -191,6 +226,8 @@ def generate_review_page_html(
     proposal_id: str,
     update_proposals: List[Dict],
     screener_proposals: List[Dict],
+    event_insights: Dict[str, Dict],
+    market_insights: Dict[str, Dict],
     signature: str,
     expiry: str
 ) -> str:
@@ -200,6 +237,8 @@ def generate_review_page_html(
         proposal_id: UUID of proposal batch
         update_proposals: List of market update proposals
         screener_proposals: List of market screener proposals
+        event_insights: Dictionary mapping event_ticker to event insight data
+        market_insights: Dictionary mapping market_id to market insight data
         signature: URL signature for authentication
         expiry: URL expiry timestamp
 
@@ -1095,6 +1134,43 @@ def generate_review_page_html(
                             <span class="external-metric-value capture-pct">{capture_pct_trades:.1f}%</span>
                         </div>
                     </div>
+        """
+
+        # Add AI Event Insights if available for this event
+        if event_ticker in event_insights:
+            insight = event_insights[event_ticker]
+            recommendation = insight.get('recommendation', 'N/A')
+            insights_text = insight.get('insights', 'No insights available')
+            rationale = insight.get('rationale', 'No rationale provided')
+
+            # Color code recommendations
+            if recommendation == 'Expand':
+                rec_color = '#28a745'  # Green
+                rec_icon = '🚀'
+            elif recommendation == 'Scale back':
+                rec_color = '#ffc107'  # Yellow
+                rec_icon = '⚠️'
+            else:  # Fully Exit
+                rec_color = '#dc3545'  # Red
+                rec_icon = '🛑'
+
+            html += f"""
+                    <div style="background: linear-gradient(to right, {rec_color}15, {rec_color}08); border-left: 4px solid {rec_color}; padding: 16px 20px; margin: 0;">
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                            <span style="font-size: 20px;">{rec_icon}</span>
+                            <h3 style="margin: 0; color: #2c3e50; font-size: 16px; font-weight: 600;">AI Event Insights</h3>
+                            <span style="background-color: {rec_color}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-left: auto;">
+                                {recommendation}
+                            </span>
+                        </div>
+                        <div style="color: #555; font-size: 14px; line-height: 1.6;">
+                            <p style="margin: 6px 0;"><strong>Insights:</strong> {html_lib.escape(insights_text)}</p>
+                            <p style="margin: 6px 0;"><strong>Rationale:</strong> {html_lib.escape(rationale)}</p>
+                        </div>
+                    </div>
+            """
+
+        html += """
                 </div>
 
                 <div class="table-wrapper">
@@ -1330,6 +1406,7 @@ def generate_review_page_html(
 def generate_screener_candidates_html(
     proposal_id: str,
     screener_proposals: List[Dict],
+    market_insights: Dict[str, Dict],
     signature: str,
     expiry: str
 ) -> str:
@@ -1338,6 +1415,7 @@ def generate_screener_candidates_html(
     Args:
         proposal_id: UUID of proposal batch
         screener_proposals: List of market screener proposals
+        market_insights: Dictionary mapping market_id to market insight data
         signature: URL signature for authentication
         expiry: URL expiry timestamp
 
@@ -1908,12 +1986,50 @@ def generate_screener_candidates_html(
                                 <div class="candidate-id">{event_ticker} • {market_id}</div>
                             </div>
                             <div class="card-checkbox">
-                                <input type="checkbox" name="selected" value="{market_id}" id="check_{market_id}" checked
+                                <input type="checkbox" name="selected" value="{market_id}" id="check_{market_id}"
                                     onchange="this.closest('.candidate-card').classList.toggle('selected', this.checked)">
                                 <label for="check_{market_id}" class="card-checkbox-label">✓ Approve</label>
                             </div>
                         </div>
                         <div class="candidate-reason">{commentary}</div>
+        """
+
+        # Add AI Market Insights if available for this market
+        if market_id in market_insights:
+            insight = market_insights[market_id]
+            recommendation = insight.get('recommendation', 'N/A')
+            rationale = insight.get('rationale', 'No rationale provided')
+
+            # Color code recommendations
+            if 'strong recommendation' in recommendation.lower():
+                rec_color = '#28a745'  # Green
+                rec_icon = '✅'
+                rec_label = 'Strong Recommendation'
+            elif 'caution' in recommendation.lower():
+                rec_color = '#ffc107'  # Yellow
+                rec_icon = '⚠️'
+                rec_label = 'Enter with Caution'
+            else:
+                rec_color = '#dc3545'  # Red
+                rec_icon = '❌'
+                rec_label = 'Do Not Enter'
+
+            html += f"""
+                        <div style="background: linear-gradient(to right, {rec_color}15, {rec_color}08); border-left: 4px solid {rec_color}; padding: 14px 16px; margin: 12px 0;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <span style="font-size: 16px;">{rec_icon}</span>
+                                <strong style="color: #2c3e50; font-size: 14px;">AI Recommendation:</strong>
+                                <span style="background-color: {rec_color}; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; font-weight: 600;">
+                                    {rec_label}
+                                </span>
+                            </div>
+                            <div style="color: #555; font-size: 13px; line-height: 1.5;">
+                                {html_lib.escape(rationale)}
+                            </div>
+                        </div>
+            """
+
+        html += """
                         <div class="candidate-metrics">
                             <div class="candidate-metric">
                                 <div class="candidate-metric-label">Volume 24h</div>
@@ -1969,10 +2085,12 @@ def generate_screener_candidates_html(
                 </div>
 
                 <div class="actions">
-                    <button type="submit" name="action" value="approve_selected" class="button">
+                    <button type="submit" name="action" value="approve_selected" class="button"
+                        onclick="return confirm('Are you sure you want to approve the selected proposals? This action cannot be undone.');">
                         ✓ Approve Selected Proposals
                     </button>
-                    <button type="submit" name="action" value="reject_all" class="button button-reject">
+                    <button type="submit" name="action" value="reject_all" class="button button-reject"
+                        onclick="return confirm('Are you sure you want to reject ALL proposals? This action cannot be undone.');">
                         ✕ Reject All Proposals
                     </button>
                 </div>
@@ -1996,15 +2114,8 @@ def generate_screener_candidates_html(
                 });
             }
 
-            // Initialize card states
-            document.addEventListener('DOMContentLoaded', function() {
-                const checkboxes = document.querySelectorAll('input[name="selected"]');
-                checkboxes.forEach(checkbox => {
-                    if (checkbox.checked) {
-                        checkbox.closest('.candidate-card').classList.add('selected');
-                    }
-                });
-            });
+            // Initialize card states - removed since checkboxes start unchecked
+            // Card styling is handled by checkbox onchange events
 
             function showModal(title, content) {
                 const modal = document.getElementById('infoModal');

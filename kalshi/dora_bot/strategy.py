@@ -88,7 +88,12 @@ class MarketMaker:
                     "trade_std_dev": trade_std_dev,
                     "current_spread": order_book.spread,
                     "volatility_trades_count": volatility_trades_count,
-                    "volatility_window": volatility_window
+                    "volatility_window": volatility_window,
+                    "net_position": position.net_position,
+                    "exit_price": exit_price,
+                    "exit_profit": exit_profit,
+                    "avg_buy_price": position.avg_buy_price,
+                    "avg_sell_price": position.avg_sell_price
                 })
                 return [], None
         else :
@@ -269,14 +274,14 @@ class MarketMaker:
         if net_position > 0:
             # Long position - we would sell at best_bid
             # Profitable if best_bid > avg_buy_price
-            exit_price = best_bid
+            exit_price = best_ask
             profit_per_contract = exit_price - position.avg_buy_price
             can_exit_profitably = profit_per_contract > 0
             return can_exit_profitably, exit_price, profit_per_contract if can_exit_profitably else None
         else:
             # Short position - we would buy to close at best_ask
             # Profitable if avg_sell_price > best_ask (we sold high, buying back low)
-            exit_price = best_ask
+            exit_price = best_bid
             profit_per_contract = position.avg_sell_price - exit_price
             can_exit_profitably = profit_per_contract > 0
             return can_exit_profitably, exit_price, profit_per_contract if can_exit_profitably else None

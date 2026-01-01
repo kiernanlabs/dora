@@ -208,22 +208,34 @@ def calculate_orderbook_depth(
     # Get the appropriate side of the order book
     if side == 'yes':
         # For yes side (bids), we want orders within price_range_cents below best bid
-        orders = orderbook.get('yes', [])
+        orders = orderbook.get('yes', []) or []
         min_price = best_price - price_range_cents
         for order in orders:
-            price = order.get('yes_price', 0)
-            size = order.get('size', 0)
+            # Handle both [price, size] array format and dict format
+            if isinstance(order, list) and len(order) >= 2:
+                price, size = order[0], order[1]
+            elif isinstance(order, dict):
+                price = order.get('yes_price', 0)
+                size = order.get('size', 0)
+            else:
+                continue
             # Include orders at or above min_price
             if price >= min_price and price <= best_price:
                 total_depth += size
     else:  # side == 'no'
         # For no side (asks), we want orders within price_range_cents above best ask
-        orders = orderbook.get('no', [])
+        orders = orderbook.get('no', []) or []
         max_price = best_price + price_range_cents
         for order in orders:
-            # NO orders have yes_price (the YES price at which NO is bought)
-            price = order.get('yes_price', 0)
-            size = order.get('size', 0)
+            # Handle both [price, size] array format and dict format
+            if isinstance(order, list) and len(order) >= 2:
+                price, size = order[0], order[1]
+            elif isinstance(order, dict):
+                # NO orders have yes_price (the YES price at which NO is bought)
+                price = order.get('yes_price', 0)
+                size = order.get('size', 0)
+            else:
+                continue
             # Include orders at or below max_price
             if price >= best_price and price <= max_price:
                 total_depth += size

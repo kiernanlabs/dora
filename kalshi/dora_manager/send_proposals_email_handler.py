@@ -16,6 +16,8 @@ from collections import defaultdict
 # Import utilities
 from utils.proposal_manager import ProposalManager
 from utils.url_signer import URLSigner
+from utils.insights_manager import InsightsManager
+from utils.ai_insights import generate_event_insights, generate_market_insights
 from email_sender import EmailSender
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,7 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
         # Initialize clients
         proposal_manager = ProposalManager(region=region, environment=environment)
         url_signer = URLSigner(region=region, environment=environment)
+        insights_manager = InsightsManager(region=region, environment=environment)
         email_sender = EmailSender(region=region)
 
         # Query recent pending proposals
@@ -99,6 +102,80 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
 
             logger.info(f"  {update_count} from market_update, {screener_count} from market_screener")
 
+            # Generate AI insights for this proposal batch
+            event_insights = {}  # event_ticker -> insight dict
+            market_insights = {}  # market_id -> insight dict
+
+            # Separate proposals by source
+            update_proposals = [p for p in proposals if p.get('proposal_source') == 'market_update']
+            screener_proposals = [p for p in proposals if p.get('proposal_source') == 'market_screener']
+
+            # Generate event-level insights for market_update proposals
+            if update_proposals:
+                # Group market_update proposals by event
+                events_dict = defaultdict(list)
+                for p in update_proposals:
+                    event_ticker = p.get('metadata', {}).get('event_ticker', '')
+                    if event_ticker:
+                        events_dict[event_ticker].append(p)
+
+                logger.info(f"Generating insights for {len(events_dict)} events...")
+                for event_ticker, event_markets in events_dict.items():
+                    try:
+                        insight = generate_event_insights(event_ticker, event_markets)
+                        if not insight.get('error'):
+                            event_insights[event_ticker] = insight
+
+                            # Save to DynamoDB
+                            metadata = {
+                                'market_count': len(event_markets),
+                                'total_pnl': sum(m.get('metadata', {}).get('pnl_24h', 0) or 0 for m in event_markets),
+                                'total_fills': sum(m.get('metadata', {}).get('fill_count', 0) or 0 for m in event_markets),
+                            }
+                            insights_manager.save_event_insight(
+                                event_ticker=event_ticker,
+                                proposal_id=proposal_id,
+                                insights=insight['insights'],
+                                recommendation=insight['recommendation'],
+                                rationale=insight['rationale'],
+                                metadata=metadata
+                            )
+                            logger.info(f"Generated insight for event {event_ticker}: {insight['recommendation']}")
+                        else:
+                            logger.warning(f"Failed to generate insight for event {event_ticker}: {insight['error']}")
+                    except Exception as e:
+                        logger.error(f"Error generating insight for event {event_ticker}: {e}")
+
+            # Generate market-level insights for market_screener proposals
+            if screener_proposals:
+                logger.info(f"Generating insights for {len(screener_proposals)} new markets...")
+                for p in screener_proposals:
+                    market_id = p.get('market_id', '')
+                    if not market_id:
+                        continue
+
+                    try:
+                        # Prepare market data for insight generation
+                        market_data = p.get('metadata', {})
+
+                        insight = generate_market_insights(market_id, market_data)
+                        if not insight.get('error'):
+                            market_insights[market_id] = insight
+
+                            # Save to DynamoDB
+                            insights_manager.save_market_insight(
+                                market_id=market_id,
+                                proposal_id=proposal_id,
+                                recommendation=insight['recommendation'],
+                                rationale=insight['rationale'],
+                                metadata=market_data
+                            )
+                            logger.info(f"Generated insight for market {market_id}: {insight['recommendation']}")
+                        else:
+                            logger.warning(f"Failed to generate insight for market {market_id}: {insight['error']}")
+                    except Exception as e:
+                        logger.error(f"Error generating insight for market {market_id}: {e}")
+
             # Convert DynamoDB items to the format expected by email sender
             formatted_proposals = []
             for p in proposals:
@@ -132,7 +209,7 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
                 ttl_hours=12
             )
 
-            # Send email
+            # Send email with AI insights
             logger.info(f"Sending proposal email to: {recipient_email}")
             email_sent = email_sender.send_market_proposals_email(
                 proposals=formatted_proposals,
@@ -140,7 +217,9 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
                 review_url=review_url,
                 approve_all_url=approve_all_url,
                 recipient=recipient_email,
-                environment=environment
+                environment=environment,
+                event_insights=event_insights,
+                market_insights=market_insights
             )
 
             if email_sent:

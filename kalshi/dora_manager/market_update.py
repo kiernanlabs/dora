@@ -45,6 +45,7 @@ from botocore.exceptions import ClientError
 from openai import OpenAI
 
 from db_client import DynamoDBClient
+from market_screener import enrich_with_orderbook_depth
 
 # Public API endpoint (no auth required for market data)
 KALSHI_API_BASE = "https://api.elections.kalshi.com"
@@ -108,6 +109,9 @@ class MarketAnalysis:
     yes_ask: Optional[int] = None  # Current yes ask price
     previous_yes_bid: Optional[int] = None  # Yes bid 24hrs ago
     previous_yes_ask: Optional[int] = None  # Yes ask 24hrs ago
+    # Orderbook depth
+    bid_depth_5c: int = 0  # Bid depth within 5 cents of best price
+    ask_depth_5c: int = 0  # Ask depth within 5 cents of best price
     # Trade price statistics
     price_std_dev_24h: Optional[float] = None  # Standard deviation of trade prices in 24h
 
@@ -156,6 +160,9 @@ class RecommendedAction:
     yes_ask: Optional[int] = None
     previous_yes_bid: Optional[int] = None
     previous_yes_ask: Optional[int] = None
+    # Orderbook depth
+    bid_depth_5c: int = 0  # Bid depth within 5 cents of best price
+    ask_depth_5c: int = 0  # Ask depth within 5 cents of best price
     # Trade price statistics
     price_std_dev_24h: Optional[float] = None  # Standard deviation of trade prices in 24h
 
@@ -197,6 +204,8 @@ class RecommendedAction:
             'yes_ask': self.yes_ask,
             'previous_yes_bid': self.previous_yes_bid,
             'previous_yes_ask': self.previous_yes_ask,
+            'bid_depth_5c': self.bid_depth_5c,
+            'ask_depth_5c': self.ask_depth_5c,
             'price_std_dev_24h': self.price_std_dev_24h,
         }
 
@@ -739,6 +748,28 @@ def analyze_markets(
     print(f"Fetching market details for {len(configs)} markets...")
     market_details = fetch_market_details(list(configs.keys()))
 
+    # Enrich with order book depth
+    if market_details:
+        # Convert market_details dict to list format for enrichment
+        markets_list = []
+        for market_id, details in market_details.items():
+            if details:  # Skip None entries
+                market_dict = dict(details)  # Make a copy
+                market_dict['ticker'] = market_id
+                markets_list.append(market_dict)
+
+        if markets_list:
+            print(f"Enriching {len(markets_list)} markets with order book depth...")
+            enriched_markets = enrich_with_orderbook_depth(markets_list)
+
+            # Update market_details with enriched data
+            for market in enriched_markets:
+                market_id = market.get('ticker')
+                if market_id and market_id in market_details:
+                    market_details[market_id]['bid_depth_5c'] = market.get('bid_depth_5c', 0)
+                    market_details[market_id]['ask_depth_5c'] = market.get('ask_depth_5c', 0)
+            print("Order book enrichment complete")
+
     # Get unique event tickers and fetch their names
     unique_event_tickers = list(set(ticker for ticker in event_tickers.values() if ticker))
     print(f"Fetching event names for {len(unique_event_tickers)} events...")
@@ -903,6 +934,8 @@ def analyze_markets(
             yes_ask=yes_ask,
             previous_yes_bid=previous_yes_bid,
             previous_yes_ask=previous_yes_ask,
+            bid_depth_5c=market_detail.get('bid_depth_5c', 0),
+            ask_depth_5c=market_detail.get('ask_depth_5c', 0),
             price_std_dev_24h=price_std_dev_24h,
         )
 
@@ -1179,6 +1212,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
@@ -1219,6 +1254,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
@@ -1266,6 +1303,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
@@ -1313,6 +1352,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
@@ -1353,6 +1394,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
@@ -1395,6 +1438,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
@@ -1437,6 +1482,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                 ))
                 action_taken = True
@@ -1498,6 +1545,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 else:
@@ -1538,6 +1587,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
                     ))
                 action_taken = True
@@ -1589,6 +1640,8 @@ def generate_recommendations(
                         yes_ask=analysis.yes_ask,
                         previous_yes_bid=analysis.previous_yes_bid,
                         previous_yes_ask=analysis.previous_yes_ask,
+                        bid_depth_5c=analysis.bid_depth_5c,
+                        ask_depth_5c=analysis.ask_depth_5c,
                         price_std_dev_24h=analysis.price_std_dev_24h,
             ))
 
@@ -1665,6 +1718,12 @@ def generate_sibling_activations(
         top_markets = new_markets[:5]
 
         print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, assessing top {len(top_markets)} by volume...")
+
+        # Enrich sibling markets with orderbook depth
+        if top_markets:
+            print(f"  {event_ticker}: Enriching {len(top_markets)} sibling markets with order book depth...")
+            top_markets = enrich_with_orderbook_depth(top_markets)
+            print(f"  {event_ticker}: Order book enrichment complete")
 
         # Assess information risk for each top market (in parallel for efficiency)
         # Increased workers from 5 to 10 for faster execution
@@ -1787,6 +1846,8 @@ def generate_sibling_activations(
                     yes_ask=yes_ask,
                     previous_yes_bid=previous_yes_bid,
                     previous_yes_ask=previous_yes_ask,
+                    bid_depth_5c=market.get('bid_depth_5c', 0),
+                    ask_depth_5c=market.get('ask_depth_5c', 0),
                     price_std_dev_24h=price_std_dev_24h,
                 ))
 

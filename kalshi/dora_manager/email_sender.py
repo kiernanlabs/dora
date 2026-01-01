@@ -463,9 +463,11 @@ class EmailSender:
         review_url: str,
         approve_all_url: str,
         recipient: str,
-        environment: str = "prod"
+        environment: str = "prod",
+        event_insights: dict = None,
+        market_insights: dict = None
     ) -> bool:
-        """Send market proposals email with approval links.
+        """Send market proposals email with approval links and AI insights.
 
         Args:
             proposals: List of proposal dicts
@@ -474,10 +476,14 @@ class EmailSender:
             approve_all_url: Signed URL for approving all
             recipient: Email recipient
             environment: 'demo' or 'prod'
+            event_insights: Dict mapping event_ticker to AI insights (for market_update proposals)
+            market_insights: Dict mapping market_id to AI insights (for market_screener proposals)
 
         Returns:
             True if email sent successfully
         """
+        event_insights = event_insights or {}
+        market_insights = market_insights or {}
         # Count proposals by source and action
         update_proposals = [p for p in proposals if p['proposal_source'] == 'market_update']
         screener_proposals = [p for p in proposals if p['proposal_source'] == 'market_screener']
@@ -596,6 +602,8 @@ class EmailSender:
 
             <div class="expiry-notice">
                 ⏰ <strong>Important:</strong> This approval link expires in 12 hours.
+                <br><br>
+                💡 <strong>Note:</strong> Detailed AI insights and recommendations are available on the approval page.
             </div>
         """
 
@@ -669,6 +677,9 @@ class EmailSender:
             <div class="section-header">
                 <h2>🆕 New Market Candidates (From Screener)</h2>
             </div>
+            """
+
+            html_body += """
             <table class="proposal-table">
                 <thead>
                     <tr>
@@ -677,6 +688,7 @@ class EmailSender:
                         <th>Volume (24h)</th>
                         <th>Bid/Ask</th>
                         <th>Quote Size</th>
+                        <th>AI Rec</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -684,19 +696,34 @@ class EmailSender:
 
             for p in screener_proposals[:20]:  # Limit to 20 for email size
                 metadata = p.get('metadata', {})
+                market_id = p['market_id']
                 volume = metadata.get('volume_24h', 0)
                 yes_bid = metadata.get('yes_bid', 0)
                 yes_ask = metadata.get('yes_ask', 0)
                 title = metadata.get('title', '')[:50]
                 quote_size = p.get('proposed_changes', {}).get('quote_size', 5)
 
+                # Get AI recommendation if available
+                ai_rec = ''
+                if market_insights and market_id in market_insights:
+                    recommendation = market_insights[market_id].get('recommendation', 'N/A')
+                    if 'strong recommendation' in recommendation.lower():
+                        ai_rec = '<span style="color: #28a745; font-weight: bold;">✅ Strong</span>'
+                    elif 'caution' in recommendation.lower():
+                        ai_rec = '<span style="color: #ffc107; font-weight: bold;">⚠️ Caution</span>'
+                    else:
+                        ai_rec = '<span style="color: #dc3545; font-weight: bold;">❌ Avoid</span>'
+                else:
+                    ai_rec = '—'
+
                 html_body += f"""
                     <tr>
-                        <td>{p['market_id']}</td>
+                        <td>{market_id}</td>
                         <td>{title}</td>
                         <td>{volume:,}</td>
                         <td>{yes_bid}/{yes_ask}</td>
                         <td>{quote_size}</td>
+                        <td>{ai_rec}</td>
                     </tr>
                 """
 
@@ -705,12 +732,12 @@ class EmailSender:
         # Action buttons
         html_body += f"""
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{review_url}" class="button">Review & Approve</a>
-                <a href="{approve_all_url}" class="button">Approve All</a>
+                <a href="{review_url}" class="button">Review Proposals</a>
             </div>
 
             <p style="color: #666; font-size: 12px;">
-                Do not share this link with others. For security, links are single-use and expire after 12 hours.
+                Click "Review Proposals" to view all proposals and select which ones to approve.<br>
+                For security, this link expires after 12 hours.
             </p>
         </body>
         </html>
