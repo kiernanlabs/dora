@@ -61,7 +61,7 @@ class MarketMaker:
         # Skip quoting if volatility (std dev) is greater than the current spread
         # Both values are in decimal format (0.01-0.99), not cents, so comparison is valid
         trade_std_dev, volatility_trades_count, volatility_window = self._calculate_trade_volatility(trades)
-        if trade_std_dev is not None and trade_std_dev > order_book.spread:
+        if trade_std_dev is not None and trade_std_dev > max(order_book.spread,0.03):
             logger.info("Trade volatility greater than spread - skipping market", extra={
                 "market": config.market_id,
                 "reason": "high_volatility_vs_spread",
