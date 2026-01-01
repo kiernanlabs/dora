@@ -60,17 +60,37 @@ class MarketMaker:
         # Check trade volatility before quoting
         # Skip quoting if volatility (std dev) is greater than the current spread
         # Both values are in decimal format (0.01-0.99), not cents, so comparison is valid
+        # EXCEPTION: Allow trading if we have a position that can be exited profitably
         trade_std_dev, volatility_trades_count, volatility_window = self._calculate_trade_volatility(trades)
-        if trade_std_dev is not None and trade_std_dev > max(order_book.spread,0.03):
-            logger.info("Trade volatility greater than spread - skipping market", extra={
-                "market": config.market_id,
-                "reason": "high_volatility_vs_spread",
-                "trade_std_dev": trade_std_dev,
-                "current_spread": order_book.spread,
-                "volatility_trades_count": volatility_trades_count,
-                "volatility_window": volatility_window
-            })
-            return [], None
+        can_exit_profitably, exit_price, exit_profit = self._can_exit_position_profitably(
+            position, order_book.best_bid, order_book.best_ask
+        )
+
+        if trade_std_dev is not None and trade_std_dev > min(max(order_book.spread,0.03),0.08):
+            if can_exit_profitably:
+                logger.info("Trade volatility high but allowing trade for profitable exit", extra={
+                    "market": config.market_id,
+                    "reason": "profitable_exit_override",
+                    "trade_std_dev": trade_std_dev,
+                    "current_spread": order_book.spread,
+                    "volatility_trades_count": volatility_trades_count,
+                    "volatility_window": volatility_window,
+                    "net_position": position.net_position,
+                    "exit_price": exit_price,
+                    "exit_profit": exit_profit,
+                    "avg_buy_price": position.avg_buy_price,
+                    "avg_sell_price": position.avg_sell_price
+                })
+            else:
+                logger.info("Trade volatility greater than spread - skipping market", extra={
+                    "market": config.market_id,
+                    "reason": "high_volatility_vs_spread",
+                    "trade_std_dev": trade_std_dev,
+                    "current_spread": order_book.spread,
+                    "volatility_trades_count": volatility_trades_count,
+                    "volatility_window": volatility_window
+                })
+                return [], None
         else :
             logger.info(f"Trade volatility check passed - std: {trade_std_dev} | current_spread: {order_book.spread}", extra={
                 "market": config.market_id,
@@ -216,6 +236,50 @@ class MarketMaker:
             })
 
         return targets, price_calc
+
+    def _can_exit_position_profitably(
+        self,
+        position: Position,
+        best_bid: Optional[float],
+        best_ask: Optional[float]
+    ) -> tuple[bool, Optional[float], Optional[float]]:
+        """Check if we can exit our position profitably at current market prices.
+
+        Args:
+            position: Current position in the market
+            best_bid: Current best bid price
+            best_ask: Current best ask price
+
+        Returns:
+            Tuple of (can_exit_profitably, exit_price, profit_per_contract)
+            - can_exit_profitably: True if we have a position and can exit it for profit
+            - exit_price: The price we would exit at (best_bid for long, best_ask for short)
+            - profit_per_contract: Expected profit per contract (None if can't exit profitably)
+        """
+        net_position = position.net_position
+
+        # No position means no exit opportunity
+        if net_position == 0:
+            return False, None, None
+
+        # Can't determine if no market prices
+        if best_bid is None or best_ask is None:
+            return False, None, None
+
+        if net_position > 0:
+            # Long position - we would sell at best_bid
+            # Profitable if best_bid > avg_buy_price
+            exit_price = best_bid
+            profit_per_contract = exit_price - position.avg_buy_price
+            can_exit_profitably = profit_per_contract > 0
+            return can_exit_profitably, exit_price, profit_per_contract if can_exit_profitably else None
+        else:
+            # Short position - we would buy to close at best_ask
+            # Profitable if avg_sell_price > best_ask (we sold high, buying back low)
+            exit_price = best_ask
+            profit_per_contract = position.avg_sell_price - exit_price
+            can_exit_profitably = profit_per_contract > 0
+            return can_exit_profitably, exit_price, profit_per_contract if can_exit_profitably else None
 
     def _calculate_skew(self, net_position: int, config: MarketConfig) -> float:
         """Calculate inventory skew adjustment.
