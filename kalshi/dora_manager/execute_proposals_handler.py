@@ -121,7 +121,7 @@ def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, A
             if '/execute' in request_path or '/execute' in resource:
                 logger.warning(f"GET request to /execute endpoint blocked for security - showing review page instead")
 
-            return handle_get_proposals(proposal_id, proposal_manager, signature, expiry)
+            return handle_get_proposals(proposal_id, proposal_manager, signature, expiry, region, environment)
         elif http_method == 'POST':
             return handle_post_execute(
                 event,
@@ -148,7 +148,7 @@ def handle_execute_proposals(event: Dict[str, Any], context: Any) -> Dict[str, A
         }
 
 
-def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, signature: str, expiry: str) -> Dict[str, Any]:
+def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, signature: str, expiry: str, region: str, environment: str) -> Dict[str, Any]:
     """Handle GET request - display proposals for review.
 
     Args:
@@ -156,6 +156,8 @@ def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, si
         proposal_manager: ProposalManager instance
         signature: URL signature for authentication
         expiry: URL expiry timestamp
+        region: AWS region
+        environment: Environment ('demo' or 'prod')
 
     Returns:
         API Gateway response with HTML page
@@ -185,8 +187,6 @@ def handle_get_proposals(proposal_id: str, proposal_manager: ProposalManager, si
 
     # Retrieve AI insights for this proposal batch
     try:
-        region = proposal_manager.region
-        environment = proposal_manager.environment
         insights_manager = InsightsManager(region=region, environment=environment)
         all_insights = insights_manager.get_insight_by_proposal(proposal_id)
 
@@ -1059,11 +1059,11 @@ def generate_review_page_html(
             'capture_pct_trades': capture_pct_trades,
         }
 
-    # Sort events by total P&L (descending - best first)
-    sorted_events = sorted(event_stats.items(), key=lambda x: x[1]['total_pnl'], reverse=True)
+    # Sort events by absolute P&L (descending - most impactful first)
+    sorted_events = sorted(event_stats.items(), key=lambda x: abs(x[1]['total_pnl']), reverse=True)
 
-    # Group and display proposals by event
-    for event_ticker, stats in sorted_events:
+    # Group and display proposals by event with ranking
+    for rank, (event_ticker, stats) in enumerate(sorted_events, start=1):
         event_proposals = stats['proposals']
         total_pnl = stats['total_pnl']
         total_fills = stats['total_fills']
@@ -1085,12 +1085,18 @@ def generate_review_page_html(
         pnl_color = '#28a745' if total_pnl >= 0 else '#dc3545'
         pnl_display = f"${total_pnl:+,.2f}" if total_pnl != 0 else "$0.00"
 
+        # Rank badge styling
+        rank_bg_color = '#ff6b6b' if rank <= 10 else '#95a5a6'
+
         html += f"""
             <div class="event-section">
                 <div class="event-header">
                     <div class="event-header-top">
                         <div class="event-title-group">
-                            <div class="event-title">{event_title or event_ticker}</div>
+                            <div class="event-title">
+                                <span style="display: inline-block; background-color: {rank_bg_color}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: 600; margin-right: 10px;">#{rank}</span>
+                                {event_title or event_ticker}
+                            </div>
                             <div class="event-ticker">{event_ticker} • {len(event_proposals)} proposal(s)</div>
                         </div>
                         <div class="event-stats">
@@ -1158,14 +1164,14 @@ def generate_review_page_html(
                     <div style="background: linear-gradient(to right, {rec_color}15, {rec_color}08); border-left: 4px solid {rec_color}; padding: 16px 20px; margin: 0;">
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
                             <span style="font-size: 20px;">{rec_icon}</span>
-                            <h3 style="margin: 0; color: #2c3e50; font-size: 16px; font-weight: 600;">AI Event Insights</h3>
+                            <h3 style="margin: 0; color: white; font-size: 16px; font-weight: 600;">AI Event Insights</h3>
                             <span style="background-color: {rec_color}; color: white; padding: 4px 10px; border-radius: 4px; font-size: 13px; font-weight: 600; margin-left: auto;">
                                 {recommendation}
                             </span>
                         </div>
-                        <div style="color: #555; font-size: 14px; line-height: 1.6;">
-                            <p style="margin: 6px 0;"><strong>Insights:</strong> {html_lib.escape(insights_text)}</p>
-                            <p style="margin: 6px 0;"><strong>Rationale:</strong> {html_lib.escape(rationale)}</p>
+                        <div style="color: white; font-size: 14px; line-height: 1.6;">
+                            <p style="margin: 6px 0;"><strong style="color: white;">Insights:</strong> {html_lib.escape(insights_text)}</p>
+                            <p style="margin: 6px 0;"><strong style="color: white;">Rationale:</strong> {html_lib.escape(rationale)}</p>
                         </div>
                     </div>
             """
@@ -2375,7 +2381,7 @@ def execute_single_proposal(
                 'max_inventory_no': proposed_changes.get('max_inventory_no', 5),
                 'min_spread': proposed_changes.get('min_spread', 0.04),
                 'enabled': proposed_changes.get('enabled', True),
-                'inventory_skew_factor': 0.5,
+                'inventory_skew_factor': 0.25,
                 'event_ticker': event_ticker,
                 'created_at': datetime.now(timezone.utc).isoformat(),
                 'updated_at': datetime.now(timezone.utc).isoformat(),
@@ -2403,7 +2409,7 @@ def execute_single_proposal(
                         'max_inventory_no': default_settings['max_inventory_no'],
                         'min_spread': default_settings['min_spread'],
                         'enabled': default_settings['enabled'],
-                        'inventory_skew_factor': 0.5,
+                        'inventory_skew_factor': 0.25,
                         'event_ticker': event_ticker,
                         'created_at': datetime.now(timezone.utc).isoformat(),
                         'updated_at': datetime.now(timezone.utc).isoformat(),

@@ -150,7 +150,7 @@ def create_sample_market_config(
             "max_inventory_no": 100,
             "min_spread": 0.06,
             "quote_size": 10,
-            "inventory_skew_factor": 0.5,
+            "inventory_skew_factor": 0.25,
         }
     )
 

@@ -219,7 +219,7 @@ class MarketConfig:
     max_inventory_yes: int = DEFAULT_MAX_INVENTORY_YES
     max_inventory_no: int = DEFAULT_MAX_INVENTORY_NO
     min_spread: float = DEFAULT_MIN_SPREAD
-    inventory_skew_factor: float = 0.5
+    inventory_skew_factor: float = 0.25
     event_ticker: Optional[str] = None
     created_at: Optional[datetime] = None
     disabled_reason: Optional[str] = None
@@ -244,7 +244,7 @@ class MarketConfig:
             max_inventory_yes=int(data.get('max_inventory_yes', DEFAULT_MAX_INVENTORY_YES)),
             max_inventory_no=int(data.get('max_inventory_no', DEFAULT_MAX_INVENTORY_NO)),
             min_spread=float(data.get('min_spread', DEFAULT_MIN_SPREAD)),
-            inventory_skew_factor=float(data.get('inventory_skew_factor', 0.5)),
+            inventory_skew_factor=float(data.get('inventory_skew_factor', 0.25)),
             event_ticker=data.get('event_ticker'),
             created_at=created_at,
             disabled_reason=data.get('disabled_reason'),
@@ -1975,7 +1975,7 @@ def execute_updates(
                     max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
                     min_spread=DEFAULT_MIN_SPREAD,
                     quote_size=DEFAULT_QUOTE_SIZE,
-                    inventory_skew_factor=0.5,
+                    inventory_skew_factor=0.25,
                     event_ticker=rec.get('event_ticker') or None,
                     created_at=datetime.now(timezone.utc),
                 )

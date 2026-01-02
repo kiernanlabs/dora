@@ -1038,7 +1038,7 @@ def upload_to_market_config(
                 'max_inventory_no': max_inv_no,
                 'min_spread': min_spread,
                 'quote_size': quote_size,
-                'inventory_skew_factor': 0.5,
+                'inventory_skew_factor': 0.25,
                 'event_ticker': market.get('event_ticker'),
                 'created_at': datetime.now(timezone.utc).isoformat(),
             }

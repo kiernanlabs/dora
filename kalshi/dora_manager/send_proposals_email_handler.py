@@ -62,13 +62,19 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
         logger.info(f"Querying proposals created after {cutoff_iso}")
 
         # Get all pending proposals from the last lookback window
-        all_proposals = proposal_manager.get_pending_proposals(max_age_hours=1)
+        # Convert lookback_minutes to hours, rounding up to ensure we don't miss any
+        max_age_hours = (lookback_minutes + 59) // 60  # Ceiling division
+        logger.info(f"Querying DynamoDB for pending proposals from last {max_age_hours} hour(s)")
+        all_proposals = proposal_manager.get_pending_proposals(max_age_hours=max_age_hours)
 
         # Filter to only those created in the lookback window
+        logger.info(f"Retrieved {len(all_proposals)} pending proposals from DynamoDB")
         recent_proposals = [
             p for p in all_proposals
             if p.get('created_at', '') >= cutoff_iso
         ]
+
+        logger.info(f"Filtered to {len(recent_proposals)} proposals created after {cutoff_iso}")
 
         if not recent_proposals:
             logger.warning(f"No proposals found created after {cutoff_iso}")

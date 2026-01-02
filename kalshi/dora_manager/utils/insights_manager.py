@@ -78,10 +78,14 @@ class InsightsManager:
             created_at = datetime.now(timezone.utc).isoformat()
             ttl_timestamp = int(time.time()) + (ttl_days * 86400)
 
+            # Create composite key for historical tracking
+            entity_type_id = f"event#{event_ticker}"
+
             item = {
-                'insight_type': 'event',
-                'entity_id': event_ticker,
-                'proposal_id': proposal_id,
+                'entity_type_id': entity_type_id,  # Primary key (HASH)
+                'proposal_id': proposal_id,         # Primary key (RANGE)
+                'insight_type': 'event',            # Separate attribute for filtering
+                'entity_id': event_ticker,          # Separate attribute for access
                 'created_at': created_at,
                 'insights': insights,
                 'recommendation': recommendation,
@@ -95,7 +99,7 @@ class InsightsManager:
             item = _serialize_for_dynamodb(item)
 
             self.table.put_item(Item=item)
-            logger.info(f"Saved event insight for {event_ticker}")
+            logger.info(f"Saved event insight for {event_ticker} (proposal: {proposal_id})")
             return True
 
         except Exception as e:
@@ -128,10 +132,14 @@ class InsightsManager:
             created_at = datetime.now(timezone.utc).isoformat()
             ttl_timestamp = int(time.time()) + (ttl_days * 86400)
 
+            # Create composite key for historical tracking
+            entity_type_id = f"market#{market_id}"
+
             item = {
-                'insight_type': 'market',
-                'entity_id': market_id,
-                'proposal_id': proposal_id,
+                'entity_type_id': entity_type_id,  # Primary key (HASH)
+                'proposal_id': proposal_id,         # Primary key (RANGE)
+                'insight_type': 'market',           # Separate attribute for filtering
+                'entity_id': market_id,             # Separate attribute for access
                 'created_at': created_at,
                 'recommendation': recommendation,
                 'rationale': rationale,
@@ -144,7 +152,7 @@ class InsightsManager:
             item = _serialize_for_dynamodb(item)
 
             self.table.put_item(Item=item)
-            logger.info(f"Saved market insight for {market_id}")
+            logger.info(f"Saved market insight for {market_id} (proposal: {proposal_id})")
             return True
 
         except Exception as e:
@@ -193,7 +201,7 @@ class InsightsManager:
             return []
 
     def get_latest_event_insight(self, event_ticker: str) -> Optional[Dict[str, Any]]:
-        """Get the most recent insight for an event.
+        """Get the most recent insight for an event across all proposals.
 
         Args:
             event_ticker: Event ticker
@@ -202,25 +210,29 @@ class InsightsManager:
             Most recent insight dict or None
         """
         try:
+            entity_type_id = f"event#{event_ticker}"
+
             response = self.table.query(
-                KeyConditionExpression='insight_type = :type AND entity_id = :id',
+                KeyConditionExpression='entity_type_id = :entity_type_id',
                 ExpressionAttributeValues={
-                    ':type': 'event',
-                    ':id': event_ticker
-                },
-                ScanIndexForward=False,  # Sort descending by created_at
-                Limit=1
+                    ':entity_type_id': entity_type_id
+                }
             )
 
             items = response.get('Items', [])
-            return items[0] if items else None
+            if not items:
+                return None
+
+            # Sort by created_at descending (most recent first)
+            sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
+            return sorted_items[0]
 
         except Exception as e:
             logger.error(f"Error retrieving latest event insight for {event_ticker}: {e}")
             return None
 
     def get_latest_market_insight(self, market_id: str) -> Optional[Dict[str, Any]]:
-        """Get the most recent insight for a market.
+        """Get the most recent insight for a market across all proposals.
 
         Args:
             market_id: Market ticker
@@ -229,19 +241,95 @@ class InsightsManager:
             Most recent insight dict or None
         """
         try:
+            entity_type_id = f"market#{market_id}"
+
             response = self.table.query(
-                KeyConditionExpression='insight_type = :type AND entity_id = :id',
+                KeyConditionExpression='entity_type_id = :entity_type_id',
                 ExpressionAttributeValues={
-                    ':type': 'market',
-                    ':id': market_id
-                },
-                ScanIndexForward=False,  # Sort descending by created_at
-                Limit=1
+                    ':entity_type_id': entity_type_id
+                }
             )
 
             items = response.get('Items', [])
-            return items[0] if items else None
+            if not items:
+                return None
+
+            # Sort by created_at descending (most recent first)
+            sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
+            return sorted_items[0]
 
         except Exception as e:
             logger.error(f"Error retrieving latest market insight for {market_id}: {e}")
             return None
+
+    def get_all_event_insights(self, event_ticker: str, limit: Optional[int] = None) -> list:
+        """Get all historical insights for an event across all proposals.
+
+        Args:
+            event_ticker: Event ticker
+            limit: Optional limit on number of insights to return (most recent first)
+
+        Returns:
+            List of insight dicts sorted by created_at descending (newest first)
+        """
+        try:
+            entity_type_id = f"event#{event_ticker}"
+
+            response = self.table.query(
+                KeyConditionExpression='entity_type_id = :entity_type_id',
+                ExpressionAttributeValues={
+                    ':entity_type_id': entity_type_id
+                }
+            )
+
+            items = response.get('Items', [])
+
+            # Sort by created_at descending (most recent first)
+            sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
+
+            # Apply limit if specified
+            if limit:
+                sorted_items = sorted_items[:limit]
+
+            logger.info(f"Retrieved {len(sorted_items)} historical insights for event {event_ticker}")
+            return sorted_items
+
+        except Exception as e:
+            logger.error(f"Error retrieving all event insights for {event_ticker}: {e}")
+            return []
+
+    def get_all_market_insights(self, market_id: str, limit: Optional[int] = None) -> list:
+        """Get all historical insights for a market across all proposals.
+
+        Args:
+            market_id: Market ticker
+            limit: Optional limit on number of insights to return (most recent first)
+
+        Returns:
+            List of insight dicts sorted by created_at descending (newest first)
+        """
+        try:
+            entity_type_id = f"market#{market_id}"
+
+            response = self.table.query(
+                KeyConditionExpression='entity_type_id = :entity_type_id',
+                ExpressionAttributeValues={
+                    ':entity_type_id': entity_type_id
+                }
+            )
+
+            items = response.get('Items', [])
+
+            # Sort by created_at descending (most recent first)
+            sorted_items = sorted(items, key=lambda x: x.get('created_at', ''), reverse=True)
+
+            # Apply limit if specified
+            if limit:
+                sorted_items = sorted_items[:limit]
+
+            logger.info(f"Retrieved {len(sorted_items)} historical insights for market {market_id}")
+            return sorted_items
+
+        except Exception as e:
+            logger.error(f"Error retrieving all market insights for {market_id}: {e}")
+            return []

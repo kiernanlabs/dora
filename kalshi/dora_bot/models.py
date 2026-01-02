@@ -186,7 +186,7 @@ class MarketConfig:
     max_inventory_no: int = 100
     min_spread: float = 0.06  # Minimum spread required to quote
     quote_size: int = 10
-    inventory_skew_factor: float = 0.5  # How aggressively to skew quotes based on inventory
+    inventory_skew_factor: float = 0.25  # How aggressively to skew quotes based on inventory
     fair_value: Optional[float] = None  # Override mid-price with custom fair value
     toxicity_score: Optional[float] = None
     event_ticker: Optional[str] = None  # Event this market belongs to
