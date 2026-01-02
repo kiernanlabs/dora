@@ -431,96 +431,76 @@ class ReadOnlyDynamoDBClient:
             logger.error(f"Error getting most recent execution timestamp for {market_id}: {e}")
             return None
 
-    def get_decision_context_for_order(self, order_id: str, days: int = 7) -> Optional[Dict]:
+    def get_decision_context_for_fill(
+        self,
+        market_id: str,
+        fill_timestamp: str,
+        days: int = 7
+    ) -> Optional[Dict]:
         """
-        Get the decision context for a given order_id.
-        This is an expensive operation as it requires scanning the execution log.
+        Get the decision context for a given fill by finding the most recent decision
+        before the fill timestamp.
 
         Args:
-            order_id: The order ID to look up
+            market_id: The market ID
+            fill_timestamp: The fill timestamp (ISO format)
             days: Number of days to look back (default 7)
 
         Returns:
-            Dictionary containing both execution log entry and decision log entry, or None if not found
+            Dictionary containing the decision log entry, or None if not found
         """
         try:
-            # Scan execution log to find entry with this order_id
-            # This is expensive but necessary since there's no GSI on order_id
-            executions = []
-            scan_kwargs: Dict[str, Any] = {}
+            # Parse the fill timestamp
+            if 'Z' in fill_timestamp:
+                fill_dt = datetime.fromisoformat(fill_timestamp.replace('Z', '+00:00'))
+            elif '+' in fill_timestamp or ('-' in fill_timestamp.split('T')[1] if 'T' in fill_timestamp else False):
+                fill_dt = datetime.fromisoformat(fill_timestamp)
+            else:
+                fill_dt = datetime.fromisoformat(fill_timestamp).replace(tzinfo=timezone.utc)
 
-            # Filter by timestamp to reduce scan size
-            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+            # Get all decision logs for this market
+            decisions = self.get_recent_decision_logs(days=days, market_id=market_id)
 
-            while True:
-                response = self.execution_log_table.scan(**scan_kwargs)
-                items = response.get('Items', [])
-
-                # Filter by timestamp and order_id
-                for item in items:
-                    event_ts_str = item.get('event_ts')
-                    if event_ts_str:
-                        try:
-                            event_ts = datetime.fromisoformat(event_ts_str.replace('Z', '+00:00'))
-                            if event_ts > cutoff:
-                                # Check if this execution event contains the order_id
-                                # order_id might be in different fields depending on event type
-                                if (item.get('order_id') == order_id or
-                                    item.get('payload', {}).get('order_id') == order_id or
-                                    order_id in str(item)):  # Fallback to string search
-                                    executions.append(item)
-                        except (ValueError, TypeError):
-                            continue
-
-                last_evaluated_key = response.get('LastEvaluatedKey')
-                if not last_evaluated_key:
-                    break
-                scan_kwargs['ExclusiveStartKey'] = last_evaluated_key
-
-            if not executions:
-                logger.warning(f"No execution log found for order_id: {order_id}")
+            if not decisions:
+                logger.warning(f"No decision logs found for market {market_id}")
                 return None
 
-            # Take the most recent execution if multiple found
-            executions.sort(key=lambda x: x.get('event_ts', ''), reverse=True)
-            execution = executions[0]
+            # Filter to only decisions before the fill timestamp
+            decisions_before_fill = []
+            for decision in decisions:
+                decision_ts_str = decision.get('timestamp')
+                if decision_ts_str:
+                    try:
+                        if 'Z' in decision_ts_str:
+                            decision_dt = datetime.fromisoformat(decision_ts_str.replace('Z', '+00:00'))
+                        elif '+' in decision_ts_str or ('-' in decision_ts_str.split('T')[1] if 'T' in decision_ts_str else False):
+                            decision_dt = datetime.fromisoformat(decision_ts_str)
+                        else:
+                            decision_dt = datetime.fromisoformat(decision_ts_str).replace(tzinfo=timezone.utc)
 
-            # Extract decision_id from the execution log
-            decision_id = execution.get('decision_id')
-            if not decision_id:
-                logger.warning(f"No decision_id found in execution log for order_id: {order_id}")
-                return {
-                    'execution': self._deserialize_decimal(execution),
-                    'decision': None
-                }
+                        if decision_dt <= fill_dt:
+                            decisions_before_fill.append(decision)
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"Failed to parse decision timestamp {decision_ts_str}: {e}")
+                        continue
 
-            # Query the decision log using the decision_id
-            # Need to scan decision log since we don't know the date
-            decision = None
-            scan_kwargs = {}
+            if not decisions_before_fill:
+                logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
+                return None
 
-            while True:
-                response = self.decision_log_table.scan(
-                    FilterExpression=Attr('decision_id').eq(decision_id),
-                    **scan_kwargs
-                )
-                items = response.get('Items', [])
-                if items:
-                    decision = items[0]  # Should only be one
-                    break
-
-                last_evaluated_key = response.get('LastEvaluatedKey')
-                if not last_evaluated_key:
-                    break
-                scan_kwargs['ExclusiveStartKey'] = last_evaluated_key
+            # Sort by timestamp (most recent first) and take the most recent one before the fill
+            decisions_before_fill.sort(
+                key=lambda d: d.get('timestamp', ''),
+                reverse=True
+            )
+            most_recent_decision = decisions_before_fill[0]
 
             return {
-                'execution': self._deserialize_decimal(execution),
-                'decision': self._deserialize_decimal(decision) if decision else None
+                'decision': most_recent_decision
             }
 
         except Exception as e:
-            logger.error(f"Error getting decision context for order {order_id}: {e}")
+            logger.error(f"Error getting decision context for fill: {e}")
             return None
 
     def get_pnl_over_time(self, days: int = 7) -> List[Dict]:

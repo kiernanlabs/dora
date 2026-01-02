@@ -176,85 +176,76 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
 
         # Add button to load decision context
         st.markdown("---")
-        order_id = selected_fill.get('order_id')
+        fill_timestamp = selected_fill.get('fill_timestamp') or selected_fill.get('timestamp')
 
-        if order_id:
+        if fill_timestamp:
             if st.button("Load Decision Context", key=f'load_decision_{market_id}_{selected_idx}', type="primary"):
-                with st.spinner("Loading decision context (this may take a moment)..."):
-                    decision_context = db_client.get_decision_context_for_order(order_id, days=days)
+                with st.spinner("Loading decision context..."):
+                    decision_context = db_client.get_decision_context_for_fill(
+                        market_id=market_id,
+                        fill_timestamp=fill_timestamp,
+                        days=days
+                    )
 
-                if decision_context:
+                if decision_context and decision_context.get('decision'):
                     st.success("Decision context loaded successfully!")
 
-                    # Display execution log data
-                    if decision_context.get('execution'):
-                        st.markdown("**Execution Log**")
-                        execution = decision_context['execution']
-
-                        # Show key execution details in columns
-                        exec_col1, exec_col2, exec_col3 = st.columns(3)
-                        with exec_col1:
-                            st.metric("Decision ID", execution.get('decision_id', 'N/A')[:20] + '...' if execution.get('decision_id') else 'N/A')
-                        with exec_col2:
-                            st.metric("Event Type", execution.get('event_type', 'N/A'))
-                        with exec_col3:
-                            event_ts = execution.get('event_ts', '')
-                            st.metric("Event Time", to_local_time(event_ts) if event_ts else 'N/A')
-
-                        # Show full execution log in expander
-                        with st.expander("Full Execution Log Details", expanded=False):
-                            st.json(execution)
-
                     # Display decision log data
-                    if decision_context.get('decision'):
-                        st.markdown("---")
-                        st.markdown("**Decision Log**")
-                        decision = decision_context['decision']
+                    st.markdown("**Decision Log (Most Recent Before Fill)**")
+                    decision = decision_context['decision']
 
-                        # Show key decision metrics
-                        dec_col1, dec_col2, dec_col3, dec_col4 = st.columns(4)
-                        with dec_col1:
-                            fair_value = decision.get('fair_value')
-                            st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
-                        with dec_col2:
-                            mid_price = decision.get('mid_price')
-                            st.metric("Mid Price", f"${mid_price:.3f}" if mid_price is not None else 'N/A')
-                        with dec_col3:
-                            inventory = decision.get('inventory')
-                            st.metric("Inventory (YES)", inventory if inventory is not None else 'N/A')
-                        with dec_col4:
-                            skew = decision.get('inventory_skew')
-                            st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
+                    # Show decision timestamp
+                    decision_ts = decision.get('timestamp', '')
+                    if decision_ts:
+                        st.info(f"Decision Timestamp: {to_local_time(decision_ts)}")
 
-                        # Show target quotes if available
-                        target_quotes = decision.get('target_quotes', [])
-                        if target_quotes:
-                            st.markdown("**Target Quotes**")
-                            bids = [q for q in target_quotes if q.get('side') == 'bid']
-                            asks = [q for q in target_quotes if q.get('side') == 'ask']
+                    # Show key decision metrics
+                    dec_col1, dec_col2, dec_col3, dec_col4 = st.columns(4)
+                    with dec_col1:
+                        fair_value = decision.get('fair_value')
+                        st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
+                    with dec_col2:
+                        mid_price = decision.get('mid_price')
+                        st.metric("Mid Price", f"${mid_price:.3f}" if mid_price is not None else 'N/A')
+                    with dec_col3:
+                        inventory = decision.get('inventory')
+                        st.metric("Inventory (YES)", inventory if inventory is not None else 'N/A')
+                    with dec_col4:
+                        skew = decision.get('inventory_skew')
+                        st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
 
-                            quote_col1, quote_col2 = st.columns(2)
-                            with quote_col1:
-                                st.markdown("*Bids*")
+                    # Show target quotes if available
+                    target_quotes = decision.get('target_quotes', [])
+                    if target_quotes:
+                        st.markdown("**Target Quotes at Decision Time**")
+                        bids = [q for q in target_quotes if q.get('side') == 'bid']
+                        asks = [q for q in target_quotes if q.get('side') == 'ask']
+
+                        quote_col1, quote_col2 = st.columns(2)
+                        with quote_col1:
+                            st.markdown("*Bids*")
+                            if bids:
                                 for bid in sorted(bids, key=lambda x: x.get('price', 0), reverse=True):
                                     st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
+                            else:
+                                st.text("No bids")
 
-                            with quote_col2:
-                                st.markdown("*Asks*")
+                        with quote_col2:
+                            st.markdown("*Asks*")
+                            if asks:
                                 for ask in sorted(asks, key=lambda x: x.get('price', 0)):
                                     st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
+                            else:
+                                st.text("No asks")
 
-                        # Show full decision log in expander
-                        with st.expander("Full Decision Log Details", expanded=False):
-                            st.json(decision)
-
-                    else:
-                        st.warning("Decision log not found for this order")
+                    # Show full decision log in expander
+                    with st.expander("Full Decision Log Details", expanded=False):
+                        st.json(decision)
 
                 else:
-                    st.error(f"Could not find decision context for order ID: {order_id}")
+                    st.error(f"Could not find decision context for this fill")
         else:
-            st.warning("No order ID available for this fill")
+            st.warning("No timestamp available for this fill")
 
 
 def render(environment: str, region: str):
