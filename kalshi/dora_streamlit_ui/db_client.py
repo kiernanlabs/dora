@@ -431,6 +431,98 @@ class ReadOnlyDynamoDBClient:
             logger.error(f"Error getting most recent execution timestamp for {market_id}: {e}")
             return None
 
+    def get_decision_context_for_order(self, order_id: str, days: int = 7) -> Optional[Dict]:
+        """
+        Get the decision context for a given order_id.
+        This is an expensive operation as it requires scanning the execution log.
+
+        Args:
+            order_id: The order ID to look up
+            days: Number of days to look back (default 7)
+
+        Returns:
+            Dictionary containing both execution log entry and decision log entry, or None if not found
+        """
+        try:
+            # Scan execution log to find entry with this order_id
+            # This is expensive but necessary since there's no GSI on order_id
+            executions = []
+            scan_kwargs: Dict[str, Any] = {}
+
+            # Filter by timestamp to reduce scan size
+            cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+
+            while True:
+                response = self.execution_log_table.scan(**scan_kwargs)
+                items = response.get('Items', [])
+
+                # Filter by timestamp and order_id
+                for item in items:
+                    event_ts_str = item.get('event_ts')
+                    if event_ts_str:
+                        try:
+                            event_ts = datetime.fromisoformat(event_ts_str.replace('Z', '+00:00'))
+                            if event_ts > cutoff:
+                                # Check if this execution event contains the order_id
+                                # order_id might be in different fields depending on event type
+                                if (item.get('order_id') == order_id or
+                                    item.get('payload', {}).get('order_id') == order_id or
+                                    order_id in str(item)):  # Fallback to string search
+                                    executions.append(item)
+                        except (ValueError, TypeError):
+                            continue
+
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key:
+                    break
+                scan_kwargs['ExclusiveStartKey'] = last_evaluated_key
+
+            if not executions:
+                logger.warning(f"No execution log found for order_id: {order_id}")
+                return None
+
+            # Take the most recent execution if multiple found
+            executions.sort(key=lambda x: x.get('event_ts', ''), reverse=True)
+            execution = executions[0]
+
+            # Extract decision_id from the execution log
+            decision_id = execution.get('decision_id')
+            if not decision_id:
+                logger.warning(f"No decision_id found in execution log for order_id: {order_id}")
+                return {
+                    'execution': self._deserialize_decimal(execution),
+                    'decision': None
+                }
+
+            # Query the decision log using the decision_id
+            # Need to scan decision log since we don't know the date
+            decision = None
+            scan_kwargs = {}
+
+            while True:
+                response = self.decision_log_table.scan(
+                    FilterExpression=Attr('decision_id').eq(decision_id),
+                    **scan_kwargs
+                )
+                items = response.get('Items', [])
+                if items:
+                    decision = items[0]  # Should only be one
+                    break
+
+                last_evaluated_key = response.get('LastEvaluatedKey')
+                if not last_evaluated_key:
+                    break
+                scan_kwargs['ExclusiveStartKey'] = last_evaluated_key
+
+            return {
+                'execution': self._deserialize_decimal(execution),
+                'decision': self._deserialize_decimal(decision) if decision else None
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting decision context for order {order_id}: {e}")
+            return None
+
     def get_pnl_over_time(self, days: int = 7) -> List[Dict]:
         """
         Calculate P&L over time from trade history using proper cost basis tracking.
