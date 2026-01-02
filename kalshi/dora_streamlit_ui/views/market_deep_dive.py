@@ -200,9 +200,15 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
                         st.info(f"Decision Timestamp: {to_local_time(decision_ts)}")
 
                     # Show key decision metrics
+                    # Extract price_calc once for reuse
+                    price_calc = decision.get('price_calc', {})
+
                     dec_col1, dec_col2, dec_col3, dec_col4 = st.columns(4)
                     with dec_col1:
+                        # Fair value can be at top level or in price_calc
                         fair_value = decision.get('fair_value')
+                        if fair_value is None:
+                            fair_value = price_calc.get('fair_value')
                         st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
                     with dec_col2:
                         # Try to get mid_price from order_book_snapshot if not at top level
@@ -220,10 +226,11 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
                             net_yes_qty = inventory_data
                         st.metric("Inventory (YES)", net_yes_qty if net_yes_qty is not None else 'N/A')
                     with dec_col4:
-                        # Try to get inventory_skew from price_calc if not at top level
+                        # Skew is in price_calc (note: field is 'skew', not 'inventory_skew')
                         skew = decision.get('inventory_skew')
                         if skew is None:
-                            price_calc = decision.get('price_calc', {})
+                            skew = price_calc.get('skew')
+                        if skew is None:
                             skew = price_calc.get('inventory_skew')
                         st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
 

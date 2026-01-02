@@ -496,10 +496,20 @@ class DoraBot:
             # Prepare recent trades data (last 3)
             recent_trades = []
             for trade in trades[:3]:
+                # Handle both dict and object formats
+                if isinstance(trade, dict):
+                    price = trade.get('price', 0)
+                    size = trade.get('size', 0)
+                    timestamp = trade.get('timestamp', '')
+                else:
+                    price = trade.price
+                    size = trade.size
+                    timestamp = trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+
                 recent_trades.append({
-                    'price': trade.price,
-                    'size': trade.size,
-                    'timestamp': trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                    'price': price,
+                    'size': size,
+                    'timestamp': str(timestamp)
                 })
 
             log_decision_record({
@@ -1024,10 +1034,20 @@ class DoraBot:
                 # Prepare recent trades data (last 3)
                 recent_trades = []
                 for trade in trades[:3]:
+                    # Handle both dict and object formats
+                    if isinstance(trade, dict):
+                        price = trade.get('price', 0)
+                        size = trade.get('size', 0)
+                        timestamp = trade.get('timestamp', '')
+                    else:
+                        price = trade.price
+                        size = trade.size
+                        timestamp = trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+
                     recent_trades.append({
-                        'price': trade.price,
-                        'size': trade.size,
-                        'timestamp': trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                        'price': price,
+                        'size': size,
+                        'timestamp': str(timestamp)
                     })
 
                 log_decision_record({

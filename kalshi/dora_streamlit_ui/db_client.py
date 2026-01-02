@@ -239,14 +239,26 @@ class ReadOnlyDynamoDBClient:
             decisions = []
             start_date = datetime.utcnow() - timedelta(days=days)
 
-            # Query each date
+            # Query each date with pagination
             for i in range(days + 1):
                 date_str = (start_date + timedelta(days=i)).strftime('%Y-%m-%d')
-                response = self.decision_log_table.query(
-                    KeyConditionExpression=Key('date').eq(date_str),
-                    ScanIndexForward=False  # Most recent first
-                )
-                decisions.extend(response.get('Items', []))
+
+                # Handle pagination to get all results
+                last_evaluated_key = None
+                while True:
+                    query_kwargs = {
+                        'KeyConditionExpression': Key('date').eq(date_str),
+                        'ScanIndexForward': False  # Most recent first
+                    }
+                    if last_evaluated_key:
+                        query_kwargs['ExclusiveStartKey'] = last_evaluated_key
+
+                    response = self.decision_log_table.query(**query_kwargs)
+                    decisions.extend(response.get('Items', []))
+
+                    last_evaluated_key = response.get('LastEvaluatedKey')
+                    if not last_evaluated_key:
+                        break
 
             # Filter by market if specified
             if market_id:
