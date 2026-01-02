@@ -449,15 +449,37 @@ def get_time_ago(timestamp_str: Optional[str]) -> str:
         return 'N/A'
 
 
-def render_recent_logs(db_client: ReadOnlyDynamoDBClient, trades: List[Dict]):
-    """Render most recent decision and fill details."""
+def render_recent_logs(db_client: ReadOnlyDynamoDBClient, trades: List[Dict], decisions_by_market: Dict[str, Dict]):
+    """Render most recent decision and fill details.
+
+    Args:
+        db_client: DynamoDB client (not used for queries - data is pre-fetched)
+        trades: Pre-fetched trades list
+        decisions_by_market: Pre-fetched decisions indexed by market_id
+    """
     st.subheader("Recent Activity")
 
     col1, col2 = st.columns(2)
 
     with col1:
         st.markdown("#### Most Recent Decision")
-        decision = db_client.get_most_recent_decision_log()
+        # Find the most recent decision across all markets from pre-fetched data
+        decision = None
+        most_recent_ts = None
+        for market_id, market_decision in decisions_by_market.items():
+            if not market_decision:
+                continue
+            ts_str = market_decision.get('timestamp', '')
+            if not ts_str:
+                continue
+            try:
+                ts = datetime.fromisoformat(ts_str.replace('Z', '+00:00'))
+                if most_recent_ts is None or ts > most_recent_ts:
+                    most_recent_ts = ts
+                    decision = market_decision
+            except Exception:
+                continue
+
         if decision:
             timestamp = decision.get('timestamp', '')
             local_time, time_ago = format_timestamp_with_ago(timestamp)
@@ -1290,7 +1312,7 @@ def render(environment: str, region: str):
     st.markdown("---")
 
     # Middle row - Recent logs
-    render_recent_logs(db_client, trades)
+    render_recent_logs(db_client, trades, decisions_by_market)
 
     st.markdown("---")
 
