@@ -101,6 +101,17 @@ def create_tables(region: str, environment: str) -> None:
         attribute_definitions=[
             {"AttributeName": "date", "AttributeType": "S"},
             {"AttributeName": "timestamp", "AttributeType": "S"},
+            {"AttributeName": "market_id", "AttributeType": "S"},
+        ],
+        gsi=[
+            {
+                "IndexName": "market_id-timestamp-index",
+                "KeySchema": [
+                    {"AttributeName": "market_id", "KeyType": "HASH"},
+                    {"AttributeName": "timestamp", "KeyType": "RANGE"},
+                ],
+                "Projection": {"ProjectionType": "ALL"},
+            }
         ],
     )
 

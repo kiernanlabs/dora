@@ -223,21 +223,26 @@ def calculate_orderbook_depth(
             if price >= min_price and price <= best_price:
                 total_depth += size
     else:  # side == 'no'
-        # For no side (asks), we want orders within price_range_cents above best ask
+        # For no side (asks), we want orders within price_range_cents of best ask
+        # NO side order book prices are in NO terms (100 - YES price)
+        # If best_price is YES ask of 20¢, convert to NO price: 100-20=80¢
+        # Then find orders within ±price_range_cents of 80¢ in NO terms
         orders = orderbook.get('no', []) or []
-        max_price = best_price + price_range_cents
+        best_price_no = 100 - best_price  # Convert YES price to NO price
+        min_price_no = best_price_no - price_range_cents
+        max_price_no = best_price_no + price_range_cents
         for order in orders:
             # Handle both [price, size] array format and dict format
             if isinstance(order, list) and len(order) >= 2:
                 price, size = order[0], order[1]
             elif isinstance(order, dict):
-                # NO orders have yes_price (the YES price at which NO is bought)
+                # NO orders are priced in NO terms (complement)
                 price = order.get('yes_price', 0)
                 size = order.get('size', 0)
             else:
                 continue
-            # Include orders at or below max_price
-            if price >= best_price and price <= max_price:
+            # Include orders within price_range_cents of best NO price
+            if price >= min_price_no and price <= max_price_no:
                 total_depth += size
 
     return total_depth
@@ -1079,7 +1084,10 @@ def check_existing_markets(
     dynamo = DynamoDBClient(region=region, environment=environment)
 
     # Fetch all existing market configs (including disabled ones)
-    all_configs = dynamo.get_all_market_configs(enabled_only=False)
+    all_configs_list = dynamo.get_all_market_configs(enabled_only=False)
+
+    # Convert list to dict for efficient lookup by ticker
+    all_configs = {config['market_id']: config for config in all_configs_list}
 
     # Fetch all positions to get realized P&L
     positions = dynamo.get_positions()
@@ -1095,14 +1103,14 @@ def check_existing_markets(
             config = all_configs[ticker]
 
             # Skip if already enabled
-            if config.enabled:
+            if config.get('enabled', False):
                 skipped_enabled_count += 1
                 continue
 
             # Market exists but is disabled - add P&L info
             if ticker in positions:
                 position = positions[ticker]
-                market['historical_realized_pnl'] = position.realized_pnl
+                market['historical_realized_pnl'] = position.get('realized_pnl', 0.0)
             else:
                 market['historical_realized_pnl'] = 0.0
 

@@ -106,6 +106,8 @@ Proposed actions:
         # Create the prompt
         prompt = f"""You are a market risk and profitability analyst for prediction market trading. Your job is to analyze the performance of all markets within an event and provide strategic insights.
 
+Today's date: {datetime.now().strftime("%Y-%m-%d")}
+
 {context}
 
 Please provide:
@@ -242,6 +244,8 @@ Key metrics:
 
         # Create the prompt
         prompt = f"""You are a market selection analyst for prediction market trading. Your job is to evaluate new market candidates and provide entry recommendations.
+
+Today's date: {datetime.now().strftime("%Y-%m-%d")}
 
 {context}
 

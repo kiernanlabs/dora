@@ -231,11 +231,49 @@ class ReadOnlyDynamoDBClient:
         """
         Get recent decision logs.
 
+        Uses the market_id-timestamp-index GSI when filtering by market_id for better performance.
+
         Args:
             days: Number of days to look back
             market_id: Optional filter for specific market
         """
         try:
+            # If market_id is specified, try to use the GSI for efficient querying
+            if market_id:
+                try:
+                    # Calculate cutoff timestamp for filtering
+                    cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
+                    cutoff_ts = cutoff_dt.isoformat()
+
+                    # Query GSI for this market
+                    decisions = []
+                    last_evaluated_key = None
+
+                    while True:
+                        query_kwargs = {
+                            'IndexName': 'market_id-timestamp-index',
+                            'KeyConditionExpression': Key('market_id').eq(market_id) & Key('timestamp').gte(cutoff_ts),
+                            'ScanIndexForward': False  # Most recent first
+                        }
+                        if last_evaluated_key:
+                            query_kwargs['ExclusiveStartKey'] = last_evaluated_key
+
+                        response = self.decision_log_table.query(**query_kwargs)
+                        decisions.extend(response.get('Items', []))
+
+                        last_evaluated_key = response.get('LastEvaluatedKey')
+                        if not last_evaluated_key:
+                            break
+
+                    # Already sorted by timestamp descending from the query
+                    return [self._deserialize_decimal(decision) for decision in decisions]
+
+                except Exception as gsi_error:
+                    # GSI doesn't exist yet - fall back to date-based query
+                    logger.warning(f"GSI query failed (index may not exist yet), falling back to date-based query: {gsi_error}")
+                    # Continue to fallback method below
+
+            # Fallback: Query by date (works without GSI)
             decisions = []
             start_date = datetime.utcnow() - timedelta(days=days)
 
@@ -526,6 +564,8 @@ class ReadOnlyDynamoDBClient:
         Get the decision context for a given fill by finding the most recent decision
         before the fill timestamp.
 
+        This method uses the market_id-timestamp-index GSI for efficient lookups.
+
         Args:
             market_id: The market ID
             fill_timestamp: The fill timestamp (ISO format)
@@ -538,51 +578,97 @@ class ReadOnlyDynamoDBClient:
             # Parse the fill timestamp
             if 'Z' in fill_timestamp:
                 fill_dt = datetime.fromisoformat(fill_timestamp.replace('Z', '+00:00'))
-            elif '+' in fill_timestamp or ('-' in fill_timestamp.split('T')[1] if 'T' in fill_timestamp else False):
+            elif '+' in fill_timestamp or (('-' in fill_timestamp) and fill_timestamp.rfind('-') > 10):
                 fill_dt = datetime.fromisoformat(fill_timestamp)
             else:
                 fill_dt = datetime.fromisoformat(fill_timestamp).replace(tzinfo=timezone.utc)
 
-            # Get all decision logs for this market
-            decisions = self.get_recent_decision_logs(days=days, market_id=market_id)
+            # Use GSI to query decisions for this specific market
+            # Query in reverse chronological order and stop when we find one before fill_dt
+            most_recent_decision = None
 
-            if not decisions:
-                logger.warning(f"No decision logs found for market {market_id}")
-                return None
+            # Try to use GSI for efficient query (requires GSI to be created)
+            try:
+                response = self.decision_log_table.query(
+                    IndexName='market_id-timestamp-index',
+                    KeyConditionExpression=Key('market_id').eq(market_id),
+                    ScanIndexForward=False,  # Descending order (newest first)
+                    Limit=100  # Get recent decisions, we'll filter client-side
+                )
 
-            # Filter to only decisions before the fill timestamp
-            decisions_before_fill = []
-            for decision in decisions:
-                decision_ts_str = decision.get('timestamp')
-                if decision_ts_str:
-                    try:
-                        if 'Z' in decision_ts_str:
-                            decision_dt = datetime.fromisoformat(decision_ts_str.replace('Z', '+00:00'))
-                        elif '+' in decision_ts_str or ('-' in decision_ts_str.split('T')[1] if 'T' in decision_ts_str else False):
-                            decision_dt = datetime.fromisoformat(decision_ts_str)
-                        else:
-                            decision_dt = datetime.fromisoformat(decision_ts_str).replace(tzinfo=timezone.utc)
+                decisions = response.get('Items', [])
 
-                        if decision_dt <= fill_dt:
-                            decisions_before_fill.append(decision)
-                    except (ValueError, TypeError) as e:
-                        logger.warning(f"Failed to parse decision timestamp {decision_ts_str}: {e}")
-                        continue
+                # Filter to only decisions before the fill timestamp
+                for decision in decisions:
+                    decision_ts_str = decision.get('timestamp')
+                    if decision_ts_str:
+                        try:
+                            if 'Z' in decision_ts_str:
+                                decision_dt = datetime.fromisoformat(decision_ts_str.replace('Z', '+00:00'))
+                            elif '+' in decision_ts_str or (('-' in decision_ts_str) and decision_ts_str.rfind('-') > 10):
+                                decision_dt = datetime.fromisoformat(decision_ts_str)
+                            else:
+                                decision_dt = datetime.fromisoformat(decision_ts_str).replace(tzinfo=timezone.utc)
 
-            if not decisions_before_fill:
-                logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
-                return None
+                            if decision_dt <= fill_dt:
+                                most_recent_decision = decision
+                                break  # Found the most recent one before fill
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Failed to parse decision timestamp {decision_ts_str}: {e}")
+                            continue
 
-            # Sort by timestamp (most recent first) and take the most recent one before the fill
-            decisions_before_fill.sort(
-                key=lambda d: d.get('timestamp', ''),
-                reverse=True
-            )
-            most_recent_decision = decisions_before_fill[0]
+                if most_recent_decision:
+                    return {
+                        'decision': self._deserialize_decimal(most_recent_decision)
+                    }
 
-            return {
-                'decision': most_recent_decision
-            }
+            except Exception as gsi_error:
+                # GSI doesn't exist yet - fall back to old method
+                logger.warning(f"GSI query failed (index may not exist yet), falling back to date-based query: {gsi_error}")
+
+                # Fallback: Get all decision logs for this market (old method)
+                decisions = self.get_recent_decision_logs(days=days, market_id=market_id)
+
+                if not decisions:
+                    logger.warning(f"No decision logs found for market {market_id}")
+                    return None
+
+                # Filter to only decisions before the fill timestamp
+                decisions_before_fill = []
+                for decision in decisions:
+                    decision_ts_str = decision.get('timestamp')
+                    if decision_ts_str:
+                        try:
+                            if 'Z' in decision_ts_str:
+                                decision_dt = datetime.fromisoformat(decision_ts_str.replace('Z', '+00:00'))
+                            elif '+' in decision_ts_str or (('-' in decision_ts_str) and decision_ts_str.rfind('-') > 10):
+                                decision_dt = datetime.fromisoformat(decision_ts_str)
+                            else:
+                                decision_dt = datetime.fromisoformat(decision_ts_str).replace(tzinfo=timezone.utc)
+
+                            if decision_dt <= fill_dt:
+                                decisions_before_fill.append(decision)
+                        except (ValueError, TypeError) as e:
+                            logger.warning(f"Failed to parse decision timestamp {decision_ts_str}: {e}")
+                            continue
+
+                if not decisions_before_fill:
+                    logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
+                    return None
+
+                # Sort by timestamp (most recent first) and take the most recent one before the fill
+                decisions_before_fill.sort(
+                    key=lambda d: d.get('timestamp', ''),
+                    reverse=True
+                )
+                most_recent_decision = decisions_before_fill[0]
+
+                return {
+                    'decision': most_recent_decision
+                }
+
+            logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
+            return None
 
         except Exception as e:
             logger.error(f"Error getting decision context for fill: {e}")

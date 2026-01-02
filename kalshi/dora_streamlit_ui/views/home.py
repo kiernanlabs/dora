@@ -41,7 +41,9 @@ def to_local_time(timestamp_str: str) -> str:
     try:
         if 'Z' in timestamp_str:
             dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        elif '+' in timestamp_str or ('-' in timestamp_str.split('T')[1] if 'T' in timestamp_str else False):
+        elif '+' in timestamp_str or (('-' in timestamp_str) and timestamp_str.rfind('-') > 10):
+            # Already has timezone info (e.g., +00:00 or -05:00)
+            # Check for '-' after position 10 to avoid matching the date separator
             dt = datetime.fromisoformat(timestamp_str)
         else:
             dt = datetime.fromisoformat(timestamp_str).replace(tzinfo=timezone.utc)
@@ -406,8 +408,9 @@ def format_timestamp_with_ago(timestamp_str: str) -> tuple[str, str]:
         # Parse ISO timestamp - handle both with and without timezone
         if 'Z' in timestamp_str:
             dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
-        elif '+' in timestamp_str or timestamp_str.endswith(('00:00', '00')):
-            # Already has timezone info
+        elif '+' in timestamp_str or (('-' in timestamp_str) and timestamp_str.rfind('-') > 10):
+            # Already has timezone info (e.g., +00:00 or -05:00)
+            # Check for '-' after position 10 to avoid matching the date separator
             dt = datetime.fromisoformat(timestamp_str)
         else:
             # No timezone info - assume UTC
