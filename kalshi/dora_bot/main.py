@@ -489,6 +489,19 @@ class DoraBot:
             })
 
             # Log decision to DynamoDB (for historical record)
+            # Prepare enhanced order book data
+            top_bids = [{'price': price, 'size': size} for price, size in order_book.bid_levels[:3]]
+            top_asks = [{'price': price, 'size': size} for price, size in order_book.ask_levels[:3]]
+
+            # Prepare recent trades data (last 3)
+            recent_trades = []
+            for trade in trades[:3]:
+                recent_trades.append({
+                    'price': trade.price,
+                    'size': trade.size,
+                    'timestamp': trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                })
+
             log_decision_record({
                 'market_id': market_id,
                 'decision_id': decision_id,
@@ -498,8 +511,11 @@ class DoraBot:
                     'best_bid': order_book.best_bid,
                     'best_ask': order_book.best_ask,
                     'spread': order_book.spread,
-                    'mid': order_book.mid_price
+                    'mid': order_book.mid_price,
+                    'top_bids': top_bids,
+                    'top_asks': top_asks,
                 },
+                'recent_trades': recent_trades,
                 'inventory': {
                     'net_yes_qty': position.net_yes_qty
                 },
@@ -1001,6 +1017,19 @@ class DoraBot:
                 })
 
                 # Log to DynamoDB
+                # Prepare enhanced order book data
+                top_bids = [{'price': price, 'size': size} for price, size in order_book.bid_levels[:3]]
+                top_asks = [{'price': price, 'size': size} for price, size in order_book.ask_levels[:3]]
+
+                # Prepare recent trades data (last 3)
+                recent_trades = []
+                for trade in trades[:3]:
+                    recent_trades.append({
+                        'price': trade.price,
+                        'size': trade.size,
+                        'timestamp': trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                    })
+
                 log_decision_record({
                     'market_id': market_id,
                     'decision_id': decision_id,
@@ -1010,8 +1039,11 @@ class DoraBot:
                         'best_bid': order_book.best_bid,
                         'best_ask': order_book.best_ask,
                         'spread': order_book.spread,
-                        'mid': order_book.mid_price
+                        'mid': order_book.mid_price,
+                        'top_bids': top_bids,
+                        'top_asks': top_asks,
                     },
+                    'recent_trades': recent_trades,
                     'inventory': {
                         'net_yes_qty': position.net_yes_qty
                     },

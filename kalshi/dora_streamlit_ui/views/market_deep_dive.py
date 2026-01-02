@@ -205,14 +205,72 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
                         fair_value = decision.get('fair_value')
                         st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
                     with dec_col2:
+                        # Try to get mid_price from order_book_snapshot if not at top level
                         mid_price = decision.get('mid_price')
+                        if mid_price is None:
+                            order_book_snapshot = decision.get('order_book_snapshot', {})
+                            mid_price = order_book_snapshot.get('mid')
                         st.metric("Mid Price", f"${mid_price:.3f}" if mid_price is not None else 'N/A')
                     with dec_col3:
-                        inventory = decision.get('inventory')
-                        st.metric("Inventory (YES)", inventory if inventory is not None else 'N/A')
+                        # Inventory is stored as a dict with net_yes_qty
+                        inventory_data = decision.get('inventory', {})
+                        if isinstance(inventory_data, dict):
+                            net_yes_qty = inventory_data.get('net_yes_qty')
+                        else:
+                            net_yes_qty = inventory_data
+                        st.metric("Inventory (YES)", net_yes_qty if net_yes_qty is not None else 'N/A')
                     with dec_col4:
+                        # Try to get inventory_skew from price_calc if not at top level
                         skew = decision.get('inventory_skew')
+                        if skew is None:
+                            price_calc = decision.get('price_calc', {})
+                            skew = price_calc.get('inventory_skew')
                         st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
+
+                    # Show order book depth if available
+                    order_book = decision.get('order_book_snapshot', {})
+                    top_bids = order_book.get('top_bids', [])
+                    top_asks = order_book.get('top_asks', [])
+
+                    if top_bids or top_asks:
+                        st.markdown("---")
+                        st.markdown("**Order Book Depth at Decision Time**")
+
+                        ob_col1, ob_col2 = st.columns(2)
+                        with ob_col1:
+                            st.markdown("*Bids (Best 3)*")
+                            if top_bids:
+                                for bid in top_bids:
+                                    st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
+                            else:
+                                st.text("No bid data")
+
+                        with ob_col2:
+                            st.markdown("*Asks (Best 3)*")
+                            if top_asks:
+                                for ask in top_asks:
+                                    st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
+                            else:
+                                st.text("No ask data")
+
+                    # Show recent trades if available
+                    recent_trades = decision.get('recent_trades', [])
+                    if recent_trades:
+                        st.markdown("---")
+                        st.markdown("**Recent Trades at Decision Time**")
+
+                        # Create a table for recent trades
+                        trades_data = []
+                        for trade in recent_trades:
+                            timestamp = trade.get('timestamp', '')
+                            trades_data.append({
+                                'Price': f"${trade.get('price', 0):.3f}",
+                                'Size': trade.get('size', 0),
+                                'Time': to_local_time(timestamp) if timestamp else 'N/A'
+                            })
+
+                        trades_df = pd.DataFrame(trades_data)
+                        st.dataframe(trades_df, hide_index=True, use_container_width=True)
 
                     # Show target quotes if available
                     target_quotes = decision.get('target_quotes', [])
