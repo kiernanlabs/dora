@@ -1333,6 +1333,9 @@ def generate_review_page_html(
             previous_yes_ask = metadata.get('previous_yes_ask')
             current_spread = metadata.get('current_spread')
             spread_24h_ago = metadata.get('spread_24h_ago')
+            # Convert spread_24h_ago to cents if it's in dollars (< 1 indicates dollars)
+            if spread_24h_ago is not None and spread_24h_ago < 1:
+                spread_24h_ago = spread_24h_ago * 100
 
             # Format Market Spread with modal
             if current_spread is not None:
@@ -1930,6 +1933,9 @@ def generate_screener_candidates_html(
         previous_yes_ask = metadata.get('previous_yes_ask')
         current_spread = metadata.get('current_spread')
         spread_24h_ago = metadata.get('spread_24h_ago')
+        # Convert spread_24h_ago to cents if it's in dollars (< 1 indicates dollars)
+        if spread_24h_ago is not None and spread_24h_ago < 1:
+            spread_24h_ago = spread_24h_ago * 100
 
         info_risk = metadata.get('info_risk')
         info_risk_rationale = metadata.get('info_risk_rationale', '')
@@ -1964,7 +1970,18 @@ def generate_screener_candidates_html(
 
         bid_ask_str = f"{yes_bid}¢ / {yes_ask}¢" if yes_bid is not None and yes_ask is not None else "—"
         info_risk_str = f"{info_risk:.0f}%" if info_risk is not None else "—"
-        depth_str = f"{bid_depth:,} / {ask_depth:,}" if bid_depth or ask_depth else "—"
+
+        # Format Order Depth with modal
+        if bid_depth or ask_depth:
+            total_depth = bid_depth + ask_depth
+            depth_imbalance = ((bid_depth - ask_depth) / total_depth * 100) if total_depth > 0 else 0
+            imbalance_label = "Bid-heavy" if depth_imbalance > 10 else ("Ask-heavy" if depth_imbalance < -10 else "Balanced")
+            modal_content = f'''<div class="modal-row"><span class="modal-label">Bid Depth (±5¢):</span><span class="modal-value">{bid_depth:,} contracts</span></div><div class="modal-row"><span class="modal-label">Ask Depth (±5¢):</span><span class="modal-value">{ask_depth:,} contracts</span></div><div class="modal-row"><span class="modal-label">Total Depth:</span><span class="modal-value">{total_depth:,} contracts</span></div><div class="modal-row"><span class="modal-label">Imbalance:</span><span class="modal-value">{depth_imbalance:+.1f}% ({imbalance_label})</span></div>'''
+            modal_content_escaped = html_lib.escape(modal_content, quote=True)
+            depth_str = f'''<span class="clickable-info" data-modal-title="Order Book Depth (±5¢)" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)">{bid_depth:,} / {ask_depth:,}</span>'''
+        else:
+            depth_str = "—"
+
         buy_sell_str = f"{buy_volume_trades:,} / {sell_volume_trades:,}" if buy_volume_trades or sell_volume_trades else "—"
 
         # Price standard deviation
@@ -2035,7 +2052,7 @@ def generate_screener_candidates_html(
                         </div>
             """
 
-        html += """
+        html += f"""
                         <div class="candidate-metrics">
                             <div class="candidate-metric">
                                 <div class="candidate-metric-label">Volume 24h</div>
@@ -2082,7 +2099,7 @@ def generate_screener_candidates_html(
                                 <div class="candidate-metric-value metric-pnl {pnl_class}">{pnl_str}</div>
                             </div>"""
 
-        html += """
+        html += f"""
                         </div>
                     </div>
         """
@@ -2430,7 +2447,19 @@ def execute_single_proposal(
                 current_quote_size = existing.get('quote_size', 5)
 
                 if action == 'exit':
-                    changes_to_apply = {'enabled': False}
+                    # Check if there's an outstanding position
+                    position_qty = proposal.get('metadata', {}).get('position_qty', 0)
+                    if position_qty != 0:
+                        # Aggressively exit position: wide spread + minimal size
+                        changes_to_apply = {
+                            'enabled': True,
+                            'min_spread': 0.50,  # 50 cent spread - aggressive exit
+                            'quote_size': 1
+                        }
+                        logger.info(f"Exit action for {market_id} with position {position_qty}: setting aggressive exit params")
+                    else:
+                        # No position, just disable
+                        changes_to_apply = {'enabled': False}
                 elif action == 'scale_down':
                     changes_to_apply = {
                         'quote_size': max(1, int(current_quote_size * 0.5))
@@ -2456,6 +2485,20 @@ def execute_single_proposal(
                 # Use the original proposed changes
                 if action == 'activate_sibling':
                     changes_to_apply = build_default_settings(proposed_changes)
+                elif action == 'exit':
+                    # Check if there's an outstanding position
+                    position_qty = proposal.get('metadata', {}).get('position_qty', 0)
+                    if position_qty != 0:
+                        # Aggressively exit position: wide spread + minimal size
+                        changes_to_apply = {
+                            'enabled': True,
+                            'min_spread': 0.50,  # 50 cent spread - aggressive exit
+                            'quote_size': 1
+                        }
+                        logger.info(f"Exit action for {market_id} with position {position_qty}: setting aggressive exit params")
+                    else:
+                        # No position, just disable
+                        changes_to_apply = {'enabled': False}
                 else:
                     changes_to_apply = proposed_changes
 

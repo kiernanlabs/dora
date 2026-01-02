@@ -277,6 +277,79 @@ class ReadOnlyDynamoDBClient:
         decisions = self.get_recent_decision_logs(days=1, market_id=market_id)
         return decisions[0] if decisions else None
 
+    def get_most_recent_decision_per_market(self, market_ids: Optional[List[str]] = None) -> Dict[str, Dict]:
+        """
+        Get the most recent decision for each market efficiently.
+
+        This is optimized for the home page which needs just the latest decision per market
+        for order book snapshots, avoiding the slow scan of all decisions from the last day.
+
+        Args:
+            market_ids: Optional list of market IDs to filter. If None, returns for all markets.
+
+        Returns:
+            Dict mapping market_id -> most recent decision dict
+        """
+        try:
+            decisions_by_market: Dict[str, Dict] = {}
+
+            # Query today and yesterday to ensure we catch decisions from last 24h
+            # even if they happened before midnight UTC
+            for days_ago in [0, 1]:
+                date_str = (datetime.utcnow() - timedelta(days=days_ago)).strftime('%Y-%m-%d')
+
+                # Query with pagination, but break early once we have all markets
+                last_evaluated_key = None
+                while True:
+                    query_kwargs = {
+                        'KeyConditionExpression': Key('date').eq(date_str),
+                        'ScanIndexForward': False,  # Most recent first
+                        'Limit': 1000  # Limit batch size for faster initial response
+                    }
+                    if last_evaluated_key:
+                        query_kwargs['ExclusiveStartKey'] = last_evaluated_key
+
+                    response = self.decision_log_table.query(**query_kwargs)
+                    items = response.get('Items', [])
+
+                    # Process items - keep only most recent per market
+                    for decision in items:
+                        market_id = decision.get('market_id')
+                        if not market_id:
+                            continue
+
+                        # Filter by market_ids if provided
+                        if market_ids and market_id not in market_ids:
+                            continue
+
+                        # Only keep if we haven't seen this market yet (items are sorted by timestamp desc)
+                        if market_id not in decisions_by_market:
+                            decisions_by_market[market_id] = decision
+
+                    # Check if we should continue pagination
+                    last_evaluated_key = response.get('LastEvaluatedKey')
+
+                    # Early exit: if we have decisions for all requested markets, stop
+                    if market_ids and len(decisions_by_market) >= len(market_ids):
+                        break
+
+                    if not last_evaluated_key:
+                        break
+
+                # Early exit: if we have decisions for all requested markets, stop querying older dates
+                if market_ids and len(decisions_by_market) >= len(market_ids):
+                    break
+
+            # Deserialize decimals
+            return {
+                market_id: self._deserialize_decimal(decision)
+                for market_id, decision in decisions_by_market.items()
+            }
+
+        except Exception as e:
+            logger.error(f"Error fetching most recent decisions per market: {e}")
+            return {}
+
     # ==================== Execution Log Methods ====================
 
     def get_recent_execution_logs(

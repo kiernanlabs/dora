@@ -624,7 +624,7 @@ def render_active_markets_table(
     positions: Dict,
     market_configs: List[Dict],
     trades: List[Dict],
-    decisions: List[Dict],
+    decisions_by_market: Dict[str, Dict],
     open_orders_by_market: Dict[str, List[Dict]],
     open_orders_last_updated: Optional[str] = None,
 ):
@@ -635,7 +635,7 @@ def render_active_markets_table(
         positions: Pre-fetched positions dict
         market_configs: Pre-fetched market configs
         trades: Pre-fetched trades (last 30 days)
-        decisions: Pre-fetched decision logs (last 1 day)
+        decisions_by_market: Pre-fetched most recent decision per market (optimized dict)
         open_orders_by_market: Pre-fetched open orders grouped by market_id (from DynamoDB state)
         open_orders_last_updated: Timestamp when open orders were last synced with exchange
     """
@@ -646,14 +646,7 @@ def render_active_markets_table(
         return
 
     # Pre-index data by market_id for O(1) lookups
-    # Index decisions by market_id (most recent first, already sorted)
-    decisions_by_market: Dict[str, List[Dict]] = {}
-    for d in decisions:
-        mid = d.get('market_id')
-        if mid:
-            if mid not in decisions_by_market:
-                decisions_by_market[mid] = []
-            decisions_by_market[mid].append(d)
+    # decisions_by_market is already indexed from the optimized query
 
     # Index trades by market_id
     trades_by_market: Dict[str, List[Dict]] = {}
@@ -682,8 +675,7 @@ def render_active_markets_table(
         event_tag = config.get('event_ticker') or 'N/A'
 
         # Get most recent decision for order book snapshot (from pre-fetched data)
-        market_decisions = decisions_by_market.get(market_id, [])
-        decision = market_decisions[0] if market_decisions else None
+        decision = decisions_by_market.get(market_id)
         order_book = decision.get('order_book_snapshot', {}) if decision else {}
 
         # Get target quotes from decision (what bot intended to quote)
@@ -1141,8 +1133,12 @@ def render(environment: str, region: str):
         pnl_data = _timed("get_pnl_over_time", db_client.get_pnl_over_time, days=30)
         # Load all trades (at least 30 days) to properly calculate realized P&L with cost basis
         trades = _timed("get_recent_trades", db_client.get_recent_trades, days=30)
-        # Pre-fetch decision logs for the active markets table
-        decisions = _timed("get_recent_decision_logs", db_client.get_recent_decision_logs, days=1)
+        # Pre-fetch most recent decision per market (optimized for home page)
+        # Pass market_ids to enable early exit optimization
+        market_ids = [c.get('market_id') for c in market_configs if c.get('market_id')]
+        decisions_by_market = _timed("get_most_recent_decision_per_market",
+                                      db_client.get_most_recent_decision_per_market,
+                                      market_ids=market_ids)
         # Fetch open orders from DynamoDB state (synced from exchange by bot)
         open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
         open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)
@@ -1180,14 +1176,7 @@ def render(environment: str, region: str):
         if trade.get('date') == today_str:
             fees_today += trade.get('fees', 0.0) or 0.0
 
-    # Pre-index decisions by market_id
-    decisions_by_market: Dict[str, List[Dict]] = {}
-    for d in decisions:
-        mid = d.get('market_id')
-        if mid:
-            if mid not in decisions_by_market:
-                decisions_by_market[mid] = []
-            decisions_by_market[mid].append(d)
+    # decisions_by_market is already indexed by market_id from the optimized query
 
     for config in market_configs:
         market_id = config.get('market_id')
@@ -1195,8 +1184,7 @@ def render(environment: str, region: str):
         net_qty = position.get('net_yes_qty', 0)
 
         # Get order book from most recent decision
-        market_decisions = decisions_by_market.get(market_id, [])
-        decision = market_decisions[0] if market_decisions else None
+        decision = decisions_by_market.get(market_id)
         order_book = decision.get('order_book_snapshot', {}) if decision else {}
 
         market_best_bid = order_book.get('best_bid', 0)
@@ -1312,7 +1300,7 @@ def render(environment: str, region: str):
         positions,
         market_configs,
         trades,
-        decisions,
+        decisions_by_market,
         open_orders_by_market,
         open_orders_last_updated,
     )
