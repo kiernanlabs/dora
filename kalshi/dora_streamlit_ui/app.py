@@ -49,7 +49,7 @@ with st.sidebar:
     st.markdown("### Navigation")
 
     # Page selection
-    page_options = ["Home", "Market Deep Dive"]
+    page_options = ["Home", "Market Deep Dive", "Stale Positions"]
     default_index = page_options.index(st.session_state.get('current_page', 'Home'))
 
     page = st.radio(
@@ -74,3 +74,6 @@ if page == "Home":
 elif page == "Market Deep Dive":
     from views import market_deep_dive
     market_deep_dive.render(environment, region)
+elif page == "Stale Positions":
+    from views import stale_positions
+    stale_positions.render(environment, region)

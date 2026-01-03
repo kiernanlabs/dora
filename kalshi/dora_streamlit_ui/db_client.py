@@ -182,12 +182,17 @@ class ReadOnlyDynamoDBClient:
         """
         try:
             response = self.state_table.get_item(Key={'key': 'balance'})
+            logger.info(f"Balance query response: {response}")
             item = response.get('Item')
             if item:
-                return self._deserialize_decimal(item)
+                deserialized = self._deserialize_decimal(item)
+                logger.info(f"Balance data after deserialization: {deserialized}")
+                return deserialized
+            else:
+                logger.warning("No balance item found in state table (key='balance')")
             return None
         except Exception as e:
-            logger.error(f"Error fetching balance: {e}")
+            logger.error(f"Error fetching balance: {e}", exc_info=True)
             return None
 
     # ==================== Trade Log Methods ====================

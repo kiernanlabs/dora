@@ -11,10 +11,22 @@ import sys
 import os
 import time
 import logging
+import base64
 
 # Add parent directory to path to import db_client
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+# Add kalshi parent directory to import dora_bot modules
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
 from db_client import ReadOnlyDynamoDBClient
+
+# Import Kalshi client for fetching balance
+try:
+    from dora_bot.kalshi_client import KalshiHttpClient, Environment
+    from cryptography.hazmat.primitives import serialization
+    KALSHI_CLIENT_AVAILABLE = True
+except ImportError as e:
+    KALSHI_CLIENT_AVAILABLE = False
+    KALSHI_IMPORT_ERROR = str(e)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +46,67 @@ def calculate_fill_fee(price: float, count: int) -> float:
         Fee amount in dollars
     """
     return 0.0175 * count * price * (1 - price)
+
+
+def get_kalshi_client(environment: str) -> Optional['KalshiHttpClient']:
+    """Create a Kalshi HTTP client for API calls."""
+    if not KALSHI_CLIENT_AVAILABLE:
+        logger.error(f"Kalshi client not available. Import error: {KALSHI_IMPORT_ERROR if 'KALSHI_IMPORT_ERROR' in globals() else 'Unknown'}")
+        return None
+
+    try:
+        # Try to get credentials from Streamlit secrets first
+        if hasattr(st, 'secrets'):
+            if environment == 'demo':
+                keyid = st.secrets.get('DEMO_KEYID')
+                key_data = st.secrets.get('DEMO_KEY_B64') or st.secrets.get('DEMO_KEY')
+            else:
+                keyid = st.secrets.get('PROD_KEYID')
+                key_data = st.secrets.get('PROD_KEY_B64') or st.secrets.get('PROD_KEY')
+
+            if keyid and key_data:
+                # Handle both raw PEM and base64-encoded formats
+                if isinstance(key_data, str) and key_data.strip().startswith('-----BEGIN'):
+                    # Raw PEM format - use directly
+                    private_key_pem = key_data.encode('utf-8')
+                else:
+                    # Base64-encoded format - decode it
+                    try:
+                        private_key_pem = base64.b64decode(key_data)
+                    except Exception as e:
+                        logger.error(f"Failed to decode base64 key: {e}. Trying as raw PEM...")
+                        private_key_pem = key_data.encode('utf-8') if isinstance(key_data, str) else key_data
+
+                private_key = serialization.load_pem_private_key(private_key_pem, password=None)
+
+                env = Environment.DEMO if environment == 'demo' else Environment.PROD
+                logger.info(f"Created Kalshi client for environment: {environment}")
+                return KalshiHttpClient(key_id=keyid, private_key=private_key, environment=env)
+
+        # Fall back to environment variables
+        from dotenv import load_dotenv
+        kalshi_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'dora_bot', '..')
+        load_dotenv(os.path.join(kalshi_dir, '.env'))
+
+        keyid = os.getenv('DEMO_KEYID') if environment == 'demo' else os.getenv('PROD_KEYID')
+        keyfile = os.getenv('DEMO_KEYFILE') if environment == 'demo' else os.getenv('PROD_KEYFILE')
+
+        if keyid and keyfile:
+            keyfile_path = os.path.join(kalshi_dir, keyfile)
+            if os.path.exists(keyfile_path):
+                with open(keyfile_path, "rb") as key_file:
+                    private_key = serialization.load_pem_private_key(key_file.read(), password=None)
+
+                env = Environment.DEMO if environment == 'demo' else Environment.PROD
+                logger.info(f"Created Kalshi client for environment: {environment}")
+                return KalshiHttpClient(key_id=keyid, private_key=private_key, environment=env)
+
+        logger.warning("No Kalshi credentials found in secrets or environment")
+        return None
+
+    except Exception as e:
+        logger.error(f"Failed to create Kalshi client: {e}", exc_info=True)
+        return None
 
 
 def to_local_time(timestamp_str: str) -> str:
@@ -108,15 +181,18 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
     # Display summary metrics - Row 1: P&L and balance metrics
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     with col1:
-        # Display cash balance
+        # Display cash balance from Kalshi API
+        logger.info(f"Balance data received: {balance_data}")
         if balance_data:
+            # Kalshi API returns: {"balance": 123, "portfolio_value": 456, "updated_ts": 789}
             cash_balance = balance_data.get('balance', 0.0)
-            payout = balance_data.get('payout', 0.0)
-            total_balance = cash_balance + payout
-            st.metric("Cash Balance", f"${total_balance:.2f}",
-                      help=f"Balance: ${cash_balance:.2f} | Payout: ${payout:.2f}")
+            portfolio_value = balance_data.get('portfolio_value', 0.0)
+            logger.info(f"Balance components - cash: {cash_balance}, portfolio_value: {portfolio_value}")
+            st.metric("Cash Balance", f"${cash_balance:.2f}",
+                      help=f"Cash Balance: ${cash_balance:.2f} | Portfolio Value: ${portfolio_value:.2f}")
         else:
-            st.metric("Cash Balance", "N/A", help="Balance not available")
+            logger.warning("Balance data is None or empty, showing N/A")
+            st.metric("Cash Balance", "N/A", help="Balance not available - check Kalshi API credentials")
     with col2:
         total_pnl = df['cumulative_pnl'].iloc[-1] if len(df) > 0 else 0
         st.metric("Total Realized P&L", f"${total_pnl:.2f}")
@@ -1142,7 +1218,7 @@ def render(environment: str, region: str):
             st.rerun()
 
     # Fetch data - bulk load everything upfront to avoid N+1 queries
-    with st.spinner("Loading data from DynamoDB..."):
+    with st.spinner("Loading data from DynamoDB and Kalshi API..."):
         timings: List[tuple[str, float]] = []
 
         def _timed(label: str, func, *args, **kwargs):
@@ -1168,8 +1244,23 @@ def render(environment: str, region: str):
         open_orders_data = _timed("get_open_orders", db_client.get_open_orders)
         open_orders_by_market = _timed("get_open_orders_by_market", db_client.get_open_orders_by_market)
         open_orders_last_updated = open_orders_data.get('last_updated')
-        # Fetch account balance
-        balance_data = _timed("get_balance", db_client.get_balance)
+
+        # Fetch account balance from Kalshi API
+        balance_data = None
+        kalshi_client = get_kalshi_client(environment)
+        if kalshi_client:
+            try:
+                start = time.perf_counter()
+                balance_response = kalshi_client.get_balance()
+                elapsed = time.perf_counter() - start
+                timings.append(("kalshi_get_balance", elapsed))
+                logger.info(f"Kalshi balance API response: {balance_response}")
+                balance_data = balance_response
+            except Exception as e:
+                logger.error(f"Failed to fetch balance from Kalshi API: {e}", exc_info=True)
+                balance_data = None
+        else:
+            logger.warning("Kalshi client not available, skipping balance fetch")
 
         overall_elapsed = time.perf_counter() - overall_start
         timings_str = ", ".join(f"{label}={elapsed:.3f}s" for label, elapsed in timings)

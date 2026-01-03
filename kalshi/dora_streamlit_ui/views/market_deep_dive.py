@@ -277,21 +277,40 @@ def render_historical_trade_chart(
             our_fills = db_client.get_recent_trades(days=days, market_id=market_id)
 
             # Process our fills and get decision context for each
-            fill_times = []
-            fill_prices = []
-            fill_hover_texts = []
-            fill_sizes = []
+            # Separate bid and ask fills for different coloring
+            bid_fill_times = []
+            bid_fill_prices = []
+            bid_fill_hover_texts = []
+            bid_fill_sizes = []
+
+            ask_fill_times = []
+            ask_fill_prices = []
+            ask_fill_hover_texts = []
+            ask_fill_sizes = []
+
+            # Also track best bid/ask from order book snapshots
+            best_bid_times = []
+            best_bid_prices = []
+            best_bid_hover_texts = []
+
+            best_ask_times = []
+            best_ask_prices = []
+            best_ask_hover_texts = []
+
+            # Track net position after each fill
+            position_times = []
+            position_values = []
+            position_hover_texts = []
 
             for fill in our_fills:
                 fill_timestamp = fill.get('fill_timestamp') or fill.get('timestamp')
                 fill_price = fill.get('price')
+                fill_side = fill.get('side')
 
                 if fill_timestamp and fill_price:
                     ts = parse_iso_timestamp(fill_timestamp)
                     if ts:
-                        fill_times.append(ts)
-                        fill_prices.append(fill_price)
-                        fill_sizes.append(fill.get('size', 0))
+                        fill_size = fill.get('size', 0)
 
                         # Get decision context for this fill
                         decision_context = db_client.get_decision_context_for_fill(
@@ -304,8 +323,8 @@ def render_historical_trade_chart(
                         hover_parts = [
                             f"<b>Fill @ {to_local_time(fill_timestamp)}</b>",
                             f"Price: ${fill_price:.3f}",
-                            f"Size: {fill.get('size', 0)}",
-                            f"Side: {format_fill_side(fill.get('side'))}",
+                            f"Size: {fill_size}",
+                            f"Side: {format_fill_side(fill_side)}",
                             f"P&L: ${fill.get('pnl_realized', 0):+.2f}"
                         ]
 
@@ -314,6 +333,7 @@ def render_historical_trade_chart(
                             price_calc = decision.get('price_calc', {})
                             inventory = decision.get('inventory', {})
                             target_quotes = decision.get('target_quotes', [])
+                            order_book_snapshot = decision.get('order_book_snapshot', {})
 
                             hover_parts.append("<br><b>Decision Context:</b>")
 
@@ -321,6 +341,29 @@ def render_historical_trade_chart(
                             net_yes = inventory.get('net_yes_qty') if isinstance(inventory, dict) else inventory
                             if net_yes is not None:
                                 hover_parts.append(f"Inventory: {net_yes}")
+
+                            # Order book snapshot
+                            if order_book_snapshot:
+                                mid = order_book_snapshot.get('mid')
+                                spread = order_book_snapshot.get('spread')
+                                if mid is not None:
+                                    hover_parts.append(f"Mid: ${mid:.3f}")
+                                if spread is not None:
+                                    hover_parts.append(f"Spread: ${spread:.3f}")
+
+                                # Extract best bid/ask for separate dots
+                                best_bid = order_book_snapshot.get('best_bid')
+                                best_ask = order_book_snapshot.get('best_ask')
+
+                                if best_bid is not None:
+                                    best_bid_times.append(ts)
+                                    best_bid_prices.append(best_bid)
+                                    best_bid_hover_texts.append(f"<b>Best Bid @ {to_local_time(fill_timestamp)}</b><br>Price: ${best_bid:.3f}")
+
+                                if best_ask is not None:
+                                    best_ask_times.append(ts)
+                                    best_ask_prices.append(best_ask)
+                                    best_ask_hover_texts.append(f"<b>Best Ask @ {to_local_time(fill_timestamp)}</b><br>Price: ${best_ask:.3f}")
 
                             # Fair value and source
                             fv = decision.get('fair_value') or price_calc.get('fair_value')
@@ -344,7 +387,32 @@ def render_historical_trade_chart(
                                     ask_str = ', '.join([f"${a.get('price', 0):.3f}x{a.get('size', 0)}" for a in asks])
                                     hover_parts.append(f"Target Asks: {ask_str}")
 
-                        fill_hover_texts.append("<br>".join(hover_parts))
+                        hover_text = "<br>".join(hover_parts)
+
+                        # Track position after this fill
+                        net_position = fill.get('net_yes_qty_after_fill')
+                        if net_position is not None:
+                            position_times.append(ts)
+                            position_values.append(net_position)
+                            position_hover_texts.append(f"<b>Position @ {to_local_time(fill_timestamp)}</b><br>Net Position: {net_position} contracts")
+
+                        # Append to appropriate list based on side
+                        if fill_side == 'buy':
+                            bid_fill_times.append(ts)
+                            bid_fill_prices.append(fill_price)
+                            bid_fill_sizes.append(fill_size)
+                            bid_fill_hover_texts.append(hover_text)
+                        elif fill_side == 'sell':
+                            ask_fill_times.append(ts)
+                            ask_fill_prices.append(fill_price)
+                            ask_fill_sizes.append(fill_size)
+                            ask_fill_hover_texts.append(hover_text)
+                        else:
+                            # Unknown side, default to bid list
+                            bid_fill_times.append(ts)
+                            bid_fill_prices.append(fill_price)
+                            bid_fill_sizes.append(fill_size)
+                            bid_fill_hover_texts.append(hover_text)
 
             # Create plotly chart
             fig = go.Figure()
@@ -359,28 +427,103 @@ def render_historical_trade_chart(
                 hovertemplate='<b>Market Trade</b><br>Time: %{x}<br>Price: $%{y:.3f}<extra></extra>'
             ))
 
-            # Add our fills as scatter points
-            if fill_times:
+            # Add bid fills as green scatter points
+            if bid_fill_times:
                 fig.add_trace(go.Scatter(
-                    x=fill_times,
-                    y=fill_prices,
+                    x=bid_fill_times,
+                    y=bid_fill_prices,
                     mode='markers',
-                    name='Our Fills',
+                    name='Bid Fills',
                     marker=dict(
-                        size=[min(10 + s, 30) for s in fill_sizes],  # Size based on fill size
+                        size=[min(10 + s/10, 30) for s in bid_fill_sizes],  # Size based on fill size
+                        color='green',
+                        symbol='circle',
+                        line=dict(color='darkgreen', width=2)
+                    ),
+                    text=bid_fill_hover_texts,
+                    hovertemplate='%{text}<extra></extra>'
+                ))
+
+            # Add ask fills as red scatter points
+            if ask_fill_times:
+                fig.add_trace(go.Scatter(
+                    x=ask_fill_times,
+                    y=ask_fill_prices,
+                    mode='markers',
+                    name='Ask Fills',
+                    marker=dict(
+                        size=[min(10 + s/10, 30) for s in ask_fill_sizes],  # Size based on fill size
                         color='red',
                         symbol='circle',
                         line=dict(color='darkred', width=2)
                     ),
-                    text=fill_hover_texts,
+                    text=ask_fill_hover_texts,
                     hovertemplate='%{text}<extra></extra>'
                 ))
 
-            # Update layout
+            # Add best bid dots (smaller, below fills)
+            if best_bid_times:
+                fig.add_trace(go.Scatter(
+                    x=best_bid_times,
+                    y=best_bid_prices,
+                    mode='markers',
+                    name='Best Bid',
+                    marker=dict(
+                        size=6,
+                        color='lightgreen',
+                        symbol='circle',
+                        line=dict(color='green', width=1)
+                    ),
+                    text=best_bid_hover_texts,
+                    hovertemplate='%{text}<extra></extra>'
+                ))
+
+            # Add best ask dots (smaller, above fills)
+            if best_ask_times:
+                fig.add_trace(go.Scatter(
+                    x=best_ask_times,
+                    y=best_ask_prices,
+                    mode='markers',
+                    name='Best Ask',
+                    marker=dict(
+                        size=6,
+                        color='lightcoral',
+                        symbol='circle',
+                        line=dict(color='red', width=1)
+                    ),
+                    text=best_ask_hover_texts,
+                    hovertemplate='%{text}<extra></extra>'
+                ))
+
+            # Add position bars on secondary y-axis
+            if position_times:
+                fig.add_trace(go.Bar(
+                    x=position_times,
+                    y=position_values,
+                    name='Net Position',
+                    marker=dict(
+                        color=['green' if p >= 0 else 'red' for p in position_values],
+                        opacity=0.3
+                    ),
+                    text=position_hover_texts,
+                    hovertemplate='%{text}<extra></extra>',
+                    yaxis='y2'
+                ))
+
+            # Update layout with secondary y-axis for position
             fig.update_layout(
                 title=f"Trade History: {market_id}",
                 xaxis_title="Time (NY)",
-                yaxis_title="Price ($)",
+                yaxis=dict(
+                    title="Price ($)",
+                    side="left"
+                ),
+                yaxis2=dict(
+                    title="Net Position (contracts)",
+                    side="right",
+                    overlaying="y",
+                    showgrid=False
+                ),
                 hovermode='closest',
                 height=600,
                 showlegend=True,
