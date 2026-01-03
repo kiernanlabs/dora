@@ -235,31 +235,77 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Recalculate P&L with detailed tracking
             trades_sorted = sorted(trades, key=lambda t: t.get('fill_timestamp') or t.get('timestamp', ''))
 
-            # Build initial position state by working backwards from first trade of each market
-            initial_positions = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price}
+            # Build initial position state by working backwards from current DB state
+            # Group trades by market for backward processing
+            trades_by_market = {}
             for trade in trades_sorted:
                 market_id = trade.get('market_id')
-                if not market_id or market_id in initial_positions:
+                if not market_id:
                     continue
+                if market_id not in trades_by_market:
+                    trades_by_market[market_id] = []
+                trades_by_market[market_id].append(trade)
 
-                # This is the first trade for this market in our window
-                # Work backwards from net_yes_qty_after_fill to get the position before this trade
-                net_after = trade.get('net_yes_qty_after_fill', 0)
-                side = trade.get('side', '')
-                size = trade.get('size', 0)
-
-                # Calculate net_yes_qty before this trade
-                if side in ['buy', 'yes']:
-                    net_before = net_after - size  # Buy increases position, so subtract to go back
-                else:
-                    net_before = net_after + size  # Sell decreases position, so add to go back
-
-                # Use current position's avg prices if available, otherwise 0
+            initial_positions = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price, realized_pnl}
+            for market_id, market_trades in trades_by_market.items():
+                # Start with current DB state
                 current_pos = positions.get(market_id, {})
+                net_qty = current_pos.get('net_yes_qty', 0)
+                avg_buy = current_pos.get('avg_buy_price', 0.0)
+                avg_sell = current_pos.get('avg_sell_price', 0.0)
+                realized_pnl = current_pos.get('realized_pnl', 0.0)
+
+                # Work backwards through trades to reconstruct state before first trade
+                for trade in reversed(market_trades):
+                    side = trade.get('side', '')
+                    price = trade.get('price', 0.0)
+                    size = trade.get('size', 0)
+                    fees = trade.get('fees', 0.0) or 0.0
+
+                    # Undo the fee subtraction
+                    realized_pnl += fees
+
+                    # Undo the position update (reverse of update_from_fill logic)
+                    if side in ['buy', 'yes']:
+                        # Undo bid fill
+                        if net_qty > size:
+                            # Was adding to long - reverse the avg_buy_price calculation
+                            total_cost = avg_buy * net_qty - price * size
+                            net_qty -= size
+                            avg_buy = total_cost / net_qty if net_qty > 0 else 0.0
+                        elif net_qty > 0:
+                            # Was adding to long and went from smaller to current qty
+                            net_qty -= size
+                            avg_buy = 0.0  # Will be recalculated on forward pass
+                        else:
+                            # Was closing short - undo the realized P&L
+                            close_qty = min(abs(net_qty - size), size)
+                            realized_undo = (avg_sell - price) * close_qty
+                            realized_pnl -= realized_undo
+                            net_qty -= size
+                    else:
+                        # Undo ask fill
+                        if net_qty < -size:
+                            # Was adding to short - reverse the avg_sell_price calculation
+                            total_cost = avg_sell * abs(net_qty) - price * size
+                            net_qty += size
+                            avg_sell = total_cost / abs(net_qty) if net_qty != 0 else 0.0
+                        elif net_qty < 0:
+                            # Was adding to short and went from smaller to current qty
+                            net_qty += size
+                            avg_sell = 0.0  # Will be recalculated on forward pass
+                        else:
+                            # Was closing long - undo the realized P&L
+                            close_qty = min(net_qty + size, size)
+                            realized_undo = (price - avg_buy) * close_qty
+                            realized_pnl -= realized_undo
+                            net_qty += size
+
                 initial_positions[market_id] = {
-                    'net_yes_qty': net_before,
-                    'avg_buy_price': current_pos.get('avg_buy_price', 0.0),
-                    'avg_sell_price': current_pos.get('avg_sell_price', 0.0)
+                    'net_yes_qty': net_qty,
+                    'avg_buy_price': avg_buy,
+                    'avg_sell_price': avg_sell,
+                    'realized_pnl': realized_pnl
                 }
 
             # Track position state per market
@@ -277,13 +323,14 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                     init_pos = initial_positions.get(market_id, {
                         'net_yes_qty': 0,
                         'avg_buy_price': 0.0,
-                        'avg_sell_price': 0.0
+                        'avg_sell_price': 0.0,
+                        'realized_pnl': 0.0
                     })
                     positions_state[market_id] = {
                         'net_yes_qty': init_pos['net_yes_qty'],
                         'avg_buy_price': init_pos['avg_buy_price'],
                         'avg_sell_price': init_pos['avg_sell_price'],
-                        'realized_pnl': 0.0
+                        'realized_pnl': init_pos['realized_pnl']  # Use reconstructed realized_pnl
                     }
 
                 pos = positions_state[market_id]
@@ -399,40 +446,54 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Reverse to show newest first
             trade_details = trade_details[::-1]
 
-            # Calculate P&L contribution by market for debugging
+            # Calculate P&L CHANGE by market for debugging (change during window, not total)
             market_pnl_contributions = {}
             for market_id, pos_state in positions_state.items():
-                market_pnl_contributions[market_id] = pos_state['realized_pnl']
+                init_pnl = initial_positions.get(market_id, {}).get('realized_pnl', 0.0)
+                market_pnl_contributions[market_id] = pos_state['realized_pnl'] - init_pnl
 
             # Debug summary
+            initial_pnl_sum = sum(init_pos.get('realized_pnl', 0) for init_pos in initial_positions.values())
+            db_total_pnl = sum(p.get('realized_pnl', 0) for p in positions.values())
+
             st.markdown(f"**Debug Summary:**")
             st.markdown(f"- Total trades processed: {len(trade_details)}")
-            st.markdown(f"- Final cumulative P&L from window: ${global_cumulative_pnl:.2f}")
-            st.markdown(f"- Markets with P&L in window: {len([m for m, pnl in market_pnl_contributions.items() if pnl != 0])}")
-            st.markdown(f"- DynamoDB total realized P&L (all time): ${sum(p.get('realized_pnl', 0) for p in positions.values()):.2f}")
+            st.markdown(f"- Reconstructed P&L before window: ${initial_pnl_sum:.2f}")
+            st.markdown(f"- P&L change from trades in window: ${global_cumulative_pnl:.2f}")
+            st.markdown(f"- Expected final P&L: ${initial_pnl_sum + global_cumulative_pnl:.2f}")
+            st.markdown(f"- DynamoDB actual total P&L: ${db_total_pnl:.2f}")
+            st.markdown(f"- **Difference (should be ~$0):** ${(initial_pnl_sum + global_cumulative_pnl) - db_total_pnl:.2f}")
             st.markdown(f"- Summary chart P&L (from get_pnl_over_time): ${total_pnl:.2f}")
+            st.markdown(f"- Markets with P&L changes in window: {len([m for m, pnl in market_pnl_contributions.items() if pnl != 0])}")
 
             # Show top contributing markets
             sorted_markets = sorted(market_pnl_contributions.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
             if sorted_markets:
-                st.markdown("**Top 10 Markets by P&L Contribution (in this window):**")
-                for market_id, pnl in sorted_markets:
-                    if pnl != 0:
+                st.markdown("**Top 10 Markets by P&L Change (in this window):**")
+                for market_id, pnl_change in sorted_markets:
+                    if pnl_change != 0:
                         current_db_pnl = positions.get(market_id, {}).get('realized_pnl', 0)
-                        st.markdown(f"- {market_id}: ${pnl:+.2f} (DB total: ${current_db_pnl:.2f})")
+                        init_pnl = initial_positions.get(market_id, {}).get('realized_pnl', 0)
+                        st.markdown(f"- {market_id}: ${pnl_change:+.2f} change (${init_pnl:.2f} → ${current_db_pnl:.2f})")
 
             # Show markets where initial position was reconstructed
             with st.expander("Initial Position Reconstruction Details", expanded=False):
-                st.markdown("**Markets with reconstructed initial positions:**")
-                for market_id, init_pos in initial_positions.items():
+                st.markdown("**Markets with reconstructed initial positions (before window):**")
+                st.markdown("_These values were calculated by working backwards from current DB state through all trades_")
+
+                # Show top markets by initial position size
+                sorted_init = sorted(initial_positions.items(),
+                                   key=lambda x: abs(x[1]['net_yes_qty']),
+                                   reverse=True)[:10]
+
+                for market_id, init_pos in sorted_init:
                     current_pos = positions.get(market_id, {})
                     st.markdown(f"**{market_id}:**")
-                    st.markdown(f"  - Initial qty (before window): {init_pos['net_yes_qty']}")
-                    st.markdown(f"  - Current qty (in DB): {current_pos.get('net_yes_qty', 0)}")
-                    st.markdown(f"  - Initial avg_buy: ${init_pos['avg_buy_price']:.3f}")
-                    st.markdown(f"  - Current avg_buy (DB): ${current_pos.get('avg_buy_price', 0):.3f}")
-                    st.markdown(f"  - Initial avg_sell: ${init_pos['avg_sell_price']:.3f}")
-                    st.markdown(f"  - Current avg_sell (DB): ${current_pos.get('avg_sell_price', 0):.3f}")
+                    st.markdown(f"  - Initial qty: {init_pos['net_yes_qty']} → Current qty: {current_pos.get('net_yes_qty', 0)}")
+                    st.markdown(f"  - Initial realized P&L: ${init_pos['realized_pnl']:.2f} → Current: ${current_pos.get('realized_pnl', 0):.2f}")
+                    st.markdown(f"  - Initial avg_buy: ${init_pos['avg_buy_price']:.3f} → Current: ${current_pos.get('avg_buy_price', 0):.3f}")
+                    st.markdown(f"  - Initial avg_sell: ${init_pos['avg_sell_price']:.3f} → Current: ${current_pos.get('avg_sell_price', 0):.3f}")
+                    st.markdown("")
 
             st.caption(f"Showing {len(trade_details)} trades (newest first). * = fee-only (no position closed)")
 
