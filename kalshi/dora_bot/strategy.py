@@ -131,6 +131,21 @@ class MarketMaker:
             best_ask=order_book.best_ask
         )
 
+        # Add volatility metrics to price_calc for decision logging
+        if price_calc is None:
+            price_calc = {}
+        price_calc["trade_std_dev"] = trade_std_dev
+        price_calc["volatility_trades_count"] = volatility_trades_count
+        price_calc["volatility_window"] = volatility_window
+
+        # Add fair value source metrics for decision logging
+        price_calc["fv_source"] = fv_source
+        price_calc["wma_price"] = wma_price
+        price_calc["wma_trades_count"] = wma_trades_count
+        price_calc["wma_trade_time"] = wma_trade_time
+        price_calc["last_trade_price"] = last_trade_price
+        price_calc["last_trade_time"] = last_trade_time
+
         # Determine sizes based on inventory
         bid_size = 0
         ask_size = 0

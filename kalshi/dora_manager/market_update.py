@@ -232,10 +232,16 @@ class MarketConfig:
         created_at = data.get('created_at')
         if created_at and isinstance(created_at, str):
             created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        # Ensure timezone-aware if datetime object
+        if created_at and isinstance(created_at, datetime) and created_at.tzinfo is None:
+            created_at = created_at.replace(tzinfo=timezone.utc)
 
         disabled_at = data.get('disabled_at')
         if disabled_at and isinstance(disabled_at, str):
             disabled_at = datetime.fromisoformat(disabled_at.replace('Z', '+00:00'))
+        # Ensure timezone-aware if datetime object
+        if disabled_at and isinstance(disabled_at, datetime) and disabled_at.tzinfo is None:
+            disabled_at = disabled_at.replace(tzinfo=timezone.utc)
 
         return cls(
             market_id=data['market_id'],

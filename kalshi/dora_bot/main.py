@@ -496,15 +496,20 @@ class DoraBot:
             # Prepare recent trades data (last 3)
             recent_trades = []
             for trade in trades[:3]:
-                # Handle both dict and object formats
+                # Handle Kalshi API format: yes_price (in cents), count, created_time
                 if isinstance(trade, dict):
-                    price = trade.get('price', 0)
-                    size = trade.get('size', 0)
-                    timestamp = trade.get('timestamp', '')
+                    # Kalshi API uses yes_price in cents, count, and created_time
+                    price = trade.get('yes_price', 0) / 100.0 if trade.get('yes_price') else 0
+                    size = trade.get('count', 0)
+                    timestamp = trade.get('created_time', '')
                 else:
-                    price = trade.price
-                    size = trade.size
-                    timestamp = trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                    # Object format (fallback)
+                    price = getattr(trade, 'yes_price', 0) / 100.0 if hasattr(trade, 'yes_price') else getattr(trade, 'price', 0)
+                    size = getattr(trade, 'count', getattr(trade, 'size', 0))
+                    timestamp = trade.created_time if hasattr(trade, 'created_time') else (
+                        trade.timestamp.isoformat() if hasattr(trade, 'timestamp') and hasattr(trade.timestamp, 'isoformat')
+                        else str(getattr(trade, 'timestamp', ''))
+                    )
 
                 recent_trades.append({
                     'price': price,
@@ -1034,15 +1039,20 @@ class DoraBot:
                 # Prepare recent trades data (last 3)
                 recent_trades = []
                 for trade in trades[:3]:
-                    # Handle both dict and object formats
+                    # Handle Kalshi API format: yes_price (in cents), count, created_time
                     if isinstance(trade, dict):
-                        price = trade.get('price', 0)
-                        size = trade.get('size', 0)
-                        timestamp = trade.get('timestamp', '')
+                        # Kalshi API uses yes_price in cents, count, and created_time
+                        price = trade.get('yes_price', 0) / 100.0 if trade.get('yes_price') else 0
+                        size = trade.get('count', 0)
+                        timestamp = trade.get('created_time', '')
                     else:
-                        price = trade.price
-                        size = trade.size
-                        timestamp = trade.timestamp.isoformat() if hasattr(trade.timestamp, 'isoformat') else str(trade.timestamp)
+                        # Object format (fallback)
+                        price = getattr(trade, 'yes_price', 0) / 100.0 if hasattr(trade, 'yes_price') else getattr(trade, 'price', 0)
+                        size = getattr(trade, 'count', getattr(trade, 'size', 0))
+                        timestamp = trade.created_time if hasattr(trade, 'created_time') else (
+                            trade.timestamp.isoformat() if hasattr(trade, 'timestamp') and hasattr(trade.timestamp, 'isoformat')
+                            else str(getattr(trade, 'timestamp', ''))
+                        )
 
                     recent_trades.append({
                         'price': price,
