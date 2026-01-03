@@ -371,56 +371,6 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Reverse to show newest first
             trade_details = trade_details[::-1]
 
-            # Calculate total P&L by market
-            market_pnl_contributions = {}
-            for market_id, pos_state in positions_state.items():
-                market_pnl_contributions[market_id] = pos_state['realized_pnl']
-
-            # Debug summary
-            db_total_pnl = sum(p.get('realized_pnl', 0) for p in positions.values())
-            calculated_total_pnl = sum(pos_state['realized_pnl'] for pos_state in positions_state.values())
-
-            st.markdown(f"**Debug Summary:**")
-            st.markdown(f"- Total trades processed (all time): {len(trade_details)}")
-            st.markdown(f"- Calculated total P&L (from all trades): ${calculated_total_pnl:.2f}")
-            st.markdown(f"- DynamoDB actual total P&L: ${db_total_pnl:.2f}")
-            st.markdown(f"- **Difference (should be ~$0):** ${calculated_total_pnl - db_total_pnl:.2f}")
-            st.markdown(f"- Summary chart P&L (last 30 days): ${total_pnl:.2f}")
-            st.markdown(f"- Markets with realized P&L: {len([m for m, pnl in market_pnl_contributions.items() if pnl != 0])}")
-
-            # Show top contributing markets
-            sorted_markets = sorted(market_pnl_contributions.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
-            if sorted_markets:
-                st.markdown("**Top 10 Markets by Total Realized P&L:**")
-                for market_id, calc_pnl in sorted_markets:
-                    if calc_pnl != 0:
-                        db_pnl = positions.get(market_id, {}).get('realized_pnl', 0)
-                        diff = calc_pnl - db_pnl
-                        diff_str = f" (diff: ${diff:+.2f})" if abs(diff) > 0.01 else ""
-                        st.markdown(f"- {market_id}: ${calc_pnl:.2f} (DB: ${db_pnl:.2f}){diff_str}")
-
-            # Show final positions comparison
-            with st.expander("Final Position Comparison (Calculated vs DB)", expanded=False):
-                st.markdown("**Verify calculated positions match DynamoDB:**")
-
-                # Show markets with discrepancies first
-                discrepancies = []
-                for market_id, pos_state in positions_state.items():
-                    db_pos = positions.get(market_id, {})
-                    qty_diff = abs(pos_state['net_yes_qty'] - db_pos.get('net_yes_qty', 0))
-                    pnl_diff = abs(pos_state['realized_pnl'] - db_pos.get('realized_pnl', 0))
-                    if qty_diff > 0 or pnl_diff > 0.01:
-                        discrepancies.append((market_id, pos_state, db_pos, qty_diff, pnl_diff))
-
-                if discrepancies:
-                    st.warning(f"Found {len(discrepancies)} markets with discrepancies:")
-                    for market_id, calc_pos, db_pos, qty_diff, pnl_diff in discrepancies[:10]:
-                        st.markdown(f"**{market_id}:**")
-                        st.markdown(f"  - Qty: {calc_pos['net_yes_qty']} (calc) vs {db_pos.get('net_yes_qty', 0)} (DB) - diff: {qty_diff}")
-                        st.markdown(f"  - P&L: ${calc_pos['realized_pnl']:.2f} (calc) vs ${db_pos.get('realized_pnl', 0):.2f} (DB) - diff: ${pnl_diff:.2f}")
-                else:
-                    st.success("All positions match DynamoDB exactly!")
-
             st.caption(f"Showing {len(trade_details)} trades (newest first). * = fee-only (no position closed)")
 
             if trade_details:
@@ -461,6 +411,44 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                         for date, data in sorted(daily_breakdown.items())
                     ])
                     st.dataframe(daily_df, hide_index=True, width='stretch')
+
+                # Show top 10 markets by 24h P&L
+                st.markdown("#### Top 10 Markets by Realized P&L (Last 24h)")
+                from datetime import datetime, timedelta, timezone
+                cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
+
+                # Calculate P&L by market for last 24h
+                market_24h_pnl = {}
+                for detail in trade_details:
+                    timestamp_str = detail.get('Timestamp', '')
+                    if not timestamp_str:
+                        continue
+                    try:
+                        ts = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        if ts > cutoff_24h:
+                            market_id = detail.get('Market', '')
+                            pnl_str = detail['P&L Change'].replace('$', '').replace('+', '').replace('*', '')
+                            pnl_val = float(pnl_str)
+                            if market_id not in market_24h_pnl:
+                                market_24h_pnl[market_id] = 0.0
+                            market_24h_pnl[market_id] += pnl_val
+                    except (ValueError, TypeError):
+                        continue
+
+                # Sort and display top 10
+                sorted_24h = sorted(market_24h_pnl.items(), key=lambda x: x[1], reverse=True)[:10]
+                if sorted_24h:
+                    market_24h_df = pd.DataFrame([
+                        {
+                            'Market': market_id,
+                            '24h Realized P&L': f"${pnl:.2f}"
+                        }
+                        for market_id, pnl in sorted_24h if pnl != 0
+                    ])
+                    st.dataframe(market_24h_df, hide_index=True, width='stretch')
+                else:
+                    st.info("No trades in last 24 hours")
+
             else:
                 st.info("No trade details available")
 
