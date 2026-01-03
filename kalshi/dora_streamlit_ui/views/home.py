@@ -233,6 +233,33 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Recalculate P&L with detailed tracking
             trades_sorted = sorted(trades, key=lambda t: t.get('fill_timestamp') or t.get('timestamp', ''))
 
+            # Build initial position state by working backwards from first trade of each market
+            initial_positions = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price}
+            for trade in trades_sorted:
+                market_id = trade.get('market_id')
+                if not market_id or market_id in initial_positions:
+                    continue
+
+                # This is the first trade for this market in our window
+                # Work backwards from net_yes_qty_after_fill to get the position before this trade
+                net_after = trade.get('net_yes_qty_after_fill', 0)
+                side = trade.get('side', '')
+                size = trade.get('size', 0)
+
+                # Calculate net_yes_qty before this trade
+                if side in ['buy', 'yes']:
+                    net_before = net_after - size  # Buy increases position, so subtract to go back
+                else:
+                    net_before = net_after + size  # Sell decreases position, so add to go back
+
+                # Use current position's avg prices if available, otherwise 0
+                current_pos = positions.get(market_id, {})
+                initial_positions[market_id] = {
+                    'net_yes_qty': net_before,
+                    'avg_buy_price': current_pos.get('avg_buy_price', 0.0),
+                    'avg_sell_price': current_pos.get('avg_sell_price', 0.0)
+                }
+
             # Track position state per market
             positions_state = {}  # market_id -> {net_yes_qty, avg_buy_price, avg_sell_price, realized_pnl}
             trade_details = []
@@ -245,10 +272,15 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
                 # Initialize position for this market if needed
                 if market_id not in positions_state:
-                    positions_state[market_id] = {
+                    init_pos = initial_positions.get(market_id, {
                         'net_yes_qty': 0,
                         'avg_buy_price': 0.0,
-                        'avg_sell_price': 0.0,
+                        'avg_sell_price': 0.0
+                    })
+                    positions_state[market_id] = {
+                        'net_yes_qty': init_pos['net_yes_qty'],
+                        'avg_buy_price': init_pos['avg_buy_price'],
+                        'avg_sell_price': init_pos['avg_sell_price'],
                         'realized_pnl': 0.0
                     }
 
