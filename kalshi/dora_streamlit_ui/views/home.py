@@ -190,10 +190,12 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
             # Convert from cents to dollars
             cash_balance = cash_balance_cents / 100.0
             portfolio_value = portfolio_value_cents / 100.0
+            total_value = cash_balance + portfolio_value
             logger.info(f"Balance components (cents) - cash: {cash_balance_cents}, portfolio_value: {portfolio_value_cents}")
             logger.info(f"Balance components (dollars) - cash: {cash_balance}, portfolio_value: {portfolio_value}")
             st.metric("Cash Balance", f"${cash_balance:.2f}",
-                      help=f"Cash Balance: ${cash_balance:.2f} | Portfolio Value: ${portfolio_value:.2f}")
+                      delta=f"Total: ${total_value:.2f}",
+                      help=f"Cash: ${cash_balance:.2f} | Portfolio: ${portfolio_value:.2f} | Total: ${total_value:.2f}")
         else:
             logger.warning("Balance data is None or empty, showing N/A")
             st.metric("Cash Balance", "N/A", help="Balance not available - check Kalshi API credentials")
@@ -396,6 +398,41 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
 
             # Reverse to show newest first
             trade_details = trade_details[::-1]
+
+            # Calculate P&L contribution by market for debugging
+            market_pnl_contributions = {}
+            for market_id, pos_state in positions_state.items():
+                market_pnl_contributions[market_id] = pos_state['realized_pnl']
+
+            # Debug summary
+            st.markdown(f"**Debug Summary:**")
+            st.markdown(f"- Total trades processed: {len(trade_details)}")
+            st.markdown(f"- Final cumulative P&L from window: ${global_cumulative_pnl:.2f}")
+            st.markdown(f"- Markets with P&L in window: {len([m for m, pnl in market_pnl_contributions.items() if pnl != 0])}")
+            st.markdown(f"- DynamoDB total realized P&L (all time): ${sum(p.get('realized_pnl', 0) for p in positions.values()):.2f}")
+            st.markdown(f"- Summary chart P&L (from get_pnl_over_time): ${total_pnl:.2f}")
+
+            # Show top contributing markets
+            sorted_markets = sorted(market_pnl_contributions.items(), key=lambda x: abs(x[1]), reverse=True)[:10]
+            if sorted_markets:
+                st.markdown("**Top 10 Markets by P&L Contribution (in this window):**")
+                for market_id, pnl in sorted_markets:
+                    if pnl != 0:
+                        current_db_pnl = positions.get(market_id, {}).get('realized_pnl', 0)
+                        st.markdown(f"- {market_id}: ${pnl:+.2f} (DB total: ${current_db_pnl:.2f})")
+
+            # Show markets where initial position was reconstructed
+            with st.expander("Initial Position Reconstruction Details", expanded=False):
+                st.markdown("**Markets with reconstructed initial positions:**")
+                for market_id, init_pos in initial_positions.items():
+                    current_pos = positions.get(market_id, {})
+                    st.markdown(f"**{market_id}:**")
+                    st.markdown(f"  - Initial qty (before window): {init_pos['net_yes_qty']}")
+                    st.markdown(f"  - Current qty (in DB): {current_pos.get('net_yes_qty', 0)}")
+                    st.markdown(f"  - Initial avg_buy: ${init_pos['avg_buy_price']:.3f}")
+                    st.markdown(f"  - Current avg_buy (DB): ${current_pos.get('avg_buy_price', 0):.3f}")
+                    st.markdown(f"  - Initial avg_sell: ${init_pos['avg_sell_price']:.3f}")
+                    st.markdown(f"  - Current avg_sell (DB): ${current_pos.get('avg_sell_price', 0):.3f}")
 
             st.caption(f"Showing {len(trade_details)} trades (newest first). * = fee-only (no position closed)")
 

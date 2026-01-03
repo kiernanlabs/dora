@@ -658,7 +658,7 @@ class ReadOnlyDynamoDBClient:
                             continue
 
                 if not decisions_before_fill:
-                    logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
+                    logger.debug(f"No decision logs found before fill timestamp {fill_timestamp}")
                     return None
 
                 # Sort by timestamp (most recent first) and take the most recent one before the fill
@@ -672,7 +672,7 @@ class ReadOnlyDynamoDBClient:
                     'decision': most_recent_decision
                 }
 
-            logger.warning(f"No decision logs found before fill timestamp {fill_timestamp}")
+            logger.debug(f"No decision logs found before fill timestamp {fill_timestamp}")
             return None
 
         except Exception as e:
