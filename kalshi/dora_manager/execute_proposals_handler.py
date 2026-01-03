@@ -1356,6 +1356,36 @@ def generate_review_page_html(
             else:
                 price_std_dev_str = "—"
 
+            # Build enriched modal content for action rationale
+            # Include info risk and rationale if available
+            info_risk_probability = metadata.get('info_risk_probability')
+            info_risk_rationale = metadata.get('info_risk_rationale')
+
+            action_modal_content = f'<div class="modal-rationale">{full_rationale}</div>'
+
+            # Add info risk section if available
+            if info_risk_probability is not None or info_risk_rationale:
+                action_modal_content += '<div class="modal-section-title">Information Risk Assessment</div>'
+
+                if info_risk_probability is not None:
+                    # Color code the risk level
+                    if info_risk_probability > 25:
+                        risk_color = '#e74c3c'  # Red
+                        risk_label = 'High Risk'
+                    elif info_risk_probability > 15:
+                        risk_color = '#f39c12'  # Orange
+                        risk_label = 'Medium Risk'
+                    else:
+                        risk_color = '#27ae60'  # Green
+                        risk_label = 'Low Risk'
+
+                    action_modal_content += f'<div class="modal-row"><span class="modal-label">Risk Probability:</span><span class="modal-value" style="color: {risk_color};">{info_risk_probability:.0f}% ({risk_label})</span></div>'
+
+                if info_risk_rationale:
+                    action_modal_content += f'<div class="modal-row"><span class="modal-label">Risk Rationale:</span></div><div class="modal-rationale" style="margin-top: 8px;">{html_lib.escape(info_risk_rationale)}</div>'
+
+            action_modal_content_escaped = html_lib.escape(action_modal_content, quote=True)
+
             html += f"""
                             <tr>
                                 <td class="checkbox-cell">
@@ -1365,8 +1395,8 @@ def generate_review_page_html(
                                 <!-- Internal Data Columns -->
                                 <td>
                                     <span class="clickable-info action-badge action-{action.replace(' ', '_')}"
-                                          data-modal-title="Rationale"
-                                          data-modal-content="{html_lib.escape('<div class="modal-rationale">' + full_rationale + '</div>', quote=True)}"
+                                          data-modal-title="Action Details: {action}"
+                                          data-modal-content="{action_modal_content_escaped}"
                                           onclick="showModalFromData(this)">
                                         {action}
                                     </span>
@@ -1863,6 +1893,53 @@ def generate_screener_candidates_html(
                 }}
             }}
         </style>
+        <script>
+            function selectAll() {{
+                document.querySelectorAll('input[type="checkbox"][name="selected"]').forEach(cb => cb.checked = true);
+                document.querySelectorAll('.candidate-card').forEach(card => card.classList.add('selected'));
+            }}
+
+            function deselectAll() {{
+                document.querySelectorAll('input[type="checkbox"][name="selected"]').forEach(cb => cb.checked = false);
+                document.querySelectorAll('.candidate-card').forEach(card => card.classList.remove('selected'));
+            }}
+
+            function showModal(title, content) {{
+                const modal = document.getElementById('infoModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalBody = document.getElementById('modalBody');
+
+                modalTitle.textContent = title;
+                modalBody.innerHTML = content;
+                modal.classList.add('show');
+            }}
+
+            function showModalFromData(element) {{
+                const title = element.getAttribute('data-modal-title');
+                const content = element.getAttribute('data-modal-content');
+                showModal(title, content);
+            }}
+
+            function closeModal() {{
+                const modal = document.getElementById('infoModal');
+                modal.classList.remove('show');
+            }}
+
+            // Close modal when clicking outside of it
+            window.onclick = function(event) {{
+                const modal = document.getElementById('infoModal');
+                if (event.target === modal) {{
+                    closeModal();
+                }}
+            }}
+
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(event) {{
+                if (event.key === 'Escape') {{
+                    closeModal();
+                }}
+            }});
+        </script>
     </head>
     <body>
         <!-- Modal -->
@@ -1969,7 +2046,32 @@ def generate_screener_candidates_html(
             spread_str = "—"
 
         bid_ask_str = f"{yes_bid}¢ / {yes_ask}¢" if yes_bid is not None and yes_ask is not None else "—"
-        info_risk_str = f"{info_risk:.0f}%" if info_risk is not None else "—"
+
+        # Format Info Risk with modal
+        if info_risk is not None:
+            # Color code the risk level
+            if info_risk > 25:
+                risk_color = '#e74c3c'  # Red
+                risk_label = 'High Risk'
+            elif info_risk > 15:
+                risk_color = '#f39c12'  # Orange
+                risk_label = 'Medium Risk'
+            else:
+                risk_color = '#27ae60'  # Green
+                risk_label = 'Low Risk'
+
+            info_risk_str = f"{info_risk:.0f}%"
+
+            # Build modal content if rationale is available
+            if info_risk_rationale:
+                modal_content = f'''<div class="modal-row"><span class="modal-label">Probability:</span><span class="modal-value" style="color: {risk_color};">{info_risk:.0f}% ({risk_label})</span></div><div class="modal-section-title">Risk Rationale</div><div class="modal-rationale">{html_lib.escape(info_risk_rationale)}</div>'''
+                modal_content_escaped = html_lib.escape(modal_content, quote=True)
+                info_risk_html = f'''<span class="clickable-info" data-modal-title="Information Risk Assessment" data-modal-content="{modal_content_escaped}" onclick="showModalFromData(this)" style="color: {risk_color}; font-weight: 600;">{info_risk_str}</span>'''
+            else:
+                info_risk_html = f'<span style="color: {risk_color}; font-weight: 600;">{info_risk_str}</span>'
+        else:
+            info_risk_str = "—"
+            info_risk_html = info_risk_str
 
         # Format Order Depth with modal
         if bid_depth or ask_depth:
@@ -2076,7 +2178,7 @@ def generate_screener_candidates_html(
                             </div>
                             <div class="candidate-metric">
                                 <div class="candidate-metric-label">Info Risk</div>
-                                <div class="candidate-metric-value">{info_risk_str}</div>
+                                <div class="candidate-metric-value">{info_risk_html}</div>
                             </div>
                             <div class="candidate-metric">
                                 <div class="candidate-metric-label">Quote Size</div>

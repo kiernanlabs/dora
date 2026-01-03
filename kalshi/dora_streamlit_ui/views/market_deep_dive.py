@@ -11,19 +11,23 @@ import os
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# Add parent directory to path to import db_client and kalshi client
+# Add parent directory to path to import db_client
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..', 'dora_bot'))
+# Add kalshi parent directory to import dora_bot modules
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), '..'))
 from db_client import ReadOnlyDynamoDBClient
 
 # Import Kalshi client for fetching market trades
 try:
-    from kalshi_client import KalshiHttpClient, Environment
+    from dora_bot.kalshi_client import KalshiHttpClient, Environment
     from cryptography.hazmat.primitives import serialization
     import base64
     KALSHI_CLIENT_AVAILABLE = True
-except ImportError:
+except ImportError as e:
     KALSHI_CLIENT_AVAILABLE = False
+    import traceback
+    # Store error for debugging
+    KALSHI_IMPORT_ERROR = str(e)
 
 
 NY_TZ = ZoneInfo("America/New_York")
@@ -32,7 +36,10 @@ NY_TZ = ZoneInfo("America/New_York")
 def get_kalshi_client(environment: str) -> Optional['KalshiHttpClient']:
     """Create a Kalshi HTTP client for API calls."""
     if not KALSHI_CLIENT_AVAILABLE:
-        st.error("Kalshi client not available. Please install required dependencies.")
+        error_msg = "Kalshi client not available. Please install required dependencies."
+        if 'KALSHI_IMPORT_ERROR' in globals():
+            error_msg += f"\n\nImport error: {KALSHI_IMPORT_ERROR}"
+        st.error(error_msg)
         return None
 
     try:
