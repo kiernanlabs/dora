@@ -136,7 +136,7 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
                      unrealized_worst: float = 0.0, unrealized_best: float = 0.0,
                      active_bids_count: int = 0, active_bids_qty: int = 0,
                      active_asks_count: int = 0, active_asks_qty: int = 0,
-                     fees_today: float = 0.0, balance_data: Dict = None):
+                     fees_today: float = 0.0, balance_data: Dict = None, db_client = None):
     """Render P&L over time chart."""
     st.subheader("P&L Over Time")
 
@@ -1458,7 +1458,7 @@ def render(environment: str, region: str):
     with col1:
         render_pnl_chart(pnl_data, positions, trades, total_unrealized_worst, total_unrealized_best,
                          active_bids_count, active_bids_qty, active_asks_count, active_asks_qty,
-                         fees_today, balance_data)
+                         fees_today, balance_data, db_client)
 
     with col2:
         render_exposure_chart(positions, market_configs)
