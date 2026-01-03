@@ -47,14 +47,24 @@ def get_kalshi_client(environment: str) -> Optional['KalshiHttpClient']:
         if hasattr(st, 'secrets'):
             if environment == 'demo':
                 keyid = st.secrets.get('DEMO_KEYID')
-                key_b64 = st.secrets.get('DEMO_KEY_B64')
+                key_data = st.secrets.get('DEMO_KEY_B64') or st.secrets.get('DEMO_KEY')
             else:
                 keyid = st.secrets.get('PROD_KEYID')
-                key_b64 = st.secrets.get('PROD_KEY_B64')
+                key_data = st.secrets.get('PROD_KEY_B64') or st.secrets.get('PROD_KEY')
 
-            if keyid and key_b64:
-                # Decode base64-encoded private key
-                private_key_pem = base64.b64decode(key_b64)
+            if keyid and key_data:
+                # Handle both raw PEM and base64-encoded formats
+                if isinstance(key_data, str) and key_data.strip().startswith('-----BEGIN'):
+                    # Raw PEM format - use directly
+                    private_key_pem = key_data.encode('utf-8')
+                else:
+                    # Base64-encoded format - decode it
+                    try:
+                        private_key_pem = base64.b64decode(key_data)
+                    except Exception as e:
+                        st.error(f"Failed to decode base64 key: {e}. Trying as raw PEM...")
+                        private_key_pem = key_data.encode('utf-8') if isinstance(key_data, str) else key_data
+
                 private_key = serialization.load_pem_private_key(private_key_pem, password=None)
 
                 env = Environment.DEMO if environment == 'demo' else Environment.PROD
@@ -225,38 +235,43 @@ def render_historical_trade_chart(
 
     with st.spinner("Loading trade data from Kalshi API..."):
         try:
-            # Calculate time range
+            # Calculate time range for filtering
             now = datetime.now(timezone.utc)
-            min_ts = int((now - timedelta(days=days)).timestamp() * 1000)  # Convert to milliseconds
-            max_ts = int(now.timestamp() * 1000)
+            cutoff_time = now - timedelta(days=days)
 
             # Fetch market trades from Kalshi
+            # Note: Kalshi API doesn't support timestamp filters with ticker parameter
+            # So we fetch recent trades and filter client-side
             trades_response = kalshi_client.get_trades(
                 ticker=market_id,
-                min_ts=min_ts,
-                max_ts=max_ts,
-                limit=1000  # Get up to 1000 trades
+                limit=1000  # Get up to 1000 recent trades
             )
 
             market_trades = trades_response.get('trades', [])
 
             if not market_trades:
-                st.warning(f"No market trades found for {market_id} in the last {days} days")
+                st.warning(f"No market trades found for {market_id}")
                 return
 
-            # Process market trades
+            # Process market trades and filter by time range
             trade_times = []
             trade_prices = []
             for trade in market_trades:
-                # Kalshi returns yes_price in cents
-                price = trade.get('yes_price', 0) / 100.0
                 # created_time is ISO format
                 timestamp_str = trade.get('created_time', '')
                 if timestamp_str:
                     ts = parse_iso_timestamp(timestamp_str)
                     if ts:
-                        trade_times.append(ts)
-                        trade_prices.append(price)
+                        # Filter to only include trades within the time window
+                        if ts >= cutoff_time:
+                            # Kalshi returns yes_price in cents
+                            price = trade.get('yes_price', 0) / 100.0
+                            trade_times.append(ts)
+                            trade_prices.append(price)
+
+            if not trade_times:
+                st.warning(f"No market trades found for {market_id} in the last {days} days")
+                return
 
             # Get our fills from DynamoDB
             our_fills = db_client.get_recent_trades(days=days, market_id=market_id)
