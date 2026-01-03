@@ -16,7 +16,7 @@ This script analyzes market performance and generates recommended config updates
 3. Sibling market ACTIVATION (when expanding):
    - For markets being expanded, fetch all sibling markets from the same event
    - Activate any sibling markets not already in config with default settings
-   - Uses OpenAI to assess information risk for new sibling markets
+   - Info risk assessment skipped for sibling markets to improve lambda performance
 
 Usage:
     python -m dora_bot.market_update --env prod
@@ -1723,7 +1723,7 @@ def generate_sibling_activations(
         new_markets.sort(key=lambda m: m.get('volume_24h', 0) or 0, reverse=True)
         top_markets = new_markets[:5]
 
-        print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, assessing top {len(top_markets)} by volume...")
+        print(f"  {event_ticker}: Found {len(new_markets)} new sibling markets, activating top {len(top_markets)} by volume...")
 
         # Enrich sibling markets with orderbook depth
         if top_markets:
@@ -1731,131 +1731,89 @@ def generate_sibling_activations(
             top_markets = enrich_with_orderbook_depth(top_markets)
             print(f"  {event_ticker}: Order book enrichment complete")
 
-        # Assess information risk for each top market (in parallel for efficiency)
-        # Increased workers from 5 to 10 for faster execution
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = {}
-            for market in top_markets:
-                market_id = market.get('ticker')
-                # Get mid-price for current price estimate
-                yes_bid = market.get('yes_bid', 0) or 0
-                yes_ask = market.get('yes_ask', 100) or 100
-                current_price = (yes_bid + yes_ask) / 2
+        # Skip info risk assessment for sibling markets to speed up lambda execution
+        for market in top_markets:
+            market_id = market.get('ticker')
+            volume_24h = market.get('volume_24h', 0) or 0
 
-                # Use web search for highly active sibling markets (>1000 volume)
-                volume_24h = market.get('volume_24h', 0) or 0
-                use_web_search = volume_24h >= HIGH_ACTIVITY_VOLUME_24H
+            print(f"    {market_id}: volume_24h={volume_24h} - activating sibling market")
 
-                future = executor.submit(
-                    assess_information_risk,
-                    market.get('title', ''),
-                    current_price,
-                    market.get('subtitle', ''),
-                    market.get('rules_primary', ''),
-                    use_web_search,
-                )
-                futures[future] = (market_id, market)
+            # Extract available metadata from market API response
+            yes_bid = market.get('yes_bid')
+            yes_ask = market.get('yes_ask')
+            previous_yes_bid = market.get('previous_yes_bid')
+            previous_yes_ask = market.get('previous_yes_ask')
+            market_title = market.get('title', '')
 
-            for future in as_completed(futures):
-                market_id, market = futures[future]
-                ir_result = future.result()
+            # Calculate current spread if prices available
+            current_spread = None
+            if yes_bid is not None and yes_ask is not None:
+                current_spread = (yes_ask - yes_bid) / 100
 
-                # Parse probability from result
-                prob_str = ir_result.get("probability", "N/A")
-                info_risk = None
-                if prob_str and prob_str != "N/A":
-                    try:
-                        info_risk = float(str(prob_str).replace("%", "").strip())
-                    except (ValueError, AttributeError):
-                        pass
+            # Calculate spread from 24 hours ago if previous prices available
+            spread_24h_ago = None
+            if previous_yes_bid is not None and previous_yes_ask is not None:
+                spread_24h_ago = (previous_yes_ask - previous_yes_bid) / 100
 
-                volume_24h = market.get('volume_24h', 0) or 0
-                is_highly_active = volume_24h >= HIGH_ACTIVITY_VOLUME_24H
-                web_search_str = " (web_search)" if is_highly_active else ""
+            # Fetch trade history to get volume metrics and price std dev
+            trades = fetch_trade_history(market_id, limit=200)
+            trades_24h = filter_trades_by_time(trades, hours=24)
 
-                # Filter out siblings with high info risk (>25%)
-                if info_risk is not None and info_risk > MAX_INFO_RISK:
-                    print(f"    {market_id}: volume_24h={volume_24h}, info_risk={info_risk}%{web_search_str} - SKIPPED (>{MAX_INFO_RISK}%)")
-                    continue
+            # Calculate volume statistics
+            volume_24h_trades = len(trades_24h)
+            volume_24h_contracts = sum(trade.get('count', 0) or 0 for trade in trades_24h)
+            buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades_24h)
 
-                print(f"    {market_id}: volume_24h={volume_24h}, info_risk={info_risk}%{web_search_str} - OK")
+            # Calculate price standard deviation from 24h trades
+            price_std_dev_24h = None
+            if trades_24h:
+                trade_prices = [trade.get('yes_price', 0) for trade in trades_24h if trade.get('yes_price') is not None]
+                if len(trade_prices) > 1:
+                    import statistics
+                    price_std_dev_24h = statistics.stdev(trade_prices)
+                    print(f"      Calculated price_std_dev = {price_std_dev_24h:.2f}¢ from {len(trade_prices)} trades")
 
-                # Extract available metadata from market API response
-                yes_bid = market.get('yes_bid')
-                yes_ask = market.get('yes_ask')
-                previous_yes_bid = market.get('previous_yes_bid')
-                previous_yes_ask = market.get('previous_yes_ask')
-                market_title = market.get('title', '')
-
-                # Calculate current spread if prices available
-                current_spread = None
-                if yes_bid is not None and yes_ask is not None:
-                    current_spread = (yes_ask - yes_bid) / 100
-
-                # Calculate spread from 24 hours ago if previous prices available
-                spread_24h_ago = None
-                if previous_yes_bid is not None and previous_yes_ask is not None:
-                    spread_24h_ago = (previous_yes_ask - previous_yes_bid) / 100
-
-                # Fetch trade history to get volume metrics and price std dev
-                trades = fetch_trade_history(market_id, limit=200)
-                trades_24h = filter_trades_by_time(trades, hours=24)
-
-                # Calculate volume statistics
-                volume_24h_trades = len(trades_24h)
-                volume_24h_contracts = sum(trade.get('count', 0) or 0 for trade in trades_24h)
-                buy_volume_trades, buy_volume_contracts, sell_volume_trades, sell_volume_contracts = calculate_side_volumes(trades_24h)
-
-                # Calculate price standard deviation from 24h trades
-                price_std_dev_24h = None
-                if trades_24h:
-                    trade_prices = [trade.get('yes_price', 0) for trade in trades_24h if trade.get('yes_price') is not None]
-                    if len(trade_prices) > 1:
-                        import statistics
-                        price_std_dev_24h = statistics.stdev(trade_prices)
-                        print(f"      Calculated price_std_dev = {price_std_dev_24h:.2f}¢ from {len(trade_prices)} trades")
-
-                recommendations.append(RecommendedAction(
-                    market_id=market_id,
-                    event_ticker=event_ticker,
-                    event_name=event_names.get(event_ticker, ''),
-                    action='activate_sibling',
-                    reason=f"Sibling of expanding market in event {event_ticker}",
-                    new_enabled=True,
-                    new_min_spread=DEFAULT_MIN_SPREAD,
-                    new_quote_size=DEFAULT_QUOTE_SIZE,
-                    new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
-                    new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
-                    current_quote_size=None,  # New market, no current settings
-                    current_min_spread=None,  # New market, no current settings
-                    pnl_24h=0.0,
-                    fill_count_24h=0,
-                    fill_count_48h=0,
-                    last_fill_time=None,  # New market, no fills yet
-                    has_position=False,
-                    position_qty=0,
-                    info_risk_probability=info_risk,
-                    info_risk_rationale=ir_result.get("rationale"),
-                    created_at=None,  # New market, not yet in config
-                    # Enriched Kalshi metadata from API
-                    event_title=event_names.get(event_ticker, ''),
-                    market_title=market_title,
-                    volume_24h_trades=volume_24h_trades,
-                    volume_24h_contracts=volume_24h_contracts,
-                    buy_volume_trades=buy_volume_trades,
-                    buy_volume_contracts=buy_volume_contracts,
-                    sell_volume_trades=sell_volume_trades,
-                    sell_volume_contracts=sell_volume_contracts,
-                    current_spread=current_spread,
-                    spread_24h_ago=spread_24h_ago,
-                    yes_bid=yes_bid,
-                    yes_ask=yes_ask,
-                    previous_yes_bid=previous_yes_bid,
-                    previous_yes_ask=previous_yes_ask,
-                    bid_depth_5c=market.get('bid_depth_5c', 0),
-                    ask_depth_5c=market.get('ask_depth_5c', 0),
-                    price_std_dev_24h=price_std_dev_24h,
-                ))
+            recommendations.append(RecommendedAction(
+                market_id=market_id,
+                event_ticker=event_ticker,
+                event_name=event_names.get(event_ticker, ''),
+                action='activate_sibling',
+                reason=f"Sibling of expanding market in event {event_ticker}",
+                new_enabled=True,
+                new_min_spread=DEFAULT_MIN_SPREAD,
+                new_quote_size=DEFAULT_QUOTE_SIZE,
+                new_max_inventory_yes=DEFAULT_MAX_INVENTORY_YES,
+                new_max_inventory_no=DEFAULT_MAX_INVENTORY_NO,
+                current_quote_size=None,  # New market, no current settings
+                current_min_spread=None,  # New market, no current settings
+                pnl_24h=0.0,
+                fill_count_24h=0,
+                fill_count_48h=0,
+                last_fill_time=None,  # New market, no fills yet
+                has_position=False,
+                position_qty=0,
+                info_risk_probability=None,  # Skipped for performance
+                info_risk_rationale=None,  # Skipped for performance
+                created_at=None,  # New market, not yet in config
+                # Enriched Kalshi metadata from API
+                event_title=event_names.get(event_ticker, ''),
+                market_title=market_title,
+                volume_24h_trades=volume_24h_trades,
+                volume_24h_contracts=volume_24h_contracts,
+                buy_volume_trades=buy_volume_trades,
+                buy_volume_contracts=buy_volume_contracts,
+                sell_volume_trades=sell_volume_trades,
+                sell_volume_contracts=sell_volume_contracts,
+                current_spread=current_spread,
+                spread_24h_ago=spread_24h_ago,
+                yes_bid=yes_bid,
+                yes_ask=yes_ask,
+                previous_yes_bid=previous_yes_bid,
+                previous_yes_ask=previous_yes_ask,
+                bid_depth_5c=market.get('bid_depth_5c', 0),
+                ask_depth_5c=market.get('ask_depth_5c', 0),
+                price_std_dev_24h=price_std_dev_24h,
+            ))
 
     return recommendations
 

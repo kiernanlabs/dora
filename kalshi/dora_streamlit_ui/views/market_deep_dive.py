@@ -371,7 +371,7 @@ def render_historical_trade_chart(
             )
 
             # Display chart
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
             # Display summary stats
             st.markdown("**Chart Statistics:**")
@@ -607,7 +607,7 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
                             })
 
                         trades_df = pd.DataFrame(trades_data)
-                        st.dataframe(trades_df, hide_index=True, use_container_width=True)
+                        st.dataframe(trades_df, hide_index=True, width='stretch')
 
                     # Show target quotes if available
                     target_quotes = decision.get('target_quotes', [])
