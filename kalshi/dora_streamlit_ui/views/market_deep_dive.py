@@ -371,6 +371,11 @@ def render_historical_trade_chart(
                             if fv is not None:
                                 hover_parts.append(f"Fair Value: ${fv:.3f} ({fv_source})")
 
+                            # Skew
+                            skew = price_calc.get('skew')
+                            if skew is not None:
+                                hover_parts.append(f"Skew: {skew:+.4f}")
+
                             # Volatility
                             std_dev = price_calc.get('trade_std_dev')
                             if std_dev is not None:
@@ -397,12 +402,14 @@ def render_historical_trade_chart(
                             position_hover_texts.append(f"<b>Position @ {to_local_time(fill_timestamp)}</b><br>Net Position: {net_position} contracts")
 
                         # Append to appropriate list based on side
-                        if fill_side == 'buy':
+                        # Note: Kalshi uses 'yes'/'no' format, not 'buy'/'sell'
+                        side_formatted = format_fill_side(fill_side)
+                        if side_formatted == 'bid':
                             bid_fill_times.append(ts)
                             bid_fill_prices.append(fill_price)
                             bid_fill_sizes.append(fill_size)
                             bid_fill_hover_texts.append(hover_text)
-                        elif fill_side == 'sell':
+                        elif side_formatted == 'ask':
                             ask_fill_times.append(ts)
                             ask_fill_prices.append(fill_price)
                             ask_fill_sizes.append(fill_size)
@@ -549,8 +556,10 @@ def render_historical_trade_chart(
                 if trade_prices:
                     st.metric("Avg Market Price", f"${sum(trade_prices)/len(trade_prices):.3f}")
             with col4:
-                if fill_prices:
-                    st.metric("Avg Fill Price", f"${sum(fill_prices)/len(fill_prices):.3f}")
+                # Combine bid and ask fill prices for average
+                all_fill_prices = bid_fill_prices + ask_fill_prices
+                if all_fill_prices:
+                    st.metric("Avg Fill Price", f"${sum(all_fill_prices)/len(all_fill_prices):.3f}")
 
         except Exception as e:
             st.error(f"Error loading trade chart: {e}")
@@ -563,14 +572,41 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
     """Render fill logs (trades) for a specific market."""
     st.subheader(f"Fill Logs for {market_id}")
 
-    with st.spinner("Loading fill logs..."):
-        trades = db_client.get_recent_trades(days=days, market_id=market_id)
+    # Use session state to cache trades and decision contexts
+    cache_key_trades = f"trades_{market_id}_{days}"
+    cache_key_decisions = f"decision_contexts_{market_id}_{days}"
+
+    # Load trades (cache in session state)
+    if cache_key_trades not in st.session_state:
+        with st.spinner("Loading fill logs..."):
+            trades = db_client.get_recent_trades(days=days, market_id=market_id)
+            st.session_state[cache_key_trades] = trades
+    else:
+        trades = st.session_state[cache_key_trades]
 
     if not trades:
         st.info(f"No fills found for {market_id} in the last {days} days")
         return
 
     st.markdown(f"**Found {len(trades)} fills**")
+
+    # Prefetch decision contexts for all fills (cache in session state)
+    if cache_key_decisions not in st.session_state:
+        with st.spinner("Prefetching decision contexts..."):
+            decision_contexts = {}
+            for trade in trades:
+                fill_timestamp = trade.get('fill_timestamp') or trade.get('timestamp')
+                if fill_timestamp:
+                    decision_context = db_client.get_decision_context_for_fill(
+                        market_id=market_id,
+                        fill_timestamp=fill_timestamp,
+                        days=days
+                    )
+                    if decision_context:
+                        decision_contexts[fill_timestamp] = decision_context
+            st.session_state[cache_key_decisions] = decision_contexts
+    else:
+        decision_contexts = st.session_state[cache_key_decisions]
 
     # Sort fills by timestamp (most recent first)
     fallback_ts = datetime.min.replace(tzinfo=timezone.utc)
@@ -669,141 +705,135 @@ def render_fill_logs(db_client: ReadOnlyDynamoDBClient, market_id: str, days: in
                 'total_value': selected_fill.get('price', 0) * selected_fill.get('size', 0),
             })
 
-        # Add button to load decision context
+        # Automatically display decision context (prefetched)
         st.markdown("---")
         fill_timestamp = selected_fill.get('fill_timestamp') or selected_fill.get('timestamp')
 
         if fill_timestamp:
-            if st.button("Load Decision Context", key=f'load_decision_{market_id}_{selected_idx}', type="primary"):
-                with st.spinner("Loading decision context..."):
-                    decision_context = db_client.get_decision_context_for_fill(
-                        market_id=market_id,
-                        fill_timestamp=fill_timestamp,
-                        days=days
-                    )
+            decision_context = decision_contexts.get(fill_timestamp)
 
-                if decision_context and decision_context.get('decision'):
-                    st.success("Decision context loaded successfully!")
+            if decision_context and decision_context.get('decision'):
+                st.markdown("**Decision Context**")
 
-                    # Display decision log data
-                    st.markdown("**Decision Log (Most Recent Before Fill)**")
-                    decision = decision_context['decision']
+                # Display decision log data
+                decision = decision_context['decision']
+                st.markdown("*Decision Log (Most Recent Before Fill)*")
 
-                    # Show decision timestamp
-                    decision_ts = decision.get('timestamp', '')
-                    if decision_ts:
-                        st.info(f"Decision Timestamp: {to_local_time(decision_ts)}")
+                # Show decision timestamp
+                decision_ts = decision.get('timestamp', '')
+                if decision_ts:
+                    st.info(f"Decision Timestamp: {to_local_time(decision_ts)}")
 
-                    # Show key decision metrics
-                    # Extract price_calc once for reuse
-                    price_calc = decision.get('price_calc', {})
+                # Show key decision metrics
+                # Extract price_calc once for reuse
+                price_calc = decision.get('price_calc', {})
 
-                    dec_col1, dec_col2, dec_col3, dec_col4 = st.columns(4)
-                    with dec_col1:
-                        # Fair value can be at top level or in price_calc
-                        fair_value = decision.get('fair_value')
-                        if fair_value is None:
-                            fair_value = price_calc.get('fair_value')
-                        st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
-                    with dec_col2:
-                        # Try to get mid_price from order_book_snapshot if not at top level
-                        mid_price = decision.get('mid_price')
-                        if mid_price is None:
-                            order_book_snapshot = decision.get('order_book_snapshot', {})
-                            mid_price = order_book_snapshot.get('mid')
-                        st.metric("Mid Price", f"${mid_price:.3f}" if mid_price is not None else 'N/A')
-                    with dec_col3:
-                        # Inventory is stored as a dict with net_yes_qty
-                        inventory_data = decision.get('inventory', {})
-                        if isinstance(inventory_data, dict):
-                            net_yes_qty = inventory_data.get('net_yes_qty')
+                dec_col1, dec_col2, dec_col3, dec_col4 = st.columns(4)
+                with dec_col1:
+                    # Fair value can be at top level or in price_calc
+                    fair_value = decision.get('fair_value')
+                    if fair_value is None:
+                        fair_value = price_calc.get('fair_value')
+                    st.metric("Fair Value", f"${fair_value:.3f}" if fair_value is not None else 'N/A')
+                with dec_col2:
+                    # Try to get mid_price from order_book_snapshot if not at top level
+                    mid_price = decision.get('mid_price')
+                    if mid_price is None:
+                        order_book_snapshot = decision.get('order_book_snapshot', {})
+                        mid_price = order_book_snapshot.get('mid')
+                    st.metric("Mid Price", f"${mid_price:.3f}" if mid_price is not None else 'N/A')
+                with dec_col3:
+                    # Inventory is stored as a dict with net_yes_qty
+                    inventory_data = decision.get('inventory', {})
+                    if isinstance(inventory_data, dict):
+                        net_yes_qty = inventory_data.get('net_yes_qty')
+                    else:
+                        net_yes_qty = inventory_data
+                    st.metric("Inventory (YES)", net_yes_qty if net_yes_qty is not None else 'N/A')
+                with dec_col4:
+                    # Skew is in price_calc (note: field is 'skew', not 'inventory_skew')
+                    skew = decision.get('inventory_skew')
+                    if skew is None:
+                        skew = price_calc.get('skew')
+                    if skew is None:
+                        skew = price_calc.get('inventory_skew')
+                    st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
+
+                # Show order book depth if available
+                order_book = decision.get('order_book_snapshot', {})
+                top_bids = order_book.get('top_bids', [])
+                top_asks = order_book.get('top_asks', [])
+
+                if top_bids or top_asks:
+                    st.markdown("---")
+                    st.markdown("**Order Book Depth at Decision Time**")
+
+                    ob_col1, ob_col2 = st.columns(2)
+                    with ob_col1:
+                        st.markdown("*Bids (Best 3)*")
+                        if top_bids:
+                            for bid in top_bids:
+                                st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
                         else:
-                            net_yes_qty = inventory_data
-                        st.metric("Inventory (YES)", net_yes_qty if net_yes_qty is not None else 'N/A')
-                    with dec_col4:
-                        # Skew is in price_calc (note: field is 'skew', not 'inventory_skew')
-                        skew = decision.get('inventory_skew')
-                        if skew is None:
-                            skew = price_calc.get('skew')
-                        if skew is None:
-                            skew = price_calc.get('inventory_skew')
-                        st.metric("Inventory Skew", f"${skew:.4f}" if skew is not None else 'N/A')
+                            st.text("No bid data")
 
-                    # Show order book depth if available
-                    order_book = decision.get('order_book_snapshot', {})
-                    top_bids = order_book.get('top_bids', [])
-                    top_asks = order_book.get('top_asks', [])
+                    with ob_col2:
+                        st.markdown("*Asks (Best 3)*")
+                        if top_asks:
+                            for ask in top_asks:
+                                st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
+                        else:
+                            st.text("No ask data")
 
-                    if top_bids or top_asks:
-                        st.markdown("---")
-                        st.markdown("**Order Book Depth at Decision Time**")
+                # Show recent trades if available
+                recent_trades = decision.get('recent_trades', [])
+                if recent_trades:
+                    st.markdown("---")
+                    st.markdown("**Recent Trades at Decision Time**")
 
-                        ob_col1, ob_col2 = st.columns(2)
-                        with ob_col1:
-                            st.markdown("*Bids (Best 3)*")
-                            if top_bids:
-                                for bid in top_bids:
-                                    st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
-                            else:
-                                st.text("No bid data")
+                    # Create a table for recent trades
+                    trades_data = []
+                    for trade in recent_trades:
+                        timestamp = trade.get('timestamp', '')
+                        trades_data.append({
+                            'Price': f"${trade.get('price', 0):.3f}",
+                            'Size': trade.get('size', 0),
+                            'Time': to_local_time(timestamp) if timestamp else 'N/A'
+                        })
 
-                        with ob_col2:
-                            st.markdown("*Asks (Best 3)*")
-                            if top_asks:
-                                for ask in top_asks:
-                                    st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
-                            else:
-                                st.text("No ask data")
+                    trades_df = pd.DataFrame(trades_data)
+                    st.dataframe(trades_df, hide_index=True, width='stretch')
 
-                    # Show recent trades if available
-                    recent_trades = decision.get('recent_trades', [])
-                    if recent_trades:
-                        st.markdown("---")
-                        st.markdown("**Recent Trades at Decision Time**")
+                # Show target quotes if available
+                target_quotes = decision.get('target_quotes', [])
+                if target_quotes:
+                    st.markdown("**Target Quotes at Decision Time**")
+                    bids = [q for q in target_quotes if q.get('side') == 'bid']
+                    asks = [q for q in target_quotes if q.get('side') == 'ask']
 
-                        # Create a table for recent trades
-                        trades_data = []
-                        for trade in recent_trades:
-                            timestamp = trade.get('timestamp', '')
-                            trades_data.append({
-                                'Price': f"${trade.get('price', 0):.3f}",
-                                'Size': trade.get('size', 0),
-                                'Time': to_local_time(timestamp) if timestamp else 'N/A'
-                            })
+                    quote_col1, quote_col2 = st.columns(2)
+                    with quote_col1:
+                        st.markdown("*Bids*")
+                        if bids:
+                            for bid in sorted(bids, key=lambda x: x.get('price', 0), reverse=True):
+                                st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
+                        else:
+                            st.text("No bids")
 
-                        trades_df = pd.DataFrame(trades_data)
-                        st.dataframe(trades_df, hide_index=True, width='stretch')
+                    with quote_col2:
+                        st.markdown("*Asks*")
+                        if asks:
+                            for ask in sorted(asks, key=lambda x: x.get('price', 0)):
+                                st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
+                        else:
+                            st.text("No asks")
 
-                    # Show target quotes if available
-                    target_quotes = decision.get('target_quotes', [])
-                    if target_quotes:
-                        st.markdown("**Target Quotes at Decision Time**")
-                        bids = [q for q in target_quotes if q.get('side') == 'bid']
-                        asks = [q for q in target_quotes if q.get('side') == 'ask']
+                # Show full decision log in expander
+                with st.expander("Full Decision Log Details", expanded=False):
+                    st.json(decision)
 
-                        quote_col1, quote_col2 = st.columns(2)
-                        with quote_col1:
-                            st.markdown("*Bids*")
-                            if bids:
-                                for bid in sorted(bids, key=lambda x: x.get('price', 0), reverse=True):
-                                    st.text(f"${bid.get('price', 0):.3f} x {bid.get('size', 0)}")
-                            else:
-                                st.text("No bids")
-
-                        with quote_col2:
-                            st.markdown("*Asks*")
-                            if asks:
-                                for ask in sorted(asks, key=lambda x: x.get('price', 0)):
-                                    st.text(f"${ask.get('price', 0):.3f} x {ask.get('size', 0)}")
-                            else:
-                                st.text("No asks")
-
-                    # Show full decision log in expander
-                    with st.expander("Full Decision Log Details", expanded=False):
-                        st.json(decision)
-
-                else:
-                    st.error(f"Could not find decision context for this fill")
+            else:
+                st.info("No decision context found for this fill")
         else:
             st.warning("No timestamp available for this fill")
 

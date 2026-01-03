@@ -184,10 +184,14 @@ def render_pnl_chart(pnl_data: List[Dict], positions: Dict, trades: List[Dict] =
         # Display cash balance from Kalshi API
         logger.info(f"Balance data received: {balance_data}")
         if balance_data:
-            # Kalshi API returns: {"balance": 123, "portfolio_value": 456, "updated_ts": 789}
-            cash_balance = balance_data.get('balance', 0.0)
-            portfolio_value = balance_data.get('portfolio_value', 0.0)
-            logger.info(f"Balance components - cash: {cash_balance}, portfolio_value: {portfolio_value}")
+            # Kalshi API returns values in cents: {"balance": 12345, "portfolio_value": 45678, "updated_ts": 789}
+            cash_balance_cents = balance_data.get('balance', 0.0)
+            portfolio_value_cents = balance_data.get('portfolio_value', 0.0)
+            # Convert from cents to dollars
+            cash_balance = cash_balance_cents / 100.0
+            portfolio_value = portfolio_value_cents / 100.0
+            logger.info(f"Balance components (cents) - cash: {cash_balance_cents}, portfolio_value: {portfolio_value_cents}")
+            logger.info(f"Balance components (dollars) - cash: {cash_balance}, portfolio_value: {portfolio_value}")
             st.metric("Cash Balance", f"${cash_balance:.2f}",
                       help=f"Cash Balance: ${cash_balance:.2f} | Portfolio Value: ${portfolio_value:.2f}")
         else:
