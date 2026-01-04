@@ -465,7 +465,8 @@ class EmailSender:
         recipient: str,
         environment: str = "prod",
         event_insights: dict = None,
-        market_insights: dict = None
+        market_insights: dict = None,
+        portfolio_summary: dict = None
     ) -> bool:
         """Send market proposals email with approval links and AI insights.
 
@@ -478,12 +479,14 @@ class EmailSender:
             environment: 'demo' or 'prod'
             event_insights: Dict mapping event_ticker to AI insights (for market_update proposals)
             market_insights: Dict mapping market_id to AI insights (for market_screener proposals)
+            portfolio_summary: Dict with portfolio-level AI insights (summary, trends, recommendations)
 
         Returns:
             True if email sent successfully
         """
         event_insights = event_insights or {}
         market_insights = market_insights or {}
+        portfolio_summary = portfolio_summary or {}
         # Count proposals by source and action
         update_proposals = [p for p in proposals if p['proposal_source'] == 'market_update']
         screener_proposals = [p for p in proposals if p['proposal_source'] == 'market_screener']
@@ -599,7 +602,49 @@ class EmailSender:
 
         html_body += """
             </div>
+        """
 
+        # Add Portfolio Summary if available
+        if portfolio_summary and not portfolio_summary.get('error'):
+            summary_text = portfolio_summary.get('summary', '')
+            trends = portfolio_summary.get('trends', [])
+            recommendations = portfolio_summary.get('recommendations', '')
+
+            html_body += """
+            <div class="section-header" style="background-color: #6c757d;">
+                <h2>🎯 AI Portfolio Summary</h2>
+            </div>
+            <div style="background-color: #f8f9fa; padding: 15px; margin: 20px 0; border-left: 4px solid #6c757d;">
+            """
+
+            if summary_text:
+                html_body += f"""
+                <h3 style="margin-top: 0;">Overview</h3>
+                <p>{summary_text}</p>
+                """
+
+            if trends:
+                html_body += """
+                <h3>Key Trends</h3>
+                <ul>
+                """
+                for trend in trends:
+                    html_body += f"<li>{trend}</li>"
+                html_body += """
+                </ul>
+                """
+
+            if recommendations:
+                html_body += f"""
+                <h3>Recommendations</h3>
+                <p>{recommendations}</p>
+                """
+
+            html_body += """
+            </div>
+            """
+
+        html_body += """
             <div class="expiry-notice">
                 ⏰ <strong>Important:</strong> This approval link expires in 12 hours.
                 <br><br>

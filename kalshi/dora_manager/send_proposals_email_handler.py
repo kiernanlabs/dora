@@ -17,7 +17,7 @@ from collections import defaultdict
 from utils.proposal_manager import ProposalManager
 from utils.url_signer import URLSigner
 from utils.insights_manager import InsightsManager
-from utils.ai_insights import generate_event_insights, generate_market_insights
+from utils.ai_insights import generate_event_insights, generate_market_insights, generate_portfolio_summary
 from email_sender import EmailSender
 
 logger = logging.getLogger(__name__)
@@ -125,8 +125,18 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
                     if event_ticker:
                         events_dict[event_ticker].append(p)
 
-                logger.info(f"Generating insights for {len(events_dict)} events...")
+                # Calculate total volume per event and sort, keeping only top 20
+                events_with_volume = []
                 for event_ticker, event_markets in events_dict.items():
+                    total_volume = sum(m.get('metadata', {}).get('volume_24h', 0) or 0 for m in event_markets)
+                    events_with_volume.append((event_ticker, event_markets, total_volume))
+
+                # Sort by volume descending and take top 20
+                events_with_volume.sort(key=lambda x: x[2], reverse=True)
+                top_events = events_with_volume[:20]
+
+                logger.info(f"Generating insights for top {len(top_events)} events by volume (out of {len(events_dict)} total)...")
+                for event_ticker, event_markets, _ in top_events:
                     try:
                         insight = generate_event_insights(event_ticker, event_markets)
                         if not insight.get('error'):
@@ -154,8 +164,16 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
 
             # Generate market-level insights for market_screener proposals
             if screener_proposals:
-                logger.info(f"Generating insights for {len(screener_proposals)} new markets...")
-                for p in screener_proposals:
+                # Sort markets by volume and take top 20
+                screener_proposals_sorted = sorted(
+                    screener_proposals,
+                    key=lambda p: p.get('metadata', {}).get('volume_24h', 0) or 0,
+                    reverse=True
+                )
+                top_screener_proposals = screener_proposals_sorted[:20]
+
+                logger.info(f"Generating insights for top {len(top_screener_proposals)} new markets by volume (out of {len(screener_proposals)} total)...")
+                for p in top_screener_proposals:
                     market_id = p.get('market_id', '')
                     if not market_id:
                         continue
@@ -181,6 +199,14 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
                             logger.warning(f"Failed to generate insight for market {market_id}: {insight['error']}")
                     except Exception as e:
                         logger.error(f"Error generating insight for market {market_id}: {e}")
+
+            # Generate portfolio summary across all proposals
+            logger.info("Generating portfolio summary across all proposals...")
+            portfolio_summary = generate_portfolio_summary(proposals)
+            if portfolio_summary.get('error'):
+                logger.warning(f"Failed to generate portfolio summary: {portfolio_summary['error']}")
+            else:
+                logger.info(f"Portfolio summary generated successfully")
 
             # Convert DynamoDB items to the format expected by email sender
             formatted_proposals = []
@@ -225,7 +251,8 @@ def handle_send_proposals_email(event: Dict[str, Any], context: Any) -> Dict[str
                 recipient=recipient_email,
                 environment=environment,
                 event_insights=event_insights,
-                market_insights=market_insights
+                market_insights=market_insights,
+                portfolio_summary=portfolio_summary
             )
 
             if email_sent:

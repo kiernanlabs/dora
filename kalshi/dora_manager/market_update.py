@@ -96,6 +96,7 @@ class MarketAnalysis:
     # Enriched Kalshi metadata for AI model input
     event_title: Optional[str] = None  # Full event title
     market_title: Optional[str] = None  # Full market title
+    market_status: Optional[str] = None  # Market status (active, closed, settled, etc.)
     volume_24h_trades: int = 0  # Total number of trades in 24hr
     volume_24h_contracts: int = 0  # Total number of contracts traded in 24hr
     buy_volume_trades: int = 0  # Buy side trade count
@@ -544,6 +545,7 @@ def fetch_market_details(market_ids: List[str]) -> Dict[str, Dict[str, Any]]:
                 'rules_primary': market_data.get('rules_primary', ''),
                 'current_price': current_price,
                 'event_ticker': market_data.get('event_ticker'),
+                'status': market_data.get('status', ''),
                 'yes_bid': yes_bid,
                 'yes_ask': yes_ask,
                 'previous_yes_bid': previous_yes_bid,
@@ -928,6 +930,7 @@ def analyze_markets(
             # Enriched Kalshi metadata
             event_title=event_title,
             market_title=market_title,
+            market_status=market_detail.get('status'),
             volume_24h_trades=volume_24h_trades,
             volume_24h_contracts=volume_24h_contracts,
             buy_volume_trades=buy_volume_trades,
@@ -1133,15 +1136,18 @@ def generate_recommendations(
             poor_performance_candidates[market_id] = poor_reason
 
         # Check EXPAND conditions (for tracking events with expanding markets)
-        # Only allow expansion if info risk is <= MAX_INFO_RISK
+        # Only allow expansion if info risk is <= MAX_INFO_RISK and market is tradeable
         ir_result = info_risk_results.get(market_id, {})
         ir_prob = ir_result.get('info_risk_probability')
         info_risk_ok = ir_prob is None or ir_prob <= MAX_INFO_RISK
+        # Market must be 'active' to expand (exclude: inactive, closed, determined, disputed, finalized)
+        market_is_active = analysis.market_status not in ('inactive', 'closed', 'determined', 'disputed', 'finalized')
 
         if (analysis.current_enabled and
             analysis.pnl_24h > 0 and
             analysis.event_ticker and
-            info_risk_ok):
+            info_risk_ok and
+            market_is_active):
             expand_events.add(analysis.event_ticker)
 
     # Second pass: generate recommendations
@@ -1157,6 +1163,97 @@ def generate_recommendations(
 
         poor_reason = poor_performance_candidates.get(market_id)
         action_taken = False  # Track if we added a recommendation
+
+        # Check if market is no longer tradeable - recommend exit immediately
+        # Kalshi statuses: initialized, inactive, active, closed, determined, disputed, amended, finalized
+        if analysis.market_status in ('inactive', 'closed', 'determined', 'disputed', 'finalized'):
+            if analysis.has_position:
+                # Market settled with position: disable to prevent new trades
+                recommendations.append(RecommendedAction(
+                    market_id=market_id,
+                    event_ticker=analysis.event_ticker,
+                    event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
+                    action='exit',
+                    reason=f"Market {analysis.market_status} on Kalshi (has position: {analysis.position_qty})",
+                    new_enabled=False,
+                    new_min_spread=None,
+                    new_quote_size=None,
+                    new_max_inventory_yes=None,
+                    new_max_inventory_no=None,
+                    current_quote_size=analysis.current_quote_size,
+                    current_min_spread=analysis.current_min_spread,
+                    pnl_24h=analysis.pnl_24h,
+                    fill_count_24h=analysis.fill_count_24h,
+                    fill_count_48h=analysis.fill_count_48h,
+                    last_fill_time=analysis.last_fill_time,
+                    has_position=analysis.has_position,
+                    position_qty=analysis.position_qty,
+                    info_risk_probability=ir_prob,
+                    info_risk_rationale=ir_rationale,
+                    created_at=analysis.created_at,
+                    event_title=analysis.event_title,
+                    market_title=analysis.market_title,
+                    volume_24h_trades=analysis.volume_24h_trades,
+                    volume_24h_contracts=analysis.volume_24h_contracts,
+                    buy_volume_trades=analysis.buy_volume_trades,
+                    buy_volume_contracts=analysis.buy_volume_contracts,
+                    sell_volume_trades=analysis.sell_volume_trades,
+                    sell_volume_contracts=analysis.sell_volume_contracts,
+                    current_spread=analysis.current_spread,
+                    spread_24h_ago=analysis.spread_24h_ago,
+                    yes_bid=analysis.yes_bid,
+                    yes_ask=analysis.yes_ask,
+                    previous_yes_bid=analysis.previous_yes_bid,
+                    previous_yes_ask=analysis.previous_yes_ask,
+                    bid_depth_5c=analysis.bid_depth_5c,
+                    ask_depth_5c=analysis.ask_depth_5c,
+                    price_std_dev_24h=analysis.price_std_dev_24h,
+                ))
+            else:
+                # Market settled without position: disable immediately
+                recommendations.append(RecommendedAction(
+                    market_id=market_id,
+                    event_ticker=analysis.event_ticker,
+                    event_name=event_names.get(analysis.event_ticker, '') if analysis.event_ticker else '',
+                    action='exit',
+                    reason=f"Market {analysis.market_status} on Kalshi",
+                    new_enabled=False,
+                    new_min_spread=None,
+                    new_quote_size=None,
+                    new_max_inventory_yes=None,
+                    new_max_inventory_no=None,
+                    current_quote_size=analysis.current_quote_size,
+                    current_min_spread=analysis.current_min_spread,
+                    pnl_24h=analysis.pnl_24h,
+                    fill_count_24h=analysis.fill_count_24h,
+                    fill_count_48h=analysis.fill_count_48h,
+                    last_fill_time=analysis.last_fill_time,
+                    has_position=analysis.has_position,
+                    position_qty=analysis.position_qty,
+                    info_risk_probability=ir_prob,
+                    info_risk_rationale=ir_rationale,
+                    created_at=analysis.created_at,
+                    event_title=analysis.event_title,
+                    market_title=analysis.market_title,
+                    volume_24h_trades=analysis.volume_24h_trades,
+                    volume_24h_contracts=analysis.volume_24h_contracts,
+                    buy_volume_trades=analysis.buy_volume_trades,
+                    buy_volume_contracts=analysis.buy_volume_contracts,
+                    sell_volume_trades=analysis.sell_volume_trades,
+                    sell_volume_contracts=analysis.sell_volume_contracts,
+                    current_spread=analysis.current_spread,
+                    spread_24h_ago=analysis.spread_24h_ago,
+                    yes_bid=analysis.yes_bid,
+                    yes_ask=analysis.yes_ask,
+                    previous_yes_bid=analysis.previous_yes_bid,
+                    previous_yes_ask=analysis.previous_yes_ask,
+                    bid_depth_5c=analysis.bid_depth_5c,
+                    ask_depth_5c=analysis.ask_depth_5c,
+                    price_std_dev_24h=analysis.price_std_dev_24h,
+                ))
+            action_taken = True
+            # Continue to next market since we've handled this one
+            continue
 
         if poor_reason:
             event_ticker = analysis.event_ticker
@@ -1703,9 +1800,9 @@ def generate_sibling_activations(
             if market_id in active_markets or market_id in existing_market_ids:
                 continue
 
-            # Skip closed/settled markets
+            # Skip non-active markets (can't trade on these)
             status = market.get('status', '')
-            if status in ('closed', 'settled'):
+            if status in ('inactive', 'closed', 'determined', 'disputed', 'finalized'):
                 continue
 
             # Skip markets with low volume (< 10 in last 24hrs)
